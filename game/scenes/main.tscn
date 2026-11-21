@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://src/world/greybox_builder.gd" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ui/chat_bubble.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/ui/chat_menu.tscn" id="8"]
+[ext_resource type="Script" path="res://src/net/network_sync.gd" id="9"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -52,6 +53,7 @@ const ChatCatalog := preload(\"res://src/net/chat_catalog.gd\")
 var _catalog: RefCounted
 
 @onready var _player: CharacterBody3D = $Player
+@onready var _network_sync: Node = get_node_or_null(\"NetworkSync\")
 
 
 func _ready() -> void:
@@ -96,6 +98,8 @@ func _on_chat_received(msg: ChatMessage) -> void:
 func _find_player_node(sender_id: String) -> Node3D:
 	if Services.net != null and sender_id == Services.net.local_player_id():
 		return _player
+	if _network_sync != null and _network_sync.has_method(\"get_remote_player\"):
+		return _network_sync.get_remote_player(sender_id)
 	return null
 "
 
@@ -164,3 +168,7 @@ joystick = NodePath("../UI/Joystick")
 camera = NodePath("../FollowCamera/SpringArm3D/Camera3D")
 agent = NodePath("../Player/NavAgent")
 marker = NodePath("../TapMarker")
+
+[node name="NetworkSync" type="Node" parent="." node_paths=PackedStringArray("player")]
+script = ExtResource("9")
+player = NodePath("../Player")

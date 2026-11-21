@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/player/remote_player.gd" id="1"]
+[ext_resource type="Script" path="res://src/characters/pet_visual.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/chat_bubble.tscn" id="3"]
+
+[node name="RemotePlayer" type="Node3D"]
+script = ExtResource("1")
+
+[node name="PetVisual" type="Node3D" parent="."]
+script = ExtResource("2")
+
+[node name="NameLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+billboard = 1
+double_sided = false
+font_size = 28
+outline_size = 6
+text = ""
+
+[node name="ChatBubble" parent="." instance=ExtResource("3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
