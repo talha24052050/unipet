@@ -1,0 +1,104 @@
+name: android
+# main'e her push'ta debug APK üretir.
+# - Artifact olarak saklar (14 gün)
+# - "android-debug" ön-sürümüne yükler: telefondan sabit linkle indirilebilir
+#   https://github.com/talha24052050/unipet/releases/download/android-debug/unipet-debug.apk
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.7.2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Godot kur
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+
+      - name: Export template önbelleği
+        id: tpl-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Export template indir (önbellekte yoksa)
+        if: steps.tpl-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL -o tpl.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q tpl.tpz
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          # Sadece Android şablonları (önbellek küçük kalsın)
+          mv templates/android_* templates/version.txt ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          rm -rf templates tpl.tpz
+
+      - name: Debug keystore (önbellekte sabit kalır → güncellemeler üstüne kurulur)
+        id: ks-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/debug.keystore
+          key: android-debug-keystore-v1
+
+      - name: Debug keystore üret (önbellekte yoksa)
+        if: steps.ks-cache.outputs.cache-hit != 'true'
+        run: |
+          keytool -genkeypair -v -keystore ~/debug.keystore -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Godot editör ayarları (Android SDK / Java yolu)
+        run: |
+          mkdir -p ~/.config/godot
+          for f in editor_settings-4.tres editor_settings-4.7.tres; do
+            cat > ~/.config/godot/$f <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
+          EOF
+          done
+
+      - name: Export
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          cp tools/ci/export_presets.cfg game/export_presets.cfg
+          mkdir -p build
+          godot --headless --path game --import || true
+          godot --headless --path game --export-debug "Android" ../build/unipet-debug.apk 2>&1 | tee export.log
+          test -s build/unipet-debug.apk
+          ls -la build/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unipet-debug-${{ github.sha }}
+          path: build/unipet-debug.apk
+          retention-days: 14
+
+      - name: android-debug ön-sürümünü güncelle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Otomatik debug build — commit ${GITHUB_SHA::7}: $(git log -1 --pretty=%s)"
+          if gh release view android-debug >/dev/null 2>&1; then
+            gh release edit android-debug --notes "$NOTES" --target "$GITHUB_SHA"
+          else
+            gh release create android-debug --prerelease --title "Android debug (son build)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release upload android-debug build/unipet-debug.apk --clobber
