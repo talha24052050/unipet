@@ -77,10 +77,14 @@ function Invoke-AgyTask([string]$TaskPath) {
     # Sadece görevde izin verilen yollar + görev çıktıları commit'lenir; Claude'un aynı anda
     # çalıştığı (henüz commit'lenmemiş) dosyalar agy'nin commit'ine karışmaz.
     $paths = @("agy-tasks/done") + $allowed
+    # git'in stderr uyarıları (CRLF vb.) PowerShell 5.1'de durdurucu hata olmasın.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     foreach ($p in $paths) {
-        & git.exe -C $Repo add -A -- $p 2>$null
-        if (Test-Path (Join-Path $Repo "$p.uid")) { & git.exe -C $Repo add -- "$p.uid" 2>$null }
+        & git.exe -C $Repo add -A -- $p 2>&1 | Out-Null
+        if (Test-Path (Join-Path $Repo "$p.uid")) { & git.exe -C $Repo add -- "$p.uid" 2>&1 | Out-Null }
     }
+    $ErrorActionPreference = $prevEap
     & git.exe -C $Repo diff --cached --quiet
     if ($LASTEXITCODE -ne 0) {
         Git @("commit", "-m", "agy: $name")

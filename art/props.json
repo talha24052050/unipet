@@ -1,0 +1,13 @@
+{
+  "_note": "Ortabahçe prop assetleri. Kaynak: Quaternius (CC0), poly.pizza üzerinden tek tek glb.",
+  "props": [
+    {"id": "tree_birch",   "name": "Huş ağacı",      "polypizza": "k6cozoNfLH", "glb": "f51ba6c2-51e9-43ce-b2a9-ccb0230b55e6", "license": "CC0", "tris": 1704},
+    {"id": "tree_pine",    "name": "Çam ağacı",      "polypizza": "gX8WmgkeEm", "glb": "4ab9f316-03f8-4588-9dcb-ca4f02f4219b", "license": "CC0", "tris": 1681},
+    {"id": "tree_common",  "name": "Ağaç",           "polypizza": "8qABc2Nslz", "glb": "8bc17af3-141a-4b3d-ad39-5f01cf1e4de2", "license": "CC0", "tris": 1366},
+    {"id": "bush_common",  "name": "Çalı",           "polypizza": "EoTERLq3z2", "glb": "5d3066f4-58ac-46d4-899c-39d9e566e9df", "license": "CC0", "tris": 900},
+    {"id": "bush_berries", "name": "Meyveli çalı",   "polypizza": "TSbIxkDtxF", "glb": "30a7c72d-c014-40c4-8e1d-aaa949ebc465", "license": "CC0", "tris": 795},
+    {"id": "bench",        "name": "Bank",           "polypizza": "jLxjFxFRpw", "glb": "1361c268-20f7-4e73-a931-ce434c6b503e", "license": "CC0", "tris": 376},
+    {"id": "lamp",         "name": "Sokak lambası",  "polypizza": "nFwrlcLvM5", "glb": "9a8aac3e-d1ee-4860-b294-edca62ef50be", "license": "CC0", "tris": 292},
+    {"id": "trashcan",     "name": "Çöp kutusu",     "polypizza": "vlVx279xut", "glb": "9586bdcb-a768-4915-a8c6-8de8e4b0a4c6", "license": "CC0", "tris": 380}
+  ]
+}
