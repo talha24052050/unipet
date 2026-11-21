@@ -46,3 +46,46 @@ func test_extrude_faces_outward() -> String:
 	if wall.dot(outward) <= 0.0:
 		return "duvar içe bakıyor"
 	return ""
+
+
+func _paths(d: Dictionary) -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for p: Dictionary in d["paths"]:
+		out.append(Greybox.to_polygon(p["points"]))
+	return out
+
+
+func test_kisla_has_gates() -> String:
+	var d: Dictionary = Greybox.load_data(DATA)
+	for b: Dictionary in d["buildings"]:
+		if str(b.get("name", "")).contains("Kışla") and not str(b.get("name", "")).contains("Mescit"):
+			var poly: PackedVector2Array = Greybox.to_polygon(b["points"])
+			if Geometry2D.is_polygon_clockwise(poly):
+				poly.reverse()
+			var n: int = 0
+			for list: Array in Greybox.find_gates(poly, _paths(d)).values():
+				n += list.size()
+			if n < 2:
+				return "Kışla'da %d geçit var, en az 2 olmalı (avludan çıkılamaz)" % n
+			return ""
+	return "Kışla bulunamadı"
+
+
+func test_gate_cuts_wall() -> String:
+	var square: PackedVector2Array = PackedVector2Array([Vector2(0, 0), Vector2(20, 0), Vector2(20, 20), Vector2(0, 20)])
+	var path: Array[PackedVector2Array] = [PackedVector2Array([Vector2(10, -5), Vector2(10, 25)])]
+	var gates: Dictionary = Greybox.find_gates(square, path)
+	if gates.size() != 2:
+		return "kare içinden geçen yol 2 duvarı kesmeli: %s" % gates
+	var entry: Array[PackedVector2Array] = [PackedVector2Array([Vector2(10, -5), Vector2(10, 0)])]
+	if Greybox.find_gates(square, entry).size() != 1:
+		return "duvarda biten yol (giriş) tek geçit açmalı"
+	var corner: Array[PackedVector2Array] = [PackedVector2Array([Vector2(-5, -5), Vector2(0, 0)])]
+	if Greybox.find_gates(square, corner).is_empty():
+		return "köşede biten giriş komşu kenara kaydırılmalı"
+	var m: ArrayMesh = Greybox.extrude_polygon(square, 6.0, path)
+	var v: PackedVector3Array = m.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	for p: Vector3 in v:
+		if p.y < Greybox.GATE_HEIGHT - 0.01 and absf(p.x - 10.0) < Greybox.GATE_WIDTH * 0.5 - 0.01 and (p.z < 0.01 or p.z > 19.99):
+			return "geçit aralığında yerde duvar köşesi var: %s" % p
+	return ""

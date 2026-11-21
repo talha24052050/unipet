@@ -22,8 +22,15 @@ const PATH_COLOR: Color = Color(0.9, 0.9, 0.88)
 const AREA_Y: float = 0.02
 const PATH_Y: float = 0.04
 const GROUND_MARGIN: float = 30.0
+## Yürüme yolunun bina duvarını kestiği yerde açılan geçit (ör. Kışla'nın avlu kapıları).
+const GATE_WIDTH: float = 4.0
+const GATE_HEIGHT: float = 3.2
+## Yol ucu duvara bu kadar yakınsa giriş sayılır (metre).
+const GATE_TOUCH_DIST: float = 0.6
 
 var building_count: int = 0
+var gate_count: int = 0
+var _path_lines: Array[PackedVector2Array] = []
 
 
 func _ready() -> void:
@@ -37,6 +44,7 @@ func _ready() -> void:
 		_build_area(a)
 	for p: Dictionary in data.get("paths", []):
 		_build_path(p)
+		_path_lines.append(to_polygon(p.get("points", [])))
 	for b: Dictionary in data.get("buildings", []):
 		_build_building(b)
 
@@ -57,11 +65,56 @@ static func to_polygon(points: Array) -> PackedVector2Array:
 	return poly
 
 
+## Duvarda açılacak geçitler: kenar indeksi → [kenar üzerindeki oran (0..1)].
+## İki durum: (1) yol duvarı kesip geçiyor, (2) yolun ucu duvara değiyor (OSM'de giriş/pasaj böyle çizilir;
+## ör. Kışla'nın avlu kapıları). Köşeye denk gelen giriş, geçit sığacak şekilde komşu kenarın içine kaydırılır.
+static func find_gates(poly: PackedVector2Array, paths: Array[PackedVector2Array]) -> Dictionary:
+	var gates: Dictionary = {}
+	var n: int = poly.size()
+	for line: PackedVector2Array in paths:
+		if line.size() < 2:
+			continue
+		# (2) uçlar
+		for e: Vector2 in [line[0], line[line.size() - 1]]:
+			var best: int = -1
+			var best_d: float = GATE_TOUCH_DIST
+			for i: int in n:
+				var cp: Vector2 = Geometry2D.get_closest_point_to_segment(e, poly[i], poly[(i + 1) % n])
+				var dd: float = cp.distance_to(e)
+				if dd <= best_d and poly[i].distance_to(poly[(i + 1) % n]) >= GATE_WIDTH + 1.0:
+					best_d = dd
+					best = i
+			if best != -1:
+				_add_gate(gates, poly, best, e)
+		# (1) kesişimler
+		for i: int in n:
+			for j: int in line.size() - 1:
+				var hit: Variant = Geometry2D.segment_intersects_segment(poly[i], poly[(i + 1) % n], line[j], line[j + 1])
+				if hit != null and poly[i].distance_to(poly[(i + 1) % n]) >= GATE_WIDTH + 1.0:
+					_add_gate(gates, poly, i, hit)
+	return gates
+
+
+static func _add_gate(gates: Dictionary, poly: PackedVector2Array, i: int, at: Vector2) -> void:
+	var a: Vector2 = poly[i]
+	var b: Vector2 = poly[(i + 1) % poly.size()]
+	var edge_len: float = a.distance_to(b)
+	var margin: float = (GATE_WIDTH * 0.5 + 0.3) / edge_len
+	var t: float = clampf(a.distance_to(Geometry2D.get_closest_point_to_segment(at, a, b)) / edge_len, margin, 1.0 - margin)
+	var list: Array = gates.get(i, [])
+	if list.all(func(o: float) -> bool: return absf(o - t) * edge_len > GATE_WIDTH):
+		list.append(t)
+	gates[i] = list
+
+
 ## Taban çokgenini `height` kadar yukarı uzatan kapalı mesh. Çokgen basit değilse null.
-static func extrude_polygon(poly: PackedVector2Array, height: float) -> ArrayMesh:
+## `paths` verilirse, yolların duvarı kestiği yerlerde GATE_WIDTH genişliğinde, GATE_HEIGHT yüksekliğinde geçit açılır
+## (geçidin üstündeki duvar ve çatı kalır).
+static func extrude_polygon(poly: PackedVector2Array, height: float, paths: Array[PackedVector2Array] = []) -> ArrayMesh:
 	# XZ düzleminde (x, z) → saat yönü/tersi fark etmesin diye tek yöne çevir.
 	if Geometry2D.is_polygon_clockwise(poly):
 		poly.reverse()
+	var gates: Dictionary = find_gates(poly, paths) if not paths.is_empty() else {}
 	var tris: PackedInt32Array = Geometry2D.triangulate_polygon(poly)
 	if tris.is_empty():
 		return null
@@ -80,12 +133,41 @@ static func extrude_polygon(poly: PackedVector2Array, height: float) -> ArrayMes
 		var b: Vector2 = poly[(i + 1) % n]
 		var a0: Vector3 = Vector3(a.x, 0.0, a.y)
 		var b0: Vector3 = Vector3(b.x, 0.0, b.y)
+		if gates.has(i):
+			_add_wall_with_gates(st, a, b, height, gates[i])
+			continue
 		var a1: Vector3 = Vector3(a.x, height, a.y)
 		var b1: Vector3 = Vector3(b.x, height, b.y)
 		for v: Vector3 in [a0, b1, a1, a0, b0, b1]:
 			st.add_vertex(v)
 	st.generate_normals()
 	return st.commit()
+
+
+## Duvar parçası: [t0, t1] aralığı, [y0, y1] yüksekliği.
+static func _add_wall_piece(st: SurfaceTool, a: Vector2, b: Vector2, t0: float, t1: float, y0: float, y1: float) -> void:
+	var p: Vector2 = a.lerp(b, t0)
+	var q: Vector2 = a.lerp(b, t1)
+	var p0: Vector3 = Vector3(p.x, y0, p.y)
+	var q0: Vector3 = Vector3(q.x, y0, q.y)
+	var p1: Vector3 = Vector3(p.x, y1, p.y)
+	var q1: Vector3 = Vector3(q.x, y1, q.y)
+	for v: Vector3 in [p0, q1, p1, p0, q0, q1]:
+		st.add_vertex(v)
+
+
+## Geçitli duvar: geçitlerin arası tam boy, geçidin üstü (lento) GATE_HEIGHT'tan yukarısı.
+static func _add_wall_with_gates(st: SurfaceTool, a: Vector2, b: Vector2, height: float, ts: Array) -> void:
+	var half: float = GATE_WIDTH * 0.5 / a.distance_to(b)
+	var sorted: Array = ts.duplicate()
+	sorted.sort()
+	var cursor: float = 0.0
+	for t: float in sorted:
+		_add_wall_piece(st, a, b, cursor, t - half, 0.0, height)
+		if height > GATE_HEIGHT:
+			_add_wall_piece(st, a, b, t - half, t + half, GATE_HEIGHT, height)
+		cursor = t + half
+	_add_wall_piece(st, a, b, cursor, 1.0, 0.0, height)
 
 
 static func flat_polygon_mesh(poly: PackedVector2Array, y: float) -> ArrayMesh:
@@ -131,7 +213,8 @@ func _build_ground(half_size: float) -> void:
 func _build_building(b: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(b.get("points", []))
 	var height: float = float(b.get("height", 10.0))
-	var mesh: ArrayMesh = extrude_polygon(poly, height)
+	var mesh: ArrayMesh = extrude_polygon(poly, height, _path_lines)
+	gate_count += _count_gates(poly)
 	if mesh == null:
 		push_warning("Bina üçgenlenemedi, atlandı: %s" % b.get("name", "?"))
 		return
@@ -200,6 +283,16 @@ func _build_path(p: Dictionary) -> void:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	add_child(mi)
+
+
+func _count_gates(poly: PackedVector2Array) -> int:
+	var p: PackedVector2Array = poly.duplicate()
+	if Geometry2D.is_polygon_clockwise(p):
+		p.reverse()
+	var total: int = 0
+	for list: Array in find_gates(p, _path_lines).values():
+		total += list.size()
+	return total
 
 
 static func _polygon_center(poly: PackedVector2Array) -> Vector2:
