@@ -3,6 +3,7 @@ extends CharacterBody3D
 ## PlayerController sadece `move_input`u (dünya uzayında, XZ düzleminde, uzunluk 0..1) yazar.
 
 const PetVisual := preload("res://src/characters/pet_visual.gd")
+const LocalProfile := preload("res://src/core/local_profile.gd")
 
 ## Boşsa Config.DEFAULT_PET_ID.
 @export var character_id: StringName = &""
@@ -18,7 +19,19 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 func _ready() -> void:
 	floor_snap_length = Config.PLAYER_FLOOR_SNAP
-	set_character(character_id if character_id != &"" else Config.DEFAULT_PET_ID)
+	if character_id != &"":
+		set_character(character_id)
+	else:
+		apply_profile(LocalProfile.load_or_default())
+
+
+## Kayıtlı seçimi (pet + aksesuarlar) uygular.
+func apply_profile(profile: LocalProfile) -> void:
+	set_character(profile.pet_id)
+	for slot: StringName in profile.accessories:
+		var acc: AccessoryDef = Services.accessories.get_def(profile.accessories[slot])
+		if acc != null:
+			visual.equip(acc)
 
 
 ## Peti değiştirir (seçim ekranı, ağdan gelen profil). Bilinmeyen id → ilk seçilebilir pet.

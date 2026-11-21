@@ -50,3 +50,20 @@ func test_character_def_validation() -> String:
 	if d.validate().is_empty():
 		return "bilinmeyen slot kabul edildi"
 	return ""
+
+
+func test_local_profile_roundtrip() -> String:
+	var LocalProfile: GDScript = load("res://src/core/local_profile.gd")
+	var path: String = "user://test_profile.cfg"
+	var p: RefCounted = LocalProfile.new()
+	p.pet_id = &"yeti"
+	p.accessories = {&"head": &"hat_cap", &"back": &"backpack"}
+	p.save(path)
+	var back: RefCounted = LocalProfile.load_or_default(path)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	if back.pet_id != &"yeti" or back.accessories.get(&"head") != &"hat_cap" or back.accessories.size() != 2:
+		return "profil geri okunamadı: %s %s" % [back.pet_id, back.accessories]
+	var empty: RefCounted = LocalProfile.load_or_default("user://yok.cfg")
+	if empty.pet_id != Config.DEFAULT_PET_ID:
+		return "kayıt yokken varsayılan pet gelmedi"
+	return ""
