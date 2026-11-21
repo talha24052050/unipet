@@ -14,7 +14,7 @@
 
 var ALLOWED_EMAIL = /^[^@\s]+@std\.yildiz\.edu\.tr$/;
 // game/data/zones/zones.json ile AYNI (module.test.js kontrol eder)
-var ZONES = ["ortabahce", "fef", "insaat", "egitim", "guney"];
+var ZONES = ["ortabahce", "fef", "insaat", "egitim", "guney", "saha", "kutuphane"];
 var TICK_RATE = 10;
 var EMPTY_TICKS_BEFORE_CLOSE = TICK_RATE * 30;
 

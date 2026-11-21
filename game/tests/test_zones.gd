@@ -6,7 +6,7 @@ const Greybox := preload("res://src/world/greybox_builder.gd")
 
 func test_catalog_loads_all_zones() -> String:
 	var c: RefCounted = ZoneCatalog.load_default()
-	if c.ids().size() != 5 or not c.has("ortabahce") or c.default_id != "ortabahce":
+	if c.ids().size() != 7 or not c.has("ortabahce") or c.default_id != "ortabahce":
 		return "bölge listesi yanlış: %s" % [c.ids()]
 	return ""
 

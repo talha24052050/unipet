@@ -150,3 +150,7 @@ Aşağıdaki yerler OSM veritabanında ayrı bir bina adı olarak etiketlenmemi�
 - **Toplam Alan (Park/Çim/Saha) Sayısı:** 141
 - **Toplam Yol (Yaya/Servis) Sayısı:** 309
 - **Kampüs Dış Çevre Yarıçapı:** ~1098.5 m
+
+## Referans: YTÜ Davutpaşa krokisi
+https://hrm.yildiz.edu.tr/sites/hrm.yildiz.edu.tr/files/2023-02/davutpasa-kampusu-kroki-1.jpg
+Bölge adları/konumları (game/data/zones/zones.json) bu krokiye bakılarak belirlendi. Görsel YTÜ'ye ait; oyuna ve repo'ya GİRMEZ, harita ekranı OSM verisinden çizilir.
