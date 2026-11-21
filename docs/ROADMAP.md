@@ -3,14 +3,14 @@
 Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
 Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye verilecek
 
-## Parça 0 — Altyapı ✅ (kontrol bekliyor)
+## Parça 0 — Altyapı ✅
 - [x] 0.1 Repo iskeleti, Godot 4.7 projesi (mobile renderer, dikey)
 - [x] 0.2 Servis katmanı: NetworkService/AuthService arayüzleri + Offline/Mock implementasyonları
 - [x] 0.3 CharacterDef + CharacterRegistry, ChatMessage
 - [x] 0.4 Mini test runner + ilk testler, GitHub Actions'ta otomatik test
 - [x] 0.5 CLAUDE.md, kararlar, mimari, skill'ler
 - [x] 0.6 agy görev kutusu scripti + kurulum talimatı
-- [ ] 0.7 (Talha) Godot 4.7.2 kur, projeyi aç, ana sahneyi çalıştır, ekran görüntüsünü onayla
+- [x] 0.7 (Talha) Godot 4.7.2 kur, projeyi aç, ana sahneyi çalıştır, ekran görüntüsünü onayla
 
 ## Parça 1 — Tek oyunculu prototip
 - [ ] 1.1 Oyuncu sahnesi: CharacterBody3D + yerçekimi + yer takibi (placeholder kapsül)
