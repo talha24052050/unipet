@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/chat_bubble.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/ui/chat_menu.tscn" id="8"]
 [ext_resource type="Script" path="res://src/net/network_sync.gd" id="9"]
+[ext_resource type="Script" path="res://src/world/prop_placer.gd" id="10"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -120,6 +121,10 @@ script = ExtResource("4")
 [node name="Greybox" type="Node3D" parent="World"]
 script = ExtResource("6")
 data_path = "res://data/zones/ortabahce_greybox.json"
+
+[node name="PropPlacer" type="Node3D" parent="World"]
+script = ExtResource("10")
+data_path = "res://data/zones/ortabahce_props.json"
 
 [node name="TapMarker" type="MeshInstance3D" parent="."]
 mesh = SubResource("marker_mesh")
