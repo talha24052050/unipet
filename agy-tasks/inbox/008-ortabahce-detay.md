@@ -1,49 +1,41 @@
-# 008 — Ortabahçe detayları: ağaç, bank, lamba, çalı (ROADMAP 5.3)
+# 008 — Ortabahçe propları: yerleşim + sahneye kurma (ROADMAP 5.3)
 
-## Amaç
-Greybox Ortabahçe'yi canlandırmak: çim alanlara ağaç/çalı, yolların kenarına bank ve lamba. Sadece CC0 asset,
-mobil bütçe içinde. Yerleşim elle değil, mevcut greybox verisinden (`game/data/zones/ortabahce_greybox.json`) üretilsin.
+## Durum
+Modeller HAZIR ve commit'li: `game/assets/props/*.glb` (liste ve üçgen sayıları `art/props.json`). Yeni asset ARAMA/İNDİRME.
+Önceki denemede görev çok büyük kaldı; bu sefer sadece yerleşim ve sahneye kurma. Kısa tut, önce çalışan en basit hali yap.
 
 ## Dokunabileceğin dosyalar
-- `art/props.json` (yeni) — kullanılan asset'lerin kaynak listesi (poly.pizza id, glb uuid, lisans, üçgen sayısı)
-- `tools/assets/fetch_props.py` (yeni) — `art/props.json`'dan glb indirir (örnek: `tools/assets/fetch_pets.py`)
-- `game/assets/props/` (yeni klasör; sadece indirilen .glb ve Godot'un .import dosyaları)
-- `tools/osm/place_props.py` (yeni) — greybox JSON'dan yerleşim üretir
-- `game/data/zones/ortabahce_props.json` (yeni) — üretilen yerleşim
-- `game/src/world/prop_placer.gd` (yeni) — yerleşimi sahneye kurar
+- `tools/osm/place_props.py` (yeni)
+- `game/data/zones/ortabahce_props.json` (yeni, script üretir)
+- `game/src/world/prop_placer.gd` (yeni)
 - `game/tests/test_props.gd` (yeni)
-- `game/scenes/main.tscn` — SADECE `World` (NavigationRegion3D) altına PropPlacer düğümü eklemek için
-- `game/assets/CREDITS.md` — tek satır ekle
+- `game/scenes/main.tscn` — SADECE `World` (NavigationRegion3D) altına `PropPlacer` düğümü eklemek için
 - `agy-tasks/done/008-ortabahce-detay.report.md`
-Başka dosyaya dokunma (`greybox_builder.gd` dahil).
 
-## Yapılacaklar
-1. Asset: poly.pizza'da **Quaternius** (CC0) modelleri ara: 2-3 ağaç türü, 1-2 çalı, bank, sokak lambası, çöp kutusu.
-   Her biri < 1500 üçgen (ağaç < 2500). Sayfa: `https://poly.pizza/m/<id>`, glb: `https://static.poly.pizza/<uuid>.glb`
-   (sayfa HTML'inde `static.poly.pizza/<uuid>.glb` geçer; lisans ve "By Quaternius" sayfada yazar). Animasyonlu olanları alma.
-   Bulamazsan başka CC0 kaynağı kullanma, rapora yaz.
-2. `place_props.py` (sadece standart kütüphane, deterministik: sabit seed):
-   - Ağaç/çalı: `areas` içindeki çim/park çokgenlerinin İÇİNE, birbirinden ≥ 4 m, yollardan ≥ 2.5 m, binalardan ≥ 3 m uzak;
-     yoğunluk ~ 1 ağaç / 120 m², toplam ağaç ≤ 160.
-   - Bank + lamba: Ortabahçe parkı içindeki yollar (`paths`) boyunca ~ her 18 m'de bir, yolun 1.8 m yanına, yola bakacak şekilde
-     (yaw), lamba ~ her 25 m. Çöp kutusu bankların bir kısmının yanında.
-   - Çıktı: `{"props": [{"type": "tree_a", "pos": [x, z], "yaw": rad, "scale": s}]}`.
-3. `prop_placer.gd` (Node3D): JSON'u okur, her tür için glb'yi bir kez yükler. Çok sayıda kopya için `MultiMeshInstance3D`
-   kullan (tür başına bir tane; glb'deki mesh'i çıkar). Ağaç/lamba/bank için basit çarpışma: ağaç gövdesi ve lamba = ince
-   `CylinderShape3D`, bank = `BoxShape3D` (tek bir StaticBody3D altında çok shape olabilir). Çalılara çarpışma YOK.
-   `NavigationRegion3D` çocuk geometriyi çarpışmadan pişirdiği için engeller navmesh'e otomatik girer.
-4. Test: JSON yükleniyor; tüm `type`'ların glb'si var; hiçbir prop bina çokgeninin içinde değil; oyuncunun başlangıç noktasına
-   (orijin) 3 m'den yakın prop yok; toplam üçgen bütçesi (tür üçgeni × adet) < 250.000.
-5. `CREDITS.md`'ye satır: kullanılan Quaternius paket(ler)i, CC0, poly.pizza.
+## Yapılacaklar (sırayla; her adımdan sonra test et)
+1. `place_props.py` (standart kütüphane, `random.Random(42)`): `game/data/zones/ortabahce_greybox.json`'u oku.
+   - Ağaç (`tree_birch`, `tree_pine`, `tree_common` karışık) ve çalı (`bush_common`, `bush_berries`): `areas` çokgenlerinin içine,
+     birbirinden ≥ 4 m, yol çizgilerinden ≥ 2.5 m, bina çokgenlerinden ≥ 3 m uzak, orijinden ≥ 6 m uzak. Toplam ağaç ≤ 120, çalı ≤ 80.
+   - Bank (`bench`): ismi "Ortabahçe" olan alanın içindeki yollar boyunca her ~18 m'de, yolun 1.8 m yanına, yola dönük (yaw).
+     Lamba (`lamp`) her ~25 m, çöp kutusu (`trashcan`) her 3 bankın birinin yanında. Bunlar için de bina/orijin kuralı geçerli.
+   - Çıktı: `{"props": [{"type": "...", "pos": [x, z], "yaw": rad, "scale": s}]}` (ağaç ölçeği 0.9-1.2 rastgele, diğerleri 1).
+2. `prop_placer.gd` (Node3D, `@export_file var data_path`): JSON'u okur; tür başına glb'yi bir kez yükleyip içindeki
+   MeshInstance3D'lerin mesh'lerini (ve yerel dönüşümlerini) alır; her mesh için bir `MultiMeshInstance3D` kurar.
+   Çarpışma: tek bir `StaticBody3D`; ağaç ve lamba için ince `CylinderShape3D` (yarıçap 0.3, yükseklik 3), bank ve çöp kutusu için
+   `BoxShape3D`; çalılara yok. `_ready` içinde kurulmalı (NavigationRegion bir kare sonra pişirir, engeller navmesh'e girsin).
+3. Boyut kontrolü: glb'lerin gerçek boyu farklı olabilir. Bir kez yükleyip AABB'ye bak; ağaç 4-7 m, bank ~1.6 m genişlik,
+   lamba 3-4 m olacak şekilde tür başına `const` ölçek çarpanı koy.
+4. `main.tscn`: `World` altına `PropPlacer` (`data_path = "res://data/zones/ortabahce_props.json"`), Greybox'tan SONRA.
+5. `test_props.gd`: JSON yükleniyor; tüm türlerin glb'si var; hiçbir prop bina çokgeni içinde değil; orijine 6 m'den yakın yok;
+   toplam üçgen (art/props.json'daki tris × adet) < 250.000.
 
 ## Kabul kriterleri
 - [ ] `C:/Tools/Godot/godot --headless --path game --import` hatasız
-- [ ] `C:/Tools/Godot/godot --headless --path game -s res://tests/run_tests.gd` exit 0
+- [ ] `C:/Tools/Godot/godot --headless --path game -s res://tests/run_tests.gd` exit 0 ve çıktıda `SCRIPT ERROR` yok
 - [ ] `C:/Tools/Godot/godot --headless --path game --quit-after 60` çıktısında `ERROR`/`SCRIPT ERROR` yok
-- [ ] Ekran görüntüsü `agy-tasks/done/008-ortabahce.png`: oyun kamerasından Ortabahçe (görüntü kodu repo DIŞINDA, `%TEMP%`'te)
+- [ ] Ekran görüntüsü `agy-tasks/done/008-ortabahce.png` (görüntü kodu repo DIŞINDA, `%TEMP%`'te). Bu adım zor gelirse ATLA, rapora yaz.
 
 ## Kurallar
-- CLAUDE.md'ye uy. GDScript tipler açık. Python sadece standart kütüphane. Sihirli sayılar `const`.
-- Görüntü alma kodunu oyun koduna KOYMA. `Services._ready()` çağırma.
+- CLAUDE.md'ye uy. GDScript tipler açık. Sihirli sayılar `const`. `Services._ready()` çağırma.
 - git commit/push YAPMA (runner yapar).
-- Rapor: `agy-tasks/done/008-ortabahce-detay.report.md`, Türkçe.
+- Raporu iş bitmeden de olsa, sonunda MUTLAKA yaz: `agy-tasks/done/008-ortabahce-detay.report.md` (Türkçe; ne yaptın, ne kaldı).
