@@ -12,7 +12,7 @@ config_version=5
 
 config/name="UniPet"
 config/description="YTÜ Davutpaşa sanal kampüs pet oyunu"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/ui/pet_select.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
