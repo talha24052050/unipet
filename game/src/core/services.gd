@@ -11,12 +11,15 @@ const SupabaseAuthService := preload("res://src/auth/supabase_auth_service.gd")
 const CharacterRegistry := preload("res://src/characters/character_registry.gd")
 const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
 const ZoneCatalog := preload("res://src/world/zone_catalog.gd")
+const ProfileSync := preload("res://src/net/profile_sync.gd")
 
 var net: NetworkService
 var auth: AuthService
 var characters: CharacterRegistry
 var accessories: AccessoryRegistry
 var zones: ZoneCatalog
+## Profilin Supabase'e senkronu (sadece supabase girişinde etkin).
+var profile_sync: ProfileSync
 ## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
 var current_zone: String = ""
 
@@ -32,6 +35,8 @@ func _ready() -> void:
 	current_zone = zones.default_id
 	add_child(net)
 	add_child(auth)
+	profile_sync = ProfileSync.new()
+	add_child(profile_sync)
 
 
 ## Sunucu adresine göre ağ servisini seçer: {} → tek oyunculu (offline), {"host","port","ssl"} → Nakama.

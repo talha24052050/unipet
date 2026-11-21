@@ -40,7 +40,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [ ] 3.1 Supabase projesi (Talha açar, ücretsiz katman) + domain kısıtlı OTP mail ayarı
 - [x] 3.2 SupabaseAuthService (HTTPRequest ile REST), oturumu güvenli saklama, yenileme
 - [x] 3.3 Giriş ekranı: mail → kod → pet seçimi
-- [ ] 3.4 Profil tablosu (kullanıcı adı, pet, aksesuarlar) + RLS kuralları
+- [x] 3.4 Profil tablosu (kullanıcı adı, pet, aksesuarlar) + RLS kuralları
 - [ ] 3.5 Checkpoint
 
 ## Parça 4 — Multiplayer (Nakama)

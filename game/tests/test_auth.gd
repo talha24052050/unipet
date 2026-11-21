@@ -34,3 +34,29 @@ func test_unconfigured_service_fails_gracefully() -> String:
 	if configured and not FileAccess.file_exists("res://secrets.cfg"):
 		return "ayar yokken yapılandırılmış sayıldı"
 	return ""
+
+
+func test_profile_row_roundtrip() -> String:
+	var PS: GDScript = load("res://src/net/profile_sync.gd")
+	var LP: GDScript = load("res://src/core/local_profile.gd")
+	var p: RefCounted = LP.new()
+	p.pet_id = &"yeti"
+	p.display_name = "Ali Veli"
+	p.accessories = {&"head": &"hat_cap"}
+	var row: Dictionary = PS.to_row(p, "u-1")
+	if row["id"] != "u-1" or row["pet_id"] != "yeti" or row["username"] != "Ali_Veli" or row["accessories"]["head"] != "hat_cap":
+		return "satır yanlış: %s" % row
+	var back: RefCounted = PS.from_row(JSON.parse_string(JSON.stringify(row)), LP.new())
+	if back.pet_id != &"yeti" or back.display_name != "Ali Veli" or back.accessories.get(&"head") != &"hat_cap":
+		return "geri dönüş yanlış: %s %s %s" % [back.pet_id, back.display_name, back.accessories]
+	var short: RefCounted = LP.new()
+	short.display_name = "Al"
+	if PS.to_row(short, "u").has("username"):
+		return "3 harften kısa ad gönderilmemeli (tablo kısıtı)"
+	return ""
+
+
+func test_profile_sync_inactive_in_mock() -> String:
+	if Config.AUTH_BACKEND == "mock" and Services.profile_sync != null and Services.profile_sync.is_active():
+		return "sahte girişte profil senkronu kapalı olmalı"
+	return ""

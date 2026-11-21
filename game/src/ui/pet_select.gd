@@ -223,6 +223,8 @@ func save_selection(path: String = "") -> Error:
 	var target_path: String = path if not path.is_empty() else profile_path
 	if profile == null:
 		profile = LocalProfile.load_or_default()
+	if Services.profile_sync != null:
+		Services.profile_sync.push(profile)
 	return profile.save(target_path)
 
 
