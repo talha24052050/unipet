@@ -3,8 +3,9 @@
 Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
 ## Talha'yı bekleyenler (Claude bunlar olmadan ilerleyemez)
 - [ ] **Supabase projesi** (3.1): `docs/SUPABASE.md` adımları → URL + anon key'i GitHub secret'a ekle
-- [ ] **Docker Desktop kurulumu** (4.1): yönetici izni gerekiyor; `winget install -e --id Docker.DockerDesktop`, sonra yeniden başlat
-- [ ] **Telefonda test**: Parça 2 (pet seçimi, aksesuarlar) ve 3.3 (giriş ekranı, geliştirme kodu 000000)
+- [x] ~~Docker Desktop kurulumu~~ → gerek kalmadı: `server/local-nakama.ps1` Docker'sız çalışıyor (yerelde uçtan uca test geçti)
+- [ ] **Telefonda test**: pet seçimi/aksesuar, giriş (kod 000000), chat/emote, bakım
+- [ ] **Arkadaşlarla ilk oyun**: `docs/ARKADASLARLA_OYNA.md`
 
 Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye verilecek
 

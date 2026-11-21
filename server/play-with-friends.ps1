@@ -19,16 +19,17 @@ $ErrorActionPreference = "Stop"
 $ServerDir = $PSScriptRoot
 $Cloudflared = "C:\Tools\cloudflared.exe"
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Write-Host "Docker yok. Kur: winget install -e --id Docker.DockerDesktop (yönetici izni ister), sonra bilgisayarı yeniden başlat ve Docker Desktop'ı bir kez aç." -ForegroundColor Red
-    exit 1
-}
-
 # .env yoksa örnekten oluştur (geliştirme girişi açık: herkes mail + 000000 ile girer)
 $envFile = Join-Path $ServerDir ".env"
 if (-not (Test-Path $envFile)) { Copy-Item (Join-Path $ServerDir ".env.example") $envFile }
 
-& (Join-Path $ServerDir "start.ps1")
+# Docker varsa onu, yoksa Docker'sız yerel kurulumu kullan (yönetici izni gerekmez).
+if (Get-Command docker -ErrorAction SilentlyContinue) {
+    & (Join-Path $ServerDir "start.ps1")
+} else {
+    Write-Host "Docker yok; Docker'sız yerel sunucu kullanılıyor."
+    & (Join-Path $ServerDir "local-nakama.ps1")
+}
 if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) { exit $LASTEXITCODE }
 
 if (-not $Internet) {
@@ -72,5 +73,5 @@ if (-not $url) {
 Write-Host ""
 Write-Host "Sunucu internete açık. Giriş ekranındaki 'Sunucu' alanına şunu yazın:" -ForegroundColor Green
 Write-Host "    $url" -ForegroundColor Yellow
-Write-Host "Bu pencere açık kaldıkça çalışır. Kapatmak için Ctrl+C, sonra server/stop.ps1."
+Write-Host "Bu pencere açık kaldıkça çalışır. Kapatmak için Ctrl+C, sonra server/stop.ps1 (Docker) ya da server/local-nakama.ps1 -Stop."
 try { Wait-Process -Id $proc.Id } finally { Stop-Process -Id $proc.Id -ErrorAction SilentlyContinue }

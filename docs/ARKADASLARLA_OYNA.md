@@ -3,9 +3,9 @@
 Sunucu senin bilgisayarında çalışır; arkadaşların telefondan bağlanır. Supabase gerekmez:
 herkes kendi mailini yazar, kod olarak **000000** girer (geliştirme modu).
 
-## Bir kez: Docker
-1. Yönetici PowerShell: `winget install -e --id Docker.DockerDesktop`
-2. Bilgisayarı yeniden başlat, **Docker Desktop**'ı bir kez aç (WSL kurmak isterse kabul et).
+## Kurulum gerekmez
+Script Docker varsa onu, yoksa **Docker'sız yerel sunucuyu** kullanır (Nakama + taşınabilir Postgres, yönetici izni
+istemez, ilk seferde ~320 MB indirir, `C:\Tools\nakama-local`). Docker sadece kalıcı sunucu (Parça 6) için gerekecek.
 
 ## Her oyunda
 1. Repo klasöründe PowerShell:
@@ -21,7 +21,7 @@ herkes kendi mailini yazar, kod olarak **000000** girer (geliştirme modu).
   `New-NetFirewallRule -DisplayName "UniPet Nakama" -Direction Inbound -Protocol TCP -LocalPort 7350 -Action Allow`
   ya da `-Internet` ile dene. Okul/yurt Wi-Fi'leri cihazların birbirini görmesini engelleyebilir → `-Internet`.
 - **-Internet adresi değişti:** Cloudflare geçici tüneli her açılışta yeni adres verir; yeni adresi tekrar paylaş.
-- **Sunucu durdurma:** `powershell -ExecutionPolicy Bypass -File server/stop.ps1`
+- **Sunucu durdurma:** Docker'sız: `powershell -ExecutionPolicy Bypass -File server/local-nakama.ps1 -Stop` · Docker: `server/stop.ps1`
 - Sunucu konsolu (oyuncular, odalar): http://127.0.0.1:7351 (kullanıcı/şifre `server/.env`'de)
 
 ## Güvenlik notu

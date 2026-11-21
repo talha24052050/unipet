@@ -6,6 +6,10 @@ logger:
 runtime:
   js_entrypoint: "index.js"
 
+match:
+  # Yeni oda arama listesine bu kadar ms içinde girer (varsayılan 1000: aynı anda girenler ayrı odalara düşüyordu).
+  label_update_interval_ms: 100
+
 session:
   token_expiry_sec: 7200
 
