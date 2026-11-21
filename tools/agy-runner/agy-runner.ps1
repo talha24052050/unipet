@@ -99,11 +99,14 @@ function Get-AllowedPaths([string]$TaskFile) {
     foreach ($line in Get-Content -Path $TaskFile -Encoding UTF8) {
         if ($line -match '^##\s') { $inSection = $line -match 'Dokunabilece'; continue }
         if (-not $inSection -or $line -notmatch '^\s*-\s') { continue }
-        $m = [regex]::Match($line, '`([^`]+)`')
-        $p = if ($m.Success) { $m.Groups[1].Value } else { ($line -replace '^\s*-\s*', '').Split(' ')[0] }
-        $p = $p.Trim().Replace('\', '/')
-        if ($p -eq '' -or $p -match '^[A-Za-z]:' -or $p.StartsWith('%')) { continue }
-        $out += $p
+        # Satırdaki TÜM `yol` öğeleri (ör. "- `a.gd`, `a.tscn` (yeni)").
+        $ms = [regex]::Matches($line, '`([^`]+)`')
+        $cands = if ($ms.Count -gt 0) { $ms | ForEach-Object { $_.Groups[1].Value } } else { @(($line -replace '^\s*-\s*', '').Split(' ')[0]) }
+        foreach ($c in $cands) {
+            $p = $c.Trim().Replace('\', '/')
+            if ($p -eq '' -or $p -match '^[A-Za-z]:' -or $p.StartsWith('%') -or $p -notmatch '[/.]') { continue }
+            $out += $p
+        }
     }
     return $out
 }

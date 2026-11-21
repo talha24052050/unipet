@@ -47,7 +47,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 4.2 Supabase token → Nakama custom auth köprüsü (sunucu modülü)
 - [x] 4.3 Bölge/kanal eşleştirme (zone → oda, kapasite)
 - [ ] 4.4 NakamaNetworkService: katıl/ayrıl, state gönder/al, interpolasyon
-- [ ] 4.5 Hazır cümleler + emote UI, baloncuk gösterimi
+- [x] 4.5 Hazır cümleler + emote UI, baloncuk gösterimi
 - [ ] 4.6 İki cihazla test, Checkpoint
 
 ## Parça 5 — Kampüs + pet döngüsü

@@ -1,0 +1,52 @@
+[gd_scene format=3 uid="uid://cchatbubble01"]
+
+[ext_resource type="Script" path="res://src/ui/chat_bubble.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="bubble_style"]
+bg_color = Color(1, 1, 1, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.18, 0.22, 0.3, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="ChatBubble" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+billboard = 1
+no_depth_test = true
+texture_filter = 2
+pixel_size = 0.005
+
+[node name="SubViewport" type="SubViewport" parent="."]
+transparent_bg = true
+size = Vector2i(380, 110)
+render_target_update_mode = 4
+
+[node name="PanelContainer" type="PanelContainer" parent="SubViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("bubble_style")
+
+[node name="MarginContainer" type="MarginContainer" parent="SubViewport/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="Label" type="Label" parent="SubViewport/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.12, 0.16, 1)
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
