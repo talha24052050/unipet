@@ -118,4 +118,8 @@ sent = [];
 st2 = M.matchLoop(ctx(), logger, nk, dispatcher, 4, st2, [msg(Y, 2, { k: 1, p: "wave" })]).state;
 assert.ok(careMsgs().length === 1 && careMsgs()[0].data.ok && careMsgs()[0].to[0] === "Y", "emote → sosyal puan");
 
+// bölgeler zones.json ile aynı mı
+var zonesJson = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "..", "game", "data", "zones", "zones.json"), "utf8"));
+assert.deepEqual(JSON.parse(JSON.stringify(M.ZONES)), zonesJson.zones.map(function (z) { return z.id; }), "ZONES ≠ zones.json");
+
 console.log("nakama modül testleri: OK");

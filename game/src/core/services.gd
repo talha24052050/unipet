@@ -10,11 +10,15 @@ const MockAuthService := preload("res://src/auth/mock_auth_service.gd")
 const SupabaseAuthService := preload("res://src/auth/supabase_auth_service.gd")
 const CharacterRegistry := preload("res://src/characters/character_registry.gd")
 const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
+const ZoneCatalog := preload("res://src/world/zone_catalog.gd")
 
 var net: NetworkService
 var auth: AuthService
 var characters: CharacterRegistry
 var accessories: AccessoryRegistry
+var zones: ZoneCatalog
+## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
+var current_zone: String = ""
 
 
 func _ready() -> void:
@@ -24,6 +28,8 @@ func _ready() -> void:
 	characters.load_from_dir("res://data/characters")
 	accessories = AccessoryRegistry.new()
 	accessories.load_from_dir("res://data/accessories")
+	zones = ZoneCatalog.load_default()
+	current_zone = zones.default_id
 	add_child(net)
 	add_child(auth)
 

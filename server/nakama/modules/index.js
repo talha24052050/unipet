@@ -13,7 +13,8 @@
 // Not: Nakama JS runtime'ında kayıtlı fonksiyonlar global tanımlı olmalı (closure değil).
 
 var ALLOWED_EMAIL = /^[^@\s]+@std\.yildiz\.edu\.tr$/;
-var ZONES = ["ortabahce"];
+// game/data/zones/zones.json ile AYNI (module.test.js kontrol eder)
+var ZONES = ["ortabahce", "fef", "insaat", "egitim", "guney"];
 var TICK_RATE = 10;
 var EMPTY_TICKS_BEFORE_CLOSE = TICK_RATE * 30;
 

@@ -1,0 +1,81 @@
+{
+  "_note": "Kampüs bölgeleri (ROADMAP 5.4). Koordinatlar Ortabahçe merkezli metre (+X doğu, -Z kuzey). Her bölge ayrı oda/sahne. server/nakama/modules/index.js ZONES ile aynı id'ler (module.test.js kontrol eder). greybox: tools/osm/split_zones.py üretir (ortabahce hariç; o tools/osm/osm_to_greybox.py ile).",
+  "default": "ortabahce",
+  "zones": [
+    {
+      "id": "ortabahce",
+      "name": "Ortabahçe",
+      "center": [
+        0,
+        0
+      ],
+      "radius": 220,
+      "spawn": [
+        0,
+        0
+      ],
+      "greybox": "res://data/zones/ortabahce_greybox.json",
+      "props": "res://data/zones/ortabahce_props.json"
+    },
+    {
+      "id": "fef",
+      "name": "Fen-Edebiyat / Elektrik",
+      "center": [
+        130,
+        -230
+      ],
+      "radius": 220,
+      "spawn": [
+        135.7,
+        -224.3
+      ],
+      "greybox": "res://data/zones/fef_greybox.json",
+      "props": ""
+    },
+    {
+      "id": "insaat",
+      "name": "İnşaat / Çevre / Harita",
+      "center": [
+        -60,
+        300
+      ],
+      "radius": 230,
+      "spawn": [
+        -64.2,
+        295.8
+      ],
+      "greybox": "res://data/zones/insaat_greybox.json",
+      "props": ""
+    },
+    {
+      "id": "egitim",
+      "name": "Eğitim Fakültesi",
+      "center": [
+        -290,
+        -260
+      ],
+      "radius": 160,
+      "spawn": [
+        -281.3,
+        -249.1
+      ],
+      "greybox": "res://data/zones/egitim_greybox.json",
+      "props": ""
+    },
+    {
+      "id": "guney",
+      "name": "Güney (YDYO)",
+      "center": [
+        60,
+        580
+      ],
+      "radius": 230,
+      "spawn": [
+        60,
+        580
+      ],
+      "greybox": "res://data/zones/guney_greybox.json",
+      "props": ""
+    }
+  ]
+}

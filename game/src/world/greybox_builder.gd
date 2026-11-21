@@ -39,7 +39,8 @@ func _ready() -> void:
 	var data: Dictionary = load_data(data_path)
 	if data.is_empty():
 		return
-	_build_ground(float(data.get("radius", 200.0)) + GROUND_MARGIN)
+	var c: Array = data.get("center", [0, 0])
+	_build_ground(float(data.get("radius", 200.0)) + GROUND_MARGIN, Vector2(float(c[0]), float(c[1])))
 	for a: Dictionary in data.get("areas", []):
 		_build_area(a)
 	for p: Dictionary in data.get("paths", []):
@@ -192,10 +193,11 @@ func _material(color: Color) -> StandardMaterial3D:
 	return m
 
 
-func _build_ground(half_size: float) -> void:
+## Zemin bölge merkezinde (bölge dosyaları kampüs koordinatı kullanır; Ortabahçe'de merkez orijin).
+func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Ground"
-	body.position = Vector3(0.0, -0.1, 0.0)
+	body.position = Vector3(center.x, -0.1, center.y)
 	var shape: CollisionShape3D = CollisionShape3D.new()
 	var box: BoxShape3D = BoxShape3D.new()
 	box.size = Vector3(half_size * 2.0, 0.2, half_size * 2.0)
