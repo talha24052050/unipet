@@ -14,7 +14,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 
 ## Parça 1 — Tek oyunculu prototip
 - [x] 1.1 Oyuncu sahnesi: CharacterBody3D + yerçekimi + yer takibi (placeholder kapsül)
-- [ ] 1.2 Sanal joystick (sol alt, dokunmatik, çoklu dokunma güvenli)
+- [x] 1.2 Sanal joystick (sol alt, dokunmatik, çoklu dokunma güvenli)
 - [ ] 1.3 Dokun-yürü: zemine dokun → NavigationAgent3D ile hedefe yürü; joystick dokunuşu iptal eder
 - [ ] 1.4 Takip kamerası: üçüncü şahıs, iki parmakla döndürme/yakınlaştırma, duvara girmeme
 - [ ] 1.5 Greybox Ortabahçe: düz kutularla yerleşim (ölçek testi), navigation mesh

@@ -1,6 +1,6 @@
 extends CharacterBody3D
 ## Yerel oyuncu. Hareket kaynağını (joystick, dokun-yürü, klavye) bilmez:
-## onlar sadece `move_input`u (dünya uzayında, XZ düzleminde, uzunluk 0..1) yazar.
+## PlayerController sadece `move_input`u (dünya uzayında, XZ düzleminde, uzunluk 0..1) yazar.
 
 ## İstenen hareket yönü ve şiddeti. Kontrolcüler her karede yazar.
 var move_input: Vector3 = Vector3.ZERO
@@ -13,11 +13,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var input: Vector3 = move_input
-	if OS.is_debug_build() and input == Vector3.ZERO:
-		input = _debug_keyboard_input()
-
-	velocity = compute_velocity(velocity, input, is_on_floor(), _gravity, delta)
+	velocity = compute_velocity(velocity, move_input, is_on_floor(), _gravity, delta)
 	move_and_slide()
 
 	var flat: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
@@ -33,8 +29,3 @@ static func compute_velocity(current: Vector3, input: Vector3, on_floor: bool, g
 	var vy: float = 0.0 if on_floor else current.y - gravity * delta
 	return Vector3(horizontal.x, vy, horizontal.z)
 
-
-## Sadece editör/debug: ok tuşlarıyla yürüme (joystick gelene kadar test için).
-func _debug_keyboard_input() -> Vector3:
-	var v: Vector2 = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
-	return Vector3(v.x, 0.0, v.y)

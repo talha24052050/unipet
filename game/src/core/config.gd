@@ -24,3 +24,10 @@ const PLAYER_ACCELERATION: float = 20.0
 const PLAYER_TURN_SPEED: float = 10.0
 ## Yerden kopmadan inilebilecek basamak/eğim için yere yapışma mesafesi.
 const PLAYER_FLOOR_SNAP: float = 0.3
+
+## Sanal joystick (piksel; 720x1280 tasarım çözünürlüğüne göre).
+const JOYSTICK_RADIUS: float = 110.0
+const JOYSTICK_DEADZONE: float = 0.15
+## Joystick'in dokunuş kabul ettiği bölge: ekranın sol-alt kısmı (oran).
+const JOYSTICK_ZONE_WIDTH: float = 0.5
+const JOYSTICK_ZONE_HEIGHT: float = 0.4
