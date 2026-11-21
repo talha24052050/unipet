@@ -1,6 +1,11 @@
 # Yol haritası
 
 Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
+## Talha'yı bekleyenler (Claude bunlar olmadan ilerleyemez)
+- [ ] **Supabase projesi** (3.1): `docs/SUPABASE.md` adımları → URL + anon key'i GitHub secret'a ekle
+- [ ] **Docker Desktop kurulumu** (4.1): yönetici izni gerekiyor; `winget install -e --id Docker.DockerDesktop`, sonra yeniden başlat
+- [ ] **Telefonda test**: Parça 2 (pet seçimi, aksesuarlar) ve 3.3 (giriş ekranı, geliştirme kodu 000000)
+
 Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye verilecek
 
 ## Parça 0 — Altyapı ✅
@@ -33,12 +38,12 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 ## Parça 3 — Giriş (Supabase)
 - [ ] 3.1 Supabase projesi (Talha açar, ücretsiz katman) + domain kısıtlı OTP mail ayarı
 - [x] 3.2 SupabaseAuthService (HTTPRequest ile REST), oturumu güvenli saklama, yenileme
-- [ ] 3.3 Giriş ekranı: mail → kod → pet seçimi
+- [x] 3.3 Giriş ekranı: mail → kod → pet seçimi
 - [ ] 3.4 Profil tablosu (kullanıcı adı, pet, aksesuarlar) + RLS kuralları
 - [ ] 3.5 Checkpoint
 
 ## Parça 4 — Multiplayer (Nakama)
-- [ ] 4.1 `server/docker-compose.yml` (Nakama + Postgres), lokal çalıştırma talimatı
+- [x] 4.1 `server/docker-compose.yml` (Nakama + Postgres), lokal çalıştırma talimatı
 - [ ] 4.2 Supabase token → Nakama custom auth köprüsü (sunucu modülü)
 - [ ] 4.3 Bölge/kanal eşleştirme (zone → oda, kapasite)
 - [ ] 4.4 NakamaNetworkService: katıl/ayrıl, state gönder/al, interpolasyon
@@ -46,7 +51,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [ ] 4.6 İki cihazla test, Checkpoint
 
 ## Parça 5 — Kampüs + pet döngüsü
-- [ ] 5.1 OSM'den Davutpaşa bina yerleşimi çekme scripti
+- [x] 5.1 OSM'den Davutpaşa bina yerleşimi çekme scripti
 - [ ] 5.2 Blender scriptiyle low-poly binalar (fotoğraf referanslı): fakülteler, Büyükev, Hokka, kafeler, yemekhane, büyük saha
 - [ ] 5.3 Ortabahçe detaylı: ağaçlar, banklar, yollar
 - [ ] 5.4 Bölgeler arası geçiş
