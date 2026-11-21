@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CharacterDef" format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"shark"
+display_name = "Köpekbalığı"
+model_path = "res://assets/characters/shark/shark.glb"
+model_scale = 0.332
+animation_map = {
+"idle": "CharacterArmature|Idle",
+"walk": "CharacterArmature|Walk",
+"run": "CharacterArmature|Run",
+"emote_wave": "CharacterArmature|Wave",
+"emote_jump": "CharacterArmature|Jump",
+"emote_yes": "CharacterArmature|Yes",
+"emote_no": "CharacterArmature|No"
+}
+animation_speed = {}
+accessory_bones = {
+"head": "Head",
+"face": "Head",
+"neck": "Neck",
+"back": "Torso"
+}

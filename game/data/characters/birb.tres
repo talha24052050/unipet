@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="CharacterDef" format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"birb"
+display_name = "Mavi kuş"
+model_path = "res://assets/characters/birb/birb.glb"
+model_scale = 0.421
+animation_map = {
+"idle": "CharacterArmature|Idle",
+"walk": "CharacterArmature|Walk",
+"run": "CharacterArmature|Walk",
+"emote_wave": "CharacterArmature|Dance",
+"emote_jump": "CharacterArmature|Jump",
+"emote_yes": "CharacterArmature|Yes",
+"emote_no": "CharacterArmature|No",
+"emote_dance": "CharacterArmature|Dance"
+}
+animation_speed = {
+"run": 1.6
+}
+accessory_bones = {
+"head": "Head",
+"face": "Head",
+"neck": "Body",
+"back": "Body"
+}

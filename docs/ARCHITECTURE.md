@@ -24,7 +24,9 @@ unipet/
 ## Değiştirilebilirlik ilkeleri
 1. **Servis katmanı:** `Services.net/auth/characters`. Backend değişimi oyun kodunu etkilemez.
 2. **Veri odaklı karakter:** model, animasyon adları, aksesuar kemikleri `.tres` içinde.
-   Mantıksal animasyonlar: `idle, walk, run, emote_wave, emote_jump`.
+   Mantıksal animasyonlar (zorunlu): `idle, walk, run, emote_wave, emote_jump`; isteğe bağlı: `emote_yes, emote_no, emote_dance`.
+   `animation_speed` ile hız çarpanı (ör. koşusu olmayan blob'larda run = 1.6× walk).
+   `.tres`'ler elle değil `tools/assets/make_pet_defs.py` ile üretilir.
    Aksesuar slotları: `head, face, neck, back`.
 3. **Tek mesaj formatı:** `ChatMessage{kind, payload, sender_id, t}`.
 4. **Ağ durumu:** `{pos: Vector3, yaw: float, anim: String}`; saniyede `Config.NET_TICK_RATE` kez,

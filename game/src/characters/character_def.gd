@@ -10,6 +10,9 @@ extends Resource
 ## Oyun içi mantıksal animasyon adı -> modeldeki gerçek animasyon adı.
 ## Zorunlu anahtarlar: idle, walk, run, emote_wave, emote_jump
 @export var animation_map: Dictionary = {}
+## İsteğe bağlı: mantıksal animasyon -> oynatma hızı çarpanı (ör. ayrı koşu animasyonu
+## olmayan petlerde run = hızlandırılmış walk). Yoksa 1.0.
+@export var animation_speed: Dictionary = {}
 ## Aksesuar slotu -> modeldeki kemik (bone) adı. Slotlar: head, face, neck, back
 @export var accessory_bones: Dictionary = {}
 ## Slot bazında aksesuar yerleşim düzeltmesi (offset/rotation/scale).
@@ -18,6 +21,15 @@ extends Resource
 
 const REQUIRED_ANIMS: PackedStringArray = ["idle", "walk", "run", "emote_wave", "emote_jump"]
 const ACCESSORY_SLOTS: PackedStringArray = ["head", "face", "neck", "back"]
+
+
+## Mantıksal ad -> modeldeki animasyon adı ("" = yok).
+func anim_name(logical: StringName) -> String:
+	return str(animation_map.get(logical, ""))
+
+
+func anim_speed(logical: StringName) -> float:
+	return float(animation_speed.get(logical, 1.0))
 
 
 func validate() -> PackedStringArray:
