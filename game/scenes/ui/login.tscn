@@ -71,6 +71,21 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Kod gönder"
 
+[node name="ServerLabel" type="Label" parent="Margin/VBox/EmailBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Sunucu (arkadaşlarla oynamak için; boş = tek başına)"
+autowrap_mode = 3
+
+[node name="ServerInput" type="LineEdit" parent="Margin/VBox/EmailBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+placeholder_text = "192.168.1.5 ya da https://...trycloudflare.com"
+virtual_keyboard_type = 6
+clear_button_enabled = true
+
 [node name="CodeBox" type="VBoxContainer" parent="Margin/VBox"]
 unique_name_in_owner = true
 visible = false

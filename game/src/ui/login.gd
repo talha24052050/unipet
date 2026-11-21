@@ -4,6 +4,7 @@ extends Control
 ## Açılışta cihazda geçerli oturum varsa ekranı atlar.
 
 const LocalProfile := preload("res://src/core/local_profile.gd")
+const LocalSettings := preload("res://src/core/local_settings.gd")
 const PET_SELECT_SCENE: String = "res://scenes/ui/pet_select.tscn"
 const GAME_SCENE: String = "res://scenes/main.tscn"
 ## Yeni kod isteme bekleme süresi (saniye).
@@ -25,6 +26,7 @@ var _cooldown: float = 0.0
 @onready var _back_btn: Button = %BackButton
 @onready var _status: Label = %StatusLabel
 @onready var _sent_to: Label = %SentToLabel
+@onready var _server_input: LineEdit = %ServerInput
 
 
 func _ready() -> void:
@@ -37,6 +39,7 @@ func _ready() -> void:
 	_code_input.text_submitted.connect(func(_t: String) -> void: submit_code())
 	_resend_btn.pressed.connect(_resend)
 	_back_btn.pressed.connect(func() -> void: _show(Step.EMAIL))
+	_server_input.text = LocalSettings.load_or_default().server_address
 	_show(Step.BUSY)
 	_status.text = "Oturum kontrol ediliyor..."
 	if await Services.auth.restore_session():
@@ -57,6 +60,13 @@ func submit_email() -> void:
 	if not Services.auth.is_allowed_email(e):
 		_status.text = Services.auth.email_rejected_message()
 		return
+	var addr_text: String = _server_input.text.strip_edges()
+	if not addr_text.is_empty() and LocalSettings.parse_server_address(addr_text).is_empty():
+		_status.text = "Sunucu adresi geçersiz. Örnek: 192.168.1.5 ya da https://xxx.trycloudflare.com"
+		return
+	var settings: RefCounted = LocalSettings.new()
+	settings.server_address = addr_text
+	settings.save()
 	_email = e
 	_status.text = "Kod gönderiliyor..."
 	_show(Step.BUSY)
@@ -100,6 +110,7 @@ func _on_code_sent(email: String) -> void:
 
 func _on_signed_in(_user_id: String, _token: String) -> void:
 	_status.text = "Giriş yapıldı."
+	Services.use_server(LocalSettings.parse_server_address(LocalSettings.load_or_default().server_address))
 	var saved: bool = LocalProfile.new().has_saved()
 	get_tree().change_scene_to_file.call_deferred(next_scene_after_login(saved))
 

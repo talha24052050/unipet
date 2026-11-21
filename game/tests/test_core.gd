@@ -79,3 +79,21 @@ func test_any_valid_email_when_school_not_required() -> String:
 	if AuthService.is_allowed_email("ali@gmail.com") == Config.REQUIRE_SCHOOL_EMAIL:
 		return "is_allowed_email Config.REQUIRE_SCHOOL_EMAIL'e uymuyor"
 	return ""
+
+
+func test_server_address_parsing() -> String:
+	var LS: GDScript = load("res://src/core/local_settings.gd")
+	var cases: Dictionary = {
+		"192.168.1.5": {"host": "192.168.1.5", "port": 7350, "ssl": false},
+		" 192.168.1.5:8000 ": {"host": "192.168.1.5", "port": 8000, "ssl": false},
+		"https://abc-def.trycloudflare.com/": {"host": "abc-def.trycloudflare.com", "port": 443, "ssl": true},
+		"http://Oyun.local": {"host": "oyun.local", "port": 7350, "ssl": false},
+	}
+	for text: String in cases:
+		var got: Dictionary = LS.parse_server_address(text)
+		if str(got) != str(cases[text]):
+			return "%s -> %s" % [text, got]
+	for bad: String in ["", "   ", "1.2.3.4:abc", "1.2.3.4:99999", "https://a.com/yol", "a b"]:
+		if not LS.parse_server_address(bad).is_empty():
+			return "geçersiz adres kabul edildi: %s" % bad
+	return ""

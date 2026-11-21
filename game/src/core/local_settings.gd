@@ -1,0 +1,51 @@
+extends RefCounted
+## Cihaz ayarları (user://settings.cfg). Şimdilik: arkadaşlarla oynamak için sunucu adresi.
+
+const PATH: String = "user://settings.cfg"
+## Sunucu adresi verilmezse kullanılan Nakama portu (server/docker-compose.yml).
+const DEFAULT_PORT: int = 7350
+
+var server_address: String = ""
+
+
+static func load_or_default(path: String = PATH) -> RefCounted:
+	var s: RefCounted = new()
+	var cfg: ConfigFile = ConfigFile.new()
+	if cfg.load(path) == OK:
+		s.server_address = str(cfg.get_value("server", "address", ""))
+	return s
+
+
+func save(path: String = PATH) -> Error:
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("server", "address", server_address)
+	return cfg.save(path)
+
+
+## "192.168.1.5", "192.168.1.5:7350", "https://abc.trycloudflare.com" → {"host", "port", "ssl"}.
+## Boş ya da geçersizse {} (tek oyunculu).
+static func parse_server_address(text: String) -> Dictionary:
+	var t: String = text.strip_edges().to_lower()
+	if t.is_empty():
+		return {}
+	var ssl: bool = false
+	if t.begins_with("https://"):
+		ssl = true
+		t = t.substr(8)
+	elif t.begins_with("http://"):
+		t = t.substr(7)
+	t = t.trim_suffix("/")
+	if t.is_empty() or "/" in t or " " in t:
+		return {}
+	var host: String = t
+	var port: int = 443 if ssl else DEFAULT_PORT
+	var colon: int = t.rfind(":")
+	if colon > 0:
+		var p: String = t.substr(colon + 1)
+		if not p.is_valid_int() or int(p) <= 0 or int(p) > 65535:
+			return {}
+		port = int(p)
+		host = t.substr(0, colon)
+	if host.is_empty():
+		return {}
+	return {"host": host, "port": port, "ssl": ssl}

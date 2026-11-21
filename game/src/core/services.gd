@@ -28,6 +28,26 @@ func _ready() -> void:
 	add_child(auth)
 
 
+## Sunucu adresine göre ağ servisini seçer: {} → tek oyunculu (offline), {"host","port","ssl"} → Nakama.
+## Giriş ekranı, oyun sahnesine geçmeden önce çağırır (sahneler eski servise bağlı kalmasın).
+func use_server(address: Dictionary) -> void:
+	var want_nakama: bool = not address.is_empty()
+	var is_nakama: bool = net is NakamaNetworkService
+	if want_nakama == is_nakama and not want_nakama:
+		return
+	if net != null:
+		net.leave_zone()
+		remove_child(net)
+		net.queue_free()
+	net = NakamaNetworkService.new() if want_nakama else OfflineNetworkService.new()
+	add_child(net)
+	if want_nakama:
+		var n: NakamaNetworkService = net
+		n.host = str(address["host"])
+		n.port = int(address["port"])
+		n.ssl = bool(address["ssl"])
+
+
 func _make_network(kind: String) -> NetworkService:
 	match kind:
 		"offline":
