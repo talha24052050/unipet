@@ -23,6 +23,10 @@ const SPAWN_SCATTER: float = 3.0
 
 func _ready() -> void:
 	floor_snap_length = Config.PLAYER_FLOOR_SNAP
+	# Bölgenin doğuş noktası (harita ekranından gelindiyse farklı bölge).
+	if Services.zones != null and Services.zones.has(Services.current_zone):
+		var sp: Vector2 = Services.zones.get_zone(Services.current_zone)["spawn"]
+		position = Vector3(sp.x, position.y, sp.y)
 	var a: float = randf() * TAU
 	var r: float = sqrt(randf()) * SPAWN_SCATTER
 	position += Vector3(cos(a) * r, 0.0, sin(a) * r)

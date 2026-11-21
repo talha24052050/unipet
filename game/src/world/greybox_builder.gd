@@ -33,7 +33,15 @@ var gate_count: int = 0
 var _path_lines: Array[PackedVector2Array] = []
 
 
+## true ise data_path yerine Services.current_zone'un greybox verisi yüklenir (ana sahne bunu kullanır).
+@export var follow_current_zone: bool = true
+
+
 func _ready() -> void:
+	if follow_current_zone and Services.zones != null and Services.zones.has(Services.current_zone):
+		var zp: String = str(Services.zones.get_zone(Services.current_zone)["greybox"])
+		if not zp.is_empty():
+			data_path = zp
 	if data_path.is_empty():
 		return
 	var data: Dictionary = load_data(data_path)

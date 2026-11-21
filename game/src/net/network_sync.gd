@@ -12,6 +12,11 @@ const RECONNECT_DELAY: float = 5.0       # Kopunca 5 saniye sonra yeniden bağla
 const MAX_RECONNECT_ATTEMPTS: int = 5    # En çok 5 deneme, sonra dur
 const DEFAULT_ZONE: String = "ortabahce"
 
+
+## Oyuncunun bulunduğu bölge (harita ekranı Services.current_zone'u değiştirir).
+static func _zone_id() -> String:
+	return Services.current_zone if not Services.current_zone.is_empty() else DEFAULT_ZONE
+
 @export var player_node: NodePath
 var player: Node3D = null
 var remote_players_parent: Node = null
@@ -113,7 +118,7 @@ func _on_connected() -> void:
 	_waiting_reconnect = false
 	_reconnect_timer = 0.0
 	if net != null:
-		net.join_zone(DEFAULT_ZONE)
+		net.join_zone(_zone_id())
 
 
 func _on_disconnected(_reason: String) -> void:
