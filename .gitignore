@@ -1,0 +1,22 @@
+# Godot
+game/.godot/
+game/export_presets.cfg
+*.apk
+*.aab
+*.keystore
+android/build/
+
+# Gizli
+secrets.cfg
+.env
+*.env
+
+# Ham asset kaynakları (sadece dönüştürülmüş glb repo'ya girer)
+art/source/
+
+# agy runner
+agy-tasks/.runner.lock
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+name: test
+on:
+  push:
+  pull_request:
+jobs:
+  godot-tests:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.7.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot kur
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+      - name: Import
+        run: godot --headless --path game --import || true
+      - name: Testler
+        run: godot --headless --path game -s res://tests/run_tests.gd
+      - name: Ana sahne hatasız açılıyor mu
+        run: |
+          timeout 30 godot --headless --path game --quit-after 30 2>&1 | tee run.log
+          ! grep -E "SCRIPT ERROR|ERROR:" run.log
