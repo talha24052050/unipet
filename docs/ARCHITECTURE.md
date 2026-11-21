@@ -27,7 +27,9 @@ unipet/
    Mantıksal animasyonlar (zorunlu): `idle, walk, run, emote_wave, emote_jump`; isteğe bağlı: `emote_yes, emote_no, emote_dance`.
    `animation_speed` ile hız çarpanı (ör. koşusu olmayan blob'larda run = 1.6× walk).
    `.tres`'ler elle değil `tools/assets/make_pet_defs.py` ile üretilir.
-   Aksesuar slotları: `head, face, neck, back`.
+   Aksesuar slotları: `head, face, neck, back`. Aksesuarlar `data/accessories/*.tres` (AccessoryDef) →
+   `Services.accessories`; PetVisual slot kemiğine BoneAttachment3D ile takar, yeri modelin yüzeyinden hesaplanır,
+   pet başına ince ayar `make_pet_defs.py` → `accessory_offsets`.
 3. **Tek mesaj formatı:** `ChatMessage{kind, payload, sender_id, t}`.
 4. **Ağ durumu:** `{pos: Vector3, yaw: float, anim: String}`; saniyede `Config.NET_TICK_RATE` kez,
    karşı tarafta interpolasyon. Hareket girişi (joystick/dokun) yerel karakteri yürütür, ağ sadece sonucu taşır.

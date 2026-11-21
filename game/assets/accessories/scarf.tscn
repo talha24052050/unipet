@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="wool"]
+albedo_color = Color(0.96, 0.76, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="stripe"]
+albedo_color = Color(0.12, 0.18, 0.42, 1)
+
+[sub_resource type="TorusMesh" id="ring"]
+material = SubResource("wool")
+inner_radius = 0.4
+outer_radius = 0.5
+rings = 20
+ring_segments = 8
+
+[sub_resource type="BoxMesh" id="tail"]
+material = SubResource("stripe")
+size = Vector3(0.11, 0.16, 0.05)
+
+[node name="Scarf" type="Node3D"]
+
+[node name="Ring" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("ring")
+
+[node name="Tail" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.97, -0.26, 0, 0.26, 0.97, 0, 0, 0, 1, 0.16, -0.07, 0.47)
+mesh = SubResource("tail")

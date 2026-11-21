@@ -30,6 +30,21 @@ CANDIDATES = {
 # run walk'tan geliyorsa hızlandır
 RUN_FROM_WALK_SPEED = 1.6
 
+# Pet başına aksesuar ince ayarı (PetVisual.accessory_anchor'a bak).
+# pos: metre kaydırma, height: yüzeyin arandığı boy oranı, scale: çarpan.
+ACCESSORY_TWEAKS = {
+    "shark": {
+        "head": {"pos": (0.0, -0.22, 0.02)},  # yüzgeç tepesini atla
+        "face": {"height": 0.66},
+        "neck": {"height": 0.42, "scale": 0.42},  # kollar yarıçapı büyütüyor
+        "back": {"height": 0.52},
+    },
+    "chicken": {"head": {"pos": (0.0, -0.1, -0.03)}},  # ibiğin üstüne değil kafaya
+    "mushnub": {"face": {"height": 0.42, "pos": (0.0, 0.0, 0.07)}},
+    "yeti": {"face": {"height": 0.64}},
+    "birb": {"neck": {"scale": 0.85}},
+}
+
 # slot -> (tercih sırasıyla) kemik adları
 BONE_CANDIDATES = {
     "head": ["Head"],
@@ -56,10 +71,17 @@ def tres(pet: dict, info: dict) -> str:
     height = info["size"][1]
     scale = round(HEIGHT_OVERRIDE.get(pet["id"], TARGET_HEIGHT_M) / height, 3)
 
+    def gd_value(v) -> str:
+        if isinstance(v, dict):
+            return gd_dict(v)
+        if isinstance(v, tuple):
+            return "Vector3(" + ", ".join(str(float(x)) for x in v) + ")"
+        return json.dumps(v, ensure_ascii=False)
+
     def gd_dict(d: dict) -> str:
         if not d:
             return "{}"
-        items = ",\n".join(f'"{k}": {json.dumps(v, ensure_ascii=False)}' for k, v in d.items())
+        items = ",\n".join(f'"{k}": {gd_value(v)}' for k, v in d.items())
         return "{\n" + items + "\n}"
 
     return f"""[gd_resource type="Resource" script_class="CharacterDef" format=3]
@@ -75,6 +97,7 @@ model_scale = {scale}
 animation_map = {gd_dict(amap)}
 animation_speed = {gd_dict(aspeed)}
 accessory_bones = {gd_dict(bones)}
+accessory_offsets = {gd_dict(ACCESSORY_TWEAKS.get(pet["id"], {}))}
 """
 
 

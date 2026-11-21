@@ -27,3 +27,4 @@ accessory_bones = {
 "neck": "Body",
 "back": "Body"
 }
+accessory_offsets = {}

@@ -27,3 +27,9 @@ accessory_bones = {
 "neck": "Body",
 "back": "Body"
 }
+accessory_offsets = {
+"face": {
+"height": 0.42,
+"pos": Vector3(0.0, 0.0, 0.07)
+}
+}

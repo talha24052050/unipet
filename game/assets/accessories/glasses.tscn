@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="frame"]
+albedo_color = Color(0.08, 0.08, 0.1, 1)
+
+[sub_resource type="StandardMaterial3D" id="lens"]
+transparency = 1
+albedo_color = Color(0.55, 0.8, 1, 0.35)
+
+[sub_resource type="TorusMesh" id="ring"]
+material = SubResource("frame")
+inner_radius = 0.085
+outer_radius = 0.11
+rings = 16
+ring_segments = 6
+
+[sub_resource type="CylinderMesh" id="glass"]
+material = SubResource("lens")
+top_radius = 0.09
+bottom_radius = 0.09
+height = 0.01
+radial_segments = 16
+rings = 1
+
+[sub_resource type="BoxMesh" id="bridge"]
+material = SubResource("frame")
+size = Vector3(0.09, 0.02, 0.02)
+
+[node name="Glasses" type="Node3D"]
+
+[node name="RingL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -0.14, 0, 0)
+mesh = SubResource("ring")
+
+[node name="RingR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.14, 0, 0)
+mesh = SubResource("ring")
+
+[node name="LensL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, -0.14, 0, 0)
+mesh = SubResource("glass")
+
+[node name="LensR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.14, 0, 0)
+mesh = SubResource("glass")
+
+[node name="Bridge" type="MeshInstance3D" parent="."]
+mesh = SubResource("bridge")

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="AccessoryDef" format=3]
+
+[ext_resource type="Script" path="res://src/characters/accessory_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"hat_cap"
+display_name = "Kep"
+slot = &"head"
+scene_path = "res://assets/accessories/hat_cap.tscn"

@@ -48,3 +48,57 @@ func test_footprint_reasonable() -> String:
 		if fp.x < 0.2 or fp.x > 0.6 or fp.y < 0.8 or fp.y > 1.5:
 			return "%s: çarpışma ölçüsü mantıksız (yarıçap, boy) = %s" % [id, fp]
 	return ""
+
+
+const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
+
+
+func test_accessories_load_and_equip_on_all_pets() -> String:
+	var reg: AccessoryRegistry = AccessoryRegistry.new()
+	reg.load_from_dir("res://data/accessories")
+	if reg.count() != 4:
+		return "4 aksesuar bekleniyordu, %d" % reg.count()
+	for id: StringName in [&"shark", &"birb", &"mushnub", &"yeti", &"ninja", &"chicken"]:
+		var v: Node3D = _make(id)
+		for acc: AccessoryDef in reg.all():
+			if not v.call("equip", acc):
+				v.free()
+				return "%s: %s takılamadı" % [id, acc.id]
+		var ids: Dictionary = v.call("equipped_ids")
+		v.free()
+		if ids.size() != 4:
+			return "%s: takılı aksesuar sayısı %d" % [id, ids.size()]
+	return ""
+
+
+func test_accessories_survive_pet_change() -> String:
+	var reg: AccessoryRegistry = AccessoryRegistry.new()
+	reg.load_from_dir("res://data/accessories")
+	var v: Node3D = _make(&"yeti")
+	v.call("equip", reg.get_def(&"hat_cap"))
+	v.call("set_character", load("res://data/characters/chicken.tres"))
+	var ids: Dictionary = v.call("equipped_ids")
+	v.call("unequip", &"head")
+	var after: Dictionary = v.call("equipped_ids")
+	v.free()
+	if ids.get(&"head") != &"hat_cap":
+		return "pet değişince kep düştü: %s" % ids
+	if not after.is_empty():
+		return "unequip çalışmadı: %s" % after
+	return ""
+
+
+func test_hat_sits_on_head_top() -> String:
+	# Kep, petin boyunun üst kısmında olmalı (havada ya da gömülü değil).
+	var reg: AccessoryRegistry = AccessoryRegistry.new()
+	reg.load_from_dir("res://data/accessories")
+	for id: StringName in [&"birb", &"mushnub", &"yeti", &"ninja", &"chicken"]:
+		var v: Node3D = _make(id)
+		var def: CharacterDef = v.get("definition")
+		var anchor: Transform3D = v.call("accessory_anchor", &"head")
+		var height_m: float = (v.call("footprint") as Vector2).y
+		var y_m: float = anchor.origin.y * def.model_scale
+		v.free()
+		if y_m < height_m * 0.7 or y_m > height_m * 1.02:
+			return "%s: kep yüksekliği %.2f m, pet boyu %.2f m" % [id, y_m, height_m]
+	return ""
