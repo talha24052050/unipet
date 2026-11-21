@@ -49,14 +49,14 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 4.3 Bölge/kanal eşleştirme (zone → oda, kapasite)
 - [x] 4.4 NakamaNetworkService: katıl/ayrıl, state gönder/al, interpolasyon
 - [x] 4.5 Hazır cümleler + emote UI, baloncuk gösterimi
-- [ ] 4.6 İki cihazla test, Checkpoint
+- [~] 4.6 İki cihazla test, Checkpoint — yerel gerçek Nakama'ya karşı iki istemcili uçtan uca test GEÇTİ (`tools/e2e/nakama_two_players.gd`); telefonlarla deneme Talha'da
 
 ## Parça 5 — Kampüs + pet döngüsü
 - [x] 5.1 OSM'den Davutpaşa bina yerleşimi çekme scripti
 - [ ] 5.2 Blender scriptiyle low-poly binalar (fotoğraf referanslı): fakülteler, Büyükev, Hokka, kafeler, yemekhane, büyük saha
-- [ ] 5.3 Ortabahçe detaylı: ağaçlar, banklar, yollar
+- [~] 5.3 Ortabahçe detaylı: ağaçlar, banklar, yollar
 - [ ] 5.4 Bölgeler arası geçiş
-- [ ] 5.5 Pet bakımı: açlık/mutluluk/enerji, sunucuda saklama
+- [~] 5.5 Pet bakımı: açlık/mutluluk/enerji, sunucuda saklama
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test

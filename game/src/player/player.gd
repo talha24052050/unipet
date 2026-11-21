@@ -17,8 +17,15 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var _collision: CollisionShape3D = $Collision
 
 
+## Aynı anda girenler üst üste doğmasın: doğuş noktası etrafında bu yarıçapta rastgele kayma (metre).
+const SPAWN_SCATTER: float = 3.0
+
+
 func _ready() -> void:
 	floor_snap_length = Config.PLAYER_FLOOR_SNAP
+	var a: float = randf() * TAU
+	var r: float = sqrt(randf()) * SPAWN_SCATTER
+	position += Vector3(cos(a) * r, 0.0, sin(a) * r)
 	if character_id != &"":
 		set_character(character_id)
 	else:
