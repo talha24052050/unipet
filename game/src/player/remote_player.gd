@@ -25,6 +25,8 @@ var _buffer: Array[Dictionary] = []
 
 func _ready() -> void:
 	_ensure_nodes()
+	if visual != null:
+		visual.fidget_enabled = false  # uzak petin hareketi ağdan gelir
 	if character_id == &"":
 		set_character(Config.DEFAULT_PET_ID)
 	_update_name_label()

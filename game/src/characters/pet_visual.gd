@@ -5,6 +5,11 @@ extends Node3D
 
 signal emote_finished(logical: StringName)
 
+## Boşta kalan pet ara sıra kendiliğinden hareket etsin (canlı görünsün).
+const FIDGET_EMOTES: Array[StringName] = [&"emote_yes", &"emote_dance", &"emote_jump"]
+const FIDGET_MIN_S: float = 12.0
+const FIDGET_MAX_S: float = 25.0
+
 const LOOPING: PackedStringArray = ["idle", "walk", "run"]
 ## Aksesuar sahneleri bu genişlikteki (metre) bir pete göre modellenir.
 const ACCESSORY_REF_WIDTH: float = 0.9
@@ -21,6 +26,10 @@ var _emote: StringName = &""
 ## slot -> {"def": AccessoryDef, "node": Node3D}
 var _equipped: Dictionary = {}
 var _verts_cache: PackedVector3Array = []
+## false: kendiliğinden hareket yok (ör. uzak oyuncular — onların hareketi ağdan gelir).
+var fidget_enabled: bool = true
+var _idle_time: float = 0.0
+var _next_fidget: float = 0.0
 
 
 func set_character(def: CharacterDef) -> void:
@@ -181,6 +190,33 @@ func _model_vertices() -> PackedVector3Array:
 			for v: Vector3 in arr:
 				_verts_cache.append(xf * v)
 	return _verts_cache
+
+
+func _process(delta: float) -> void:
+	tick_fidget(delta)
+
+
+## Boşta geçen süreyi sayar; süre dolunca petin desteklediği rastgele bir emote oynatır. Oynatılan ya da &"".
+func tick_fidget(delta: float) -> StringName:
+	if not fidget_enabled or definition == null or current_logical() != &"idle":
+		_idle_time = 0.0
+		return &""
+	if _next_fidget <= 0.0:
+		_next_fidget = randf_range(FIDGET_MIN_S, FIDGET_MAX_S)
+	_idle_time += delta
+	if _idle_time < _next_fidget:
+		return &""
+	_idle_time = 0.0
+	_next_fidget = randf_range(FIDGET_MIN_S, FIDGET_MAX_S)
+	var options: Array[StringName] = []
+	for e: StringName in FIDGET_EMOTES:
+		if not definition.anim_name(e).is_empty():
+			options.append(e)
+	if options.is_empty():
+		return &""
+	var pick: StringName = options[randi() % options.size()]
+	play_emote(pick)
+	return pick
 
 
 ## Yatay hıza göre idle / walk / run seçer. Hareket emote'u keser.

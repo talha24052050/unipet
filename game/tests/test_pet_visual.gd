@@ -102,3 +102,22 @@ func test_hat_sits_on_head_top() -> String:
 		if y_m < height_m * 0.7 or y_m > height_m * 1.02:
 			return "%s: kep yüksekliği %.2f m, pet boyu %.2f m" % [id, y_m, height_m]
 	return ""
+
+
+func test_idle_fidget() -> String:
+	var v: Node3D = _make(&"yeti")
+	v.set("_next_fidget", 1.0)
+	var none: StringName = v.call("tick_fidget", 0.5)
+	var pick: StringName = v.call("tick_fidget", 0.6)
+	var now: StringName = v.call("current_logical")
+	v.call("set_locomotion", Config.PLAYER_WALK_SPEED)
+	var walking: StringName = v.call("tick_fidget", 100.0)
+	v.set("fidget_enabled", false)
+	v.call("set_locomotion", 0.0)
+	var off: StringName = v.call("tick_fidget", 100.0)
+	v.free()
+	if none != &"" or pick == &"" or now != pick:
+		return "boşta kalınca emote oynamalı: %s %s %s" % [none, pick, now]
+	if walking != &"" or off != &"":
+		return "yürürken ya da kapalıyken oynamamalı"
+	return ""
