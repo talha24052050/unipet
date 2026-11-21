@@ -1,0 +1,8 @@
+{
+  "_note": "Bakım eylemlerinin yapılabildiği yerler (Ortabahçe koordinatları, metre). server/nakama/modules/index.js CARE_SPOTS ile AYNI olmalı (module.test.js kontrol eder).",
+  "eat": [
+    {"name": "Yemekhane", "x": -103.5, "z": -95.2, "r": 45.0},
+    {"name": "Hokka", "x": -75.2, "z": -106.6, "r": 22.0},
+    {"name": "Kayıntı Kafe", "x": -99.9, "z": -124.7, "r": 22.0}
+  ]
+}

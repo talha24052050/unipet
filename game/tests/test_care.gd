@@ -51,3 +51,33 @@ func test_mood() -> String:
 	if R.mood({"food": 90.0, "joy": 10.0, "energy": 90.0}) != &"sad":
 		return "üzgün olmalı"
 	return ""
+
+
+func test_care_spots_and_location() -> String:
+	if not R.near_spot("eat", Vector3(-100, 0, -95)):
+		return "Yemekhane yakını yemek yeri sayılmadı"
+	if R.near_spot("eat", Vector3.ZERO):
+		return "Ortabahçe ortası yemek yeri sayıldı"
+	if R.location_error("rest", Vector3.ZERO) != "":
+		return "dinlenmenin konum şartı olmamalı"
+	return ""
+
+
+func test_offline_care_flow() -> String:
+	var Off: GDScript = load("res://src/net/offline_network_service.gd")
+	var n: Node = Off.new()
+	n.set("_care", R.new_state(int(Time.get_unix_time_from_system())))
+	var got: Array = []
+	n.care_updated.connect(func(st: Dictionary, ok: bool, reason: String) -> void: got.append([ok, reason, st]))
+	n.call("send_state", {"pos": Vector3.ZERO})
+	n.call("send_care_action", "eat")
+	n.call("send_state", {"pos": Vector3(-100, 0, -95)})
+	n.call("send_care_action", "eat")
+	n.call("send_care_action", "social")
+	n.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://care.cfg"))
+	if got.size() != 3 or got[0][0] or not got[1][0] or got[2][0]:
+		return "offline bakım akışı yanlış: %s" % [got.map(func(x: Array) -> Array: return [x[0], x[1]])]
+	if float(got[1][2]["food"]) <= 80.0:
+		return "yemek tokluğu artırmadı"
+	return ""

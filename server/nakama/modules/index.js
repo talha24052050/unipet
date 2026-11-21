@@ -1,6 +1,7 @@
 // UniPet Nakama sunucu modülü (JavaScript runtime, ES5 uyumlu yazıldı).
 // 4.2  Supabase oturumu → Nakama hesabı köprüsü (beforeAuthenticateCustom)
 // 4.3  Bölge/oda eşleştirme (RPC find_room) + yetkili oda (match "zone_room")
+// 5.5  Pet bakımı: sunucu yetkili; kurallar game/src/care/pet_care_rules.gd ile AYNI
 //
 // Ortam değişkenleri (docker-compose → --runtime.env):
 //   SUPABASE_URL, SUPABASE_ANON_KEY   Supabase oturum doğrulaması
@@ -20,6 +21,89 @@ var OP_STATE = 1;    // c→s {p:[x,y,z], y:yaw, a:anim}            s→c {id, p
 var OP_CHAT = 2;     // c→s {k:0|1|2, p:payload}                 s→c {s:senderId, k, p}
 var OP_SNAPSHOT = 3; // s→c {players:[{id, p, y, a, pet, acc}]}  (sadece yeni katılana)
 var OP_PROFILE = 4;  // c→s {pet, acc:{slot:id}}                 s→c {id, pet, acc}
+var OP_CARE = 5;     // c→s {act}                                s→c {ok, reason, state:{food,joy,energy,t}} (sadece o oyuncuya)
+
+// ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
+var CARE_MAX = 100;
+var CARE_DECAY_PER_HOUR = { food: 6, joy: 4, energy: 5 };
+var CARE_MAX_DECAY_HOURS = 12;
+var CARE_ACTIONS = {
+  eat: { food: 35, energy: 5, cooldown: 600 },
+  rest: { energy: 30, cooldown: 300 },
+  social: { joy: 8, cooldown: 30 },
+  play: { joy: 15, energy: -10, food: -5, cooldown: 120 }
+};
+var CARE_STATS = ["food", "joy", "energy"];
+// game/data/care_spots.json ile AYNI (module.test.js kontrol eder)
+var CARE_SPOTS = {
+  eat: [
+    { name: "Yemekhane", x: -103.5, z: -95.2, r: 45.0 },
+    { name: "Hokka", x: -75.2, z: -106.6, r: 22.0 },
+    { name: "Kayıntı Kafe", x: -99.9, z: -124.7, r: 22.0 }
+  ]
+};
+var CARE_COLLECTION = "pet";
+var CARE_KEY = "care";
+
+function snap2(v) { return Math.round(v * 100) / 100; }
+function clampCare(v) { return Math.max(0, Math.min(CARE_MAX, v)); }
+
+function careNew(now) { return { food: 80, joy: 80, energy: 80, t: now }; }
+
+function careDecay(state, now) {
+  var t = typeof state.t === "number" ? state.t : now;
+  var hours = Math.max(0, Math.min(CARE_MAX_DECAY_HOURS, (now - t) / 3600));
+  var out = { t: Math.max(now, t) };
+  for (var i = 0; i < CARE_STATS.length; i++) {
+    var s = CARE_STATS[i];
+    var v = typeof state[s] === "number" ? state[s] : CARE_MAX;
+    out[s] = snap2(clampCare(v - CARE_DECAY_PER_HOUR[s] * hours));
+  }
+  return out;
+}
+
+function careApply(state, action, now, lastAction) {
+  var rule = CARE_ACTIONS[action];
+  if (!rule) return { ok: false, state: state, reason: "bilinmeyen eylem" };
+  var last = lastAction && typeof lastAction[action] === "number" ? lastAction[action] : -1000000;
+  if (now - last < rule.cooldown) return { ok: false, state: careDecay(state, now), reason: "biraz bekle" };
+  var s = careDecay(state, now);
+  for (var i = 0; i < CARE_STATS.length; i++) {
+    var k = CARE_STATS[i];
+    if (typeof rule[k] === "number") s[k] = snap2(clampCare(s[k] + rule[k]));
+  }
+  return { ok: true, state: s, reason: "" };
+}
+
+function nearSpot(kind, p) {
+  var spots = CARE_SPOTS[kind] || [];
+  for (var i = 0; i < spots.length; i++) {
+    var dx = p[0] - spots[i].x, dz = p[2] - spots[i].z;
+    if (dx * dx + dz * dz <= spots[i].r * spots[i].r) return true;
+  }
+  return false;
+}
+
+function careLoad(nk, userId) {
+  var objs = nk.storageRead([{ collection: CARE_COLLECTION, key: CARE_KEY, userId: userId }]);
+  if (objs && objs.length > 0 && objs[0].value) return objs[0].value;
+  return null;
+}
+
+function careSave(nk, userId, record) {
+  nk.storageWrite([{ collection: CARE_COLLECTION, key: CARE_KEY, userId: userId, value: record,
+    permissionRead: 1, permissionWrite: 0 }]);
+}
+
+// Bir eylemi oyuncu adına uygular ve kaydeder. Dönen: {ok, reason, state}
+function careAct(nk, userId, action, now) {
+  var rec = careLoad(nk, userId) || { state: careNew(now), last: {} };
+  var r = careApply(rec.state, action, now, rec.last);
+  rec.state = r.state;
+  if (r.ok) rec.last[action] = now;
+  careSave(nk, userId, rec);
+  return { ok: r.ok, reason: r.reason, state: r.state };
+}
 
 var CHAT_PRESET = 0, CHAT_EMOTE = 1, CHAT_FREE = 2;
 var CHAT_MIN_INTERVAL_MS = 1000;
@@ -141,6 +225,11 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
       list.push({ id: id, p: o.p, y: o.y, a: o.a, pet: o.pet, acc: o.acc });
     }
     dispatcher.broadcastMessage(OP_SNAPSHOT, JSON.stringify({ players: list }), [p], null, true);
+    var nowS = Math.floor(Date.now() / 1000);
+    var rec = careLoad(nk, p.userId);
+    var careState = rec ? careDecay(rec.state, nowS) : careNew(nowS);
+    if (!rec) careSave(nk, p.userId, { state: careState, last: {} });
+    dispatcher.broadcastMessage(OP_CARE, JSON.stringify({ ok: true, reason: "", state: careState }), [p], null, true);
   }
   state.emptyTicks = 0;
   return { state: state };
@@ -203,6 +292,25 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       if (!ok) continue;
       pl.lastChat = now;
       dispatcher.broadcastMessage(OP_CHAT, JSON.stringify({ s: uid, k: k, p: payload }), everyone(state), null, true);
+      if (othersOf(state, uid).length > 0) {
+        var soc = careAct(nk, uid, "social", Math.floor(now / 1000));
+        if (soc.ok) dispatcher.broadcastMessage(OP_CARE, JSON.stringify(soc), [pl.presence], null, true);
+      }
+    } else if (m.opCode === OP_CARE) {
+      var act = String(data.act || "");
+      var res;
+      if (act === "social" || !CARE_ACTIONS[act]) {
+        res = { ok: false, reason: "geçersiz eylem", state: null };
+      } else if (act === "eat" && !nearSpot("eat", pl.p)) {
+        res = { ok: false, reason: "Yemek için Yemekhane, Hokka ya da Kayıntı'ya git", state: null };
+      } else {
+        res = careAct(nk, uid, act, Math.floor(Date.now() / 1000));
+      }
+      if (res.state === null) {
+        var cur = careLoad(nk, uid);
+        res.state = cur ? careDecay(cur.state, Math.floor(Date.now() / 1000)) : careNew(Math.floor(Date.now() / 1000));
+      }
+      dispatcher.broadcastMessage(OP_CARE, JSON.stringify(res), [pl.presence], null, true);
     } else if (m.opCode === OP_PROFILE) {
       if (!ID_PATTERN.test(String(data.pet))) continue;
       var acc = {};

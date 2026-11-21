@@ -17,6 +17,30 @@ const ACTIONS: Dictionary = {
 	"play": {"joy": 15.0, "energy": -10.0, "food": -5.0, "cooldown": 120},
 }
 const STATS: PackedStringArray = ["food", "joy", "energy"]
+## Eylem yerleri (sunucudaki CARE_SPOTS ile aynı dosya).
+const SPOTS_PATH: String = "res://data/care_spots.json"
+## İstemcinin kendisinin isteyebildiği eylemler ("social" sadece chat/emote ile kazanılır).
+const PLAYER_ACTIONS: PackedStringArray = ["eat", "rest", "play"]
+## Eylem → konum şartı (care_spots.json anahtarı).
+const ACTION_SPOT: Dictionary = {"eat": "eat"}
+
+
+## `pos` bu eylem türünün yerlerinden birinin yakınında mı?
+static func near_spot(kind: String, pos: Vector3) -> bool:
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(SPOTS_PATH))
+	if not data is Dictionary:
+		return false
+	for s: Dictionary in (data as Dictionary).get(kind, []):
+		if Vector2(pos.x - float(s["x"]), pos.z - float(s["z"])).length() <= float(s["r"]):
+			return true
+	return false
+
+
+## Konum şartı varsa ve sağlanmıyorsa kullanıcıya gösterilecek sebep, yoksa "".
+static func location_error(action: String, pos: Vector3) -> String:
+	if ACTION_SPOT.has(action) and not near_spot(ACTION_SPOT[action], pos):
+		return "Yemek için Yemekhane, Hokka ya da Kayıntı'ya git"
+	return ""
 
 
 static func new_state(now: int) -> Dictionary:
