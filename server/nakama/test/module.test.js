@@ -122,4 +122,24 @@ assert.ok(careMsgs().length === 1 && careMsgs()[0].data.ok && careMsgs()[0].to[0
 var zonesJson = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "..", "game", "data", "zones", "zones.json"), "utf8"));
 assert.deepEqual(JSON.parse(JSON.stringify(M.ZONES)), zonesJson.zones.map(function (z) { return z.id; }), "ZONES ≠ zones.json");
 
+// --- takma ad filtresi
+["amk", "Ali amk", "0r0spu", "SIKTIR git", "yarrrak", "Şerefsiz"].forEach(function (n) {
+  assert.strictEqual(M.cleanName(n), "", "küfür geçti: " + n);
+});
+["Ali Veli", "Siklon", "Memet", "Gotham", "Aqua", "Pusula"].forEach(function (n) {
+  assert.strictEqual(M.cleanName(n), n, "masum isim engellendi: " + n);
+});
+
+// --- hız koruması
+sent = [];
+var st3 = M.matchInit(ctx({}), logger, nk, { zone: "ortabahce" }).state;
+var P = { userId: "P" }, Q = { userId: "Q" };
+st3 = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st3, [P, Q]).state;
+sent = [];
+st3 = M.matchLoop(ctx(), logger, nk, dispatcher, 1, st3, [msg(P, 1, { p: [0, 0, 0], y: 0, a: "idle" })]).state;
+st3 = M.matchLoop(ctx(), logger, nk, dispatcher, 2, st3, [msg(P, 1, { p: [500, 0, 0], y: 0, a: "walk" })]).state;
+st3 = M.matchLoop(ctx(), logger, nk, dispatcher, 3, st3, [msg(P, 1, { p: [1.5, 0, 0], y: 0, a: "walk" })]).state;
+var states = sent.filter(function (s) { return s.op === 1; }).map(function (s) { return s.data.p[0]; });
+assert.deepEqual(states, [0, 1.5], "ışınlanma reddedilmeli, normal adım geçmeli: " + states);
+
 console.log("nakama modül testleri: OK");

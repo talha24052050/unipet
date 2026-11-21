@@ -23,3 +23,47 @@ jobs:
           ! grep -E "SCRIPT ERROR|ERROR:" run.log
       - name: Nakama sunucu modülü testleri
         run: node server/nakama/test/module.test.js
+
+  # Gerçek Nakama'ya karşı iki istemcili uçtan uca test (tools/e2e/nakama_two_players.gd).
+  e2e-nakama:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.7.2
+      NAKAMA_VERSION: 3.26.0
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nakama
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: localdb
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nakama" --health-interval 3s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Godot kur
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+      - name: Nakama başlat
+        run: |
+          curl -sSL -o nakama.tgz "https://github.com/heroiclabs/nakama/releases/download/v${NAKAMA_VERSION}/nakama-${NAKAMA_VERSION}-linux-amd64.tar.gz"
+          tar -xzf nakama.tgz nakama
+          DB="postgres:localdb@127.0.0.1:5432/nakama?sslmode=disable"
+          ./nakama migrate up --database.address "$DB"
+          printf 'runtime:\n  env:\n    - "UNIPET_DEV_AUTH=true"\n' > runtime-env.yml
+          ./nakama --config server/nakama/local.yml --config runtime-env.yml --database.address "$DB" \
+            --runtime.path "$PWD/server/nakama/modules" --socket.server_key unipet-dev-server-key \
+            --logger.stdout false --logger.file nakama.log &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:7350/healthcheck && break; sleep 1; done
+          grep -q "UniPet modülü yüklendi" nakama.log
+      - name: Import
+        run: godot --headless --path game --import || true
+      - name: Uçtan uca test
+        run: |
+          timeout 120 godot --headless --path game -s "$PWD/tools/e2e/nakama_two_players.gd" -- 127.0.0.1 7350 2>&1 | tee e2e.log
+          grep -q "E2E GEÇTİ" e2e.log
+      - name: Nakama logu (hata olursa)
+        if: failure()
+        run: tail -50 nakama.log || true

@@ -110,11 +110,45 @@ var CHAT_PRESET = 0, CHAT_EMOTE = 1, CHAT_FREE = 2;
 var CHAT_MIN_INTERVAL_MS = 1000;
 var ID_PATTERN = /^[a-z0-9_]{1,32}$/;
 var WORLD_LIMIT = 2000;
+// Hareket hile koruması: iki durum arasında bu hızdan (m/s) hızlı yer değiştirme reddedilir (yürüme 4.6, koşu 7).
+var MAX_SPEED = 15;
+var SPEED_TOLERANCE_M = 2;
 var NAME_PATTERN = /^[0-9A-Za-zÇĞİÖŞÜçğıöşü _-]{1,16}$/;
+
+// Herkesin gördüğü takma adlar için kaba küfür filtresi. Yakalanan ad "" olur (istemci kimliğin başını gösterir).
+// Kısa kökler sadece tam kelime olarak, uzunlar kelime içinde de aranır (yanlış pozitifi azaltmak için).
+var BAD_WORDS_EXACT = ["amk", "aq", "amq", "oc", "pic", "got", "sg", "siktir", "sik", "yarak", "meme"];
+var BAD_WORDS_SUB = ["orospu", "yarrak", "amcik", "sikerim", "sikeyim", "sikik", "siktig", "pezevenk", "kahpe", "ibne",
+  "gavat", "yavsak", "serefsiz", "surtuk", "dalyarak", "kaltak", "amina", "anani", "bacini", "pust"];
+
+function normalizeForFilter(s) {
+  var map = { "ç": "c", "ğ": "g", "ı": "i", "i̇": "i", "ö": "o", "ş": "s", "ü": "u", "0": "o", "1": "i", "3": "e",
+    "4": "a", "5": "s", "7": "t", "@": "a", "$": "s" };
+  var out = "";
+  var low = String(s).toLowerCase();
+  for (var i = 0; i < low.length; i++) {
+    var ch = low.charAt(i);
+    out += map[ch] !== undefined ? map[ch] : ch;
+  }
+  return out;
+}
+
+function isOffensive(name) {
+  var n = normalizeForFilter(name);
+  var words = n.split(/[^a-z]+/);
+  for (var i = 0; i < words.length; i++) {
+    if (BAD_WORDS_EXACT.indexOf(words[i]) >= 0) return true;
+  }
+  var squashed = n.replace(/[^a-z]/g, "").replace(/(.)\1+/g, "$1");
+  for (var j = 0; j < BAD_WORDS_SUB.length; j++) {
+    if (squashed.indexOf(BAD_WORDS_SUB[j].replace(/(.)\1+/g, "$1")) >= 0) return true;
+  }
+  return false;
+}
 
 function cleanName(raw) {
   var n = String(raw || "").replace(/\s+/g, " ").trim().substring(0, 16);
-  return NAME_PATTERN.test(n) ? n : "";
+  return NAME_PATTERN.test(n) && !isOffensive(n) ? n : "";
 }
 
 function env(ctx, key, fallback) {
@@ -282,6 +316,16 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
           !finiteIn(data.p[2], WORLD_LIMIT) || !finiteIn(data.y, 1000) || !ID_PATTERN.test(String(data.a))) {
         continue;
       }
+      var nowMs = Date.now();
+      if (typeof pl.lastStateAt === "number") {
+        var dt = Math.max(0.1, (nowMs - pl.lastStateAt) / 1000);
+        var moved = Math.sqrt(Math.pow(data.p[0] - pl.p[0], 2) + Math.pow(data.p[2] - pl.p[2], 2));
+        if (moved > MAX_SPEED * dt + SPEED_TOLERANCE_M) {
+          pl.speedRejects = (pl.speedRejects || 0) + 1;
+          continue;
+        }
+      }
+      pl.lastStateAt = nowMs;
       pl.p = data.p; pl.y = data.y; pl.a = data.a;
       var others = othersOf(state, uid);
       if (others.length > 0) {
