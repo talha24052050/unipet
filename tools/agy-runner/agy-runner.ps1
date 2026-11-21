@@ -72,17 +72,40 @@ function Invoke-AgyTask([string]$TaskPath) {
         Set-Content -Path $report -Encoding UTF8 -Value "# $name`n`nRUNNER: agy rapor yazmadı (çıkış kodu: $($proc.ExitCode)). Diff'i kontrol et."
     }
 
+    $allowed = Get-AllowedPaths $full
     Git @("mv", $rel, "agy-tasks/done/$name.md")
-    Git @("add", "-A")
+    # Sadece görevde izin verilen yollar + görev çıktıları commit'lenir; Claude'un aynı anda
+    # çalıştığı (henüz commit'lenmemiş) dosyalar agy'nin commit'ine karışmaz.
+    $paths = @("agy-tasks/done") + $allowed
+    foreach ($p in $paths) {
+        & git.exe -C $Repo add -A -- $p 2>$null
+        if (Test-Path (Join-Path $Repo "$p.uid")) { & git.exe -C $Repo add -- "$p.uid" 2>$null }
+    }
     & git.exe -C $Repo diff --cached --quiet
     if ($LASTEXITCODE -ne 0) {
         Git @("commit", "-m", "agy: $name")
         if (-not $NoPush) {
-            Git @("pull", "--rebase")
+            Git @("pull", "--rebase", "--autostash")
             Git @("push")
         }
         Write-Log "Commit'lendi: agy: $name"
     }
+}
+
+## Görev dosyasındaki "## Dokunabileceğin dosyalar" bölümünden repo içi yolları çıkarır.
+function Get-AllowedPaths([string]$TaskFile) {
+    $out = @()
+    $inSection = $false
+    foreach ($line in Get-Content -Path $TaskFile -Encoding UTF8) {
+        if ($line -match '^##\s') { $inSection = $line -match 'Dokunabilece'; continue }
+        if (-not $inSection -or $line -notmatch '^\s*-\s') { continue }
+        $m = [regex]::Match($line, '`([^`]+)`')
+        $p = if ($m.Success) { $m.Groups[1].Value } else { ($line -replace '^\s*-\s*', '').Split(' ')[0] }
+        $p = $p.Trim().Replace('\', '/')
+        if ($p -eq '' -or $p -match '^[A-Za-z]:' -or $p.StartsWith('%')) { continue }
+        $out += $p
+    }
+    return $out
 }
 
 function Get-InboxTasks {
