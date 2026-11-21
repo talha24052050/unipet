@@ -6,6 +6,7 @@ const NetworkService := preload("res://src/net/network_service.gd")
 const OfflineNetworkService := preload("res://src/net/offline_network_service.gd")
 const AuthService := preload("res://src/auth/auth_service.gd")
 const MockAuthService := preload("res://src/auth/mock_auth_service.gd")
+const SupabaseAuthService := preload("res://src/auth/supabase_auth_service.gd")
 const CharacterRegistry := preload("res://src/characters/character_registry.gd")
 const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
 
@@ -39,6 +40,8 @@ func _make_auth(kind: String) -> AuthService:
 	match kind:
 		"mock":
 			return MockAuthService.new()
+		"supabase":
+			return SupabaseAuthService.new()
 		_:
 			push_error("Bilinmeyen auth backend: %s, mock kullanılıyor" % kind)
 			return MockAuthService.new()

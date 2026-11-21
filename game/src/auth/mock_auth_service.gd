@@ -3,6 +3,7 @@ extends "res://src/auth/auth_service.gd"
 
 const DEV_CODE := "000000"
 var _signed_in := false
+var _user_id := ""
 
 
 func request_code(email: String) -> void:
@@ -20,8 +21,22 @@ func verify_code(email: String, code: String) -> void:
 		auth_failed.emit("Kod hatalı.")
 		return
 	_signed_in = true
-	signed_in.emit("mock-" + email.get_slice("@", 0), "mock-token")
+	_user_id = "mock-" + email.get_slice("@", 0)
+	signed_in.emit(_user_id, "mock-token")
 
 
 func is_signed_in() -> bool:
 	return _signed_in
+
+
+func sign_out() -> void:
+	_signed_in = false
+	_user_id = ""
+
+
+func get_access_token() -> String:
+	return "mock-token" if _signed_in else ""
+
+
+func get_user_id() -> String:
+	return _user_id

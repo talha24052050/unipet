@@ -33,17 +33,10 @@ var _accessory_labels: Dictionary = {}
 
 
 func _ready() -> void:
-	_ensure_services()
 	_setup_ui()
 	_selectable_pets = Services.characters.selectable()
 	load_selection(profile_path)
 	_connect_signals()
-	_check_screenshot_arg()
-
-
-func _ensure_services() -> void:
-	if Services.characters == null or Services.accessories == null:
-		Services._ready()
 
 
 func _setup_ui() -> void:
@@ -125,7 +118,6 @@ func _drag_yaw(dx: float) -> void:
 
 
 func set_pet_index(index: int, play_emote: bool = true) -> void:
-	_ensure_services()
 	if _selectable_pets.is_empty():
 		_selectable_pets = Services.characters.selectable()
 	if _selectable_pets.is_empty():
@@ -153,7 +145,6 @@ func prev_pet() -> void:
 
 
 func cycle_accessory(slot: StringName) -> void:
-	_ensure_services()
 	if profile == null:
 		profile = LocalProfile.load_or_default()
 	var available: Array[AccessoryDef] = Services.accessories.for_slot(slot)
@@ -186,7 +177,6 @@ func cycle_accessory(slot: StringName) -> void:
 
 
 func _apply_profile_accessories_to_visual() -> void:
-	_ensure_services()
 	if profile == null:
 		return
 	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
@@ -220,7 +210,6 @@ func save_selection(path: String = "") -> Error:
 
 
 func load_selection(path: String = "") -> void:
-	_ensure_services()
 	var target_path: String = path if not path.is_empty() else profile_path
 	profile = LocalProfile.load_or_default(target_path)
 	if _selectable_pets.is_empty():
@@ -236,25 +225,3 @@ func load_selection(path: String = "") -> void:
 func start_game() -> void:
 	save_selection()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
-
-
-func _check_screenshot_arg() -> void:
-	var args: PackedStringArray = OS.get_cmdline_args()
-	var user_args: PackedStringArray = OS.get_cmdline_user_args()
-	if "--screenshot" in args or "--screenshot" in user_args:
-		_capture_screenshot()
-
-
-func _capture_screenshot() -> void:
-	for i: int in 40:
-		await get_tree().process_frame
-	var img: Image = get_viewport().get_texture().get_image()
-	var out_dir: String = ProjectSettings.globalize_path("res://").path_join("../agy-tasks/done")
-	DirAccess.make_dir_recursive_absolute(out_dir)
-	var out_path: String = out_dir.path_join("002-pet-secim.png")
-	var err: Error = img.save_png(out_path)
-	if err == OK:
-		print("Screenshot saved to: ", out_path)
-	else:
-		push_error("Failed to save screenshot: %d" % err)
-	get_tree().quit(0)

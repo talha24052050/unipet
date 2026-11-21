@@ -72,6 +72,22 @@ jobs:
           EOF
           done
 
+      - name: Supabase ayarı (secret varsa)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -n "$SUPABASE_URL" ]; then
+            {
+              echo '[supabase]'
+              echo "url=\"$SUPABASE_URL\""
+              echo "anon_key=\"$SUPABASE_ANON_KEY\""
+            } > game/secrets.cfg
+            echo "secrets.cfg yazıldı"
+          else
+            echo "Supabase secret yok; APK mock auth ile çalışır"
+          fi
+
       - name: Export
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/debug.keystore

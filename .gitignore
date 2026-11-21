@@ -2,6 +2,7 @@
 game/.godot/
 game/export_presets.cfg
 *.apk
+build/
 *.aab
 *.keystore
 android/build/

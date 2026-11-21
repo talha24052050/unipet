@@ -1,7 +1,7 @@
 extends Node
 ## Kimlik doğrulama arayüzü (soyut).
 ## Akış: request_code(email) -> kullanıcı maildeki kodu girer -> verify_code(email, code)
-## Implementasyonlar: MockAuthService (şimdi), SupabaseAuthService (Parça 3).
+## Implementasyonlar: MockAuthService (geliştirme), SupabaseAuthService (Config.AUTH_BACKEND = "supabase").
 
 signal code_sent(email: String)
 signal signed_in(user_id: String, session_token: String)
@@ -27,3 +27,21 @@ func verify_code(_email: String, _code: String) -> void:
 
 func is_signed_in() -> bool:
 	return false
+
+
+## Cihazda kayıtlı oturumu geri yükler (await edilir). Yoksa false.
+func restore_session() -> bool:
+	return false
+
+
+func sign_out() -> void:
+	pass
+
+
+## Sunucu çağrılarında (profil, Nakama köprüsü) kullanılacak erişim anahtarı.
+func get_access_token() -> String:
+	return ""
+
+
+func get_user_id() -> String:
+	return ""

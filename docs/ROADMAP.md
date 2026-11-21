@@ -27,12 +27,12 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 2.3 Her pet için `.tres` (animation_map, accessory_bones)
 - [x] 2.4 PetVisual düğümü: CharacterDef'ten model yükle, mantıksal animasyon oynat
 - [x] 2.5 Aksesuar sistemi: slot'a BoneAttachment3D ile takma, 3-4 basit aksesuar (şapka, gözlük, atkı, çanta)
-- [ ] 2.6 Pet seçme + aksesuar giydirme ekranı
+- [x] 2.6 Pet seçme + aksesuar giydirme ekranı
 - [ ] 2.7 Checkpoint
 
 ## Parça 3 — Giriş (Supabase)
 - [ ] 3.1 Supabase projesi (Talha açar, ücretsiz katman) + domain kısıtlı OTP mail ayarı
-- [ ] 3.2 SupabaseAuthService (HTTPRequest ile REST), oturumu güvenli saklama, yenileme
+- [x] 3.2 SupabaseAuthService (HTTPRequest ile REST), oturumu güvenli saklama, yenileme
 - [ ] 3.3 Giriş ekranı: mail → kod → pet seçimi
 - [ ] 3.4 Profil tablosu (kullanıcı adı, pet, aksesuarlar) + RLS kuralları
 - [ ] 3.5 Checkpoint
