@@ -6,6 +6,8 @@
 [ext_resource type="Script" path="res://src/world/runtime_nav_region.gd" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/follow_camera.tscn" id="5"]
 [ext_resource type="Script" path="res://src/world/greybox_builder.gd" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/ui/chat_bubble.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/ui/chat_menu.tscn" id="8"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -42,7 +44,63 @@ func _on_pressed() -> void:
 	get_tree().change_scene_to_file(\"res://scenes/ui/pet_select.tscn\")
 "
 
+[sub_resource type="GDScript" id="main_script"]
+script/source = "extends Node3D
+
+const ChatCatalog := preload(\"res://src/net/chat_catalog.gd\")
+
+var _catalog: RefCounted
+
+@onready var _player: CharacterBody3D = $Player
+
+
+func _ready() -> void:
+	_catalog = ChatCatalog.new()
+	if Services.net != null:
+		Services.net.chat_received.connect(_on_chat_received)
+
+
+func _on_chat_received(msg: ChatMessage) -> void:
+	if msg == null:
+		return
+	var target: Node3D = _find_player_node(msg.sender_id)
+	if target == null:
+		return
+
+	match msg.kind:
+		ChatMessage.Kind.PRESET:
+			var text: String = _catalog.preset_text(msg.payload)
+			if text.is_empty():
+				return
+			var bubble = target.get_node_or_null(\"ChatBubble\")
+			if bubble != null and bubble.has_method(\"show_message\"):
+				bubble.show_message(text)
+
+		ChatMessage.Kind.EMOTE:
+			var anim: StringName = _catalog.emote_anim(msg.payload)
+			if anim == &\"\":
+				return
+			if \"visual\" in target and target.visual != null:
+				target.visual.play_emote(anim)
+
+		ChatMessage.Kind.FREE:
+			if not Config.FREE_CHAT_ENABLED:
+				return
+			if msg.payload.is_empty():
+				return
+			var bubble = target.get_node_or_null(\"ChatBubble\")
+			if bubble != null and bubble.has_method(\"show_message\"):
+				bubble.show_message(msg.payload)
+
+
+func _find_player_node(sender_id: String) -> Node3D:
+	if Services.net != null and sender_id == Services.net.local_player_id():
+		return _player
+	return null
+"
+
 [node name="Main" type="Node3D" unique_id=1159132603]
+script = SubResource("main_script")
 
 [node name="Environment" type="WorldEnvironment" parent="."]
 environment = SubResource("env")
@@ -65,6 +123,9 @@ surface_material_override/0 = SubResource("marker_mat")
 
 [node name="Player" parent="." unique_id=270815988 instance=ExtResource("1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="ChatBubble" parent="Player" instance=ExtResource("7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
 
 [node name="FollowCamera" parent="." node_paths=PackedStringArray("target") instance=ExtResource("5")]
 target = NodePath("../Player")
@@ -93,6 +154,8 @@ mouse_filter = 0
 theme_override_font_sizes/font_size = 28
 text = "Pet"
 script = SubResource("pet_btn_script")
+
+[node name="ChatMenu" parent="UI" instance=ExtResource("8")]
 
 [node name="PlayerController" type="Node" parent="." node_paths=PackedStringArray("player", "joystick", "camera", "agent", "marker")]
 script = ExtResource("3")

@@ -1,0 +1,87 @@
+{
+  "presets": [
+    {
+      "id": "selam",
+      "text": "Selam!"
+    },
+    {
+      "id": "gunaydin",
+      "text": "Günaydın!"
+    },
+    {
+      "id": "iyi_gunler",
+      "text": "İyi günler!"
+    },
+    {
+      "id": "gorusuruz",
+      "text": "Görüşürüz!"
+    },
+    {
+      "id": "yemekhane",
+      "text": "Yemekhaneye gidiyorum"
+    },
+    {
+      "id": "hokka",
+      "text": "Hokka'da buluşalım mı?"
+    },
+    {
+      "id": "kutuphane",
+      "text": "Kütüphaneye geçiyorum"
+    },
+    {
+      "id": "ortabahce",
+      "text": "Ortabahçe'deyim"
+    },
+    {
+      "id": "ders",
+      "text": "Derse yetişmem lazım"
+    },
+    {
+      "id": "sinav",
+      "text": "Sınav nasıl geçti?"
+    },
+    {
+      "id": "kolay_gelsin",
+      "text": "Kolay gelsin!"
+    },
+    {
+      "id": "tesekkurler",
+      "text": "Teşekkür ederim!"
+    },
+    {
+      "id": "harika",
+      "text": "Harika!"
+    },
+    {
+      "id": "bekliyorum",
+      "text": "Burada bekliyorum"
+    }
+  ],
+  "emotes": [
+    {
+      "id": "wave",
+      "anim": "emote_wave",
+      "label": "El Salla"
+    },
+    {
+      "id": "jump",
+      "anim": "emote_jump",
+      "label": "Zıpla"
+    },
+    {
+      "id": "yes",
+      "anim": "emote_yes",
+      "label": "Evet"
+    },
+    {
+      "id": "no",
+      "anim": "emote_no",
+      "label": "Hayır"
+    },
+    {
+      "id": "dance",
+      "anim": "emote_dance",
+      "label": "Dans"
+    }
+  ]
+}
