@@ -4,6 +4,7 @@ extends Node
 
 const NetworkService := preload("res://src/net/network_service.gd")
 const OfflineNetworkService := preload("res://src/net/offline_network_service.gd")
+const NakamaNetworkService := preload("res://src/net/nakama_network_service.gd")
 const AuthService := preload("res://src/auth/auth_service.gd")
 const MockAuthService := preload("res://src/auth/mock_auth_service.gd")
 const SupabaseAuthService := preload("res://src/auth/supabase_auth_service.gd")
@@ -31,6 +32,8 @@ func _make_network(kind: String) -> NetworkService:
 	match kind:
 		"offline":
 			return OfflineNetworkService.new()
+		"nakama":
+			return NakamaNetworkService.new()
 		_:
 			push_error("Bilinmeyen network backend: %s, offline kullanılıyor" % kind)
 			return OfflineNetworkService.new()
