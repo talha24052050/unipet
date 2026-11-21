@@ -1,0 +1,32 @@
+# Yayın eki: docker-compose.yml ile birlikte kullanılır (deploy/restart.sh).
+# - Nakama ve Postgres portları dışarı AÇILMAZ; sadece Caddy (80/443) dışarıda.
+# - Caddy, UNIPET_PUBLIC_HOST (<ip>.sslip.io) için otomatik HTTPS alır ve 7350'ye (HTTP + WebSocket) yönlendirir.
+services:
+  postgres:
+    ports: !reset []
+    restart: always
+
+  nakama:
+    # Sadece konsol, sadece sunucunun kendisinden (SSH tüneliyle erişilir).
+    ports: !override
+      - "127.0.0.1:7351:7351"
+    restart: always
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: unipet-caddy
+    restart: always
+    depends_on:
+      nakama:
+        condition: service_healthy
+    environment:
+      - UNIPET_PUBLIC_HOST=${UNIPET_PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+
+volumes:
+  caddy_data:

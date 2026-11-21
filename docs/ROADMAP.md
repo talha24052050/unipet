@@ -6,6 +6,7 @@ Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
 - [x] ~~Docker Desktop kurulumu~~ → gerek kalmadı: `server/local-nakama.ps1` Docker'sız çalışıyor (yerelde uçtan uca test geçti)
 - [ ] **Telefonda test**: pet seçimi/aksesuar, giriş (kod 000000), chat/emote, bakım
 - [ ] **Arkadaşlarla ilk oyun**: `docs/ARKADASLARLA_OYNA.md`
+- [ ] **Kalıcı sunucu + imzalı sürüm** (6.1/6.2): kod hazır, adımlar `docs/RELEASE.md` (VPS, keystore, GitHub secret'ları)
 
 Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye verilecek
 
@@ -60,6 +61,6 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test
-- [ ] 6.1 Ücretsiz VPS'e Nakama kurulumu
-- [ ] 6.2 İmzalı release APK
+- [~] 6.1 Ücretsiz VPS'e Nakama kurulumu
+- [~] 6.2 İmzalı release APK
 - [ ] 6.3 SKY LAB kapalı testi, geri bildirim formu

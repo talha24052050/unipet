@@ -1,0 +1,5 @@
+{$UNIPET_PUBLIC_HOST} {
+	encode gzip
+	# Nakama API + WebSocket (/ws). Konsol (7351) dışarı açılmaz.
+	reverse_proxy nakama:7350
+}

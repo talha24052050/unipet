@@ -22,6 +22,19 @@ func save(path: String = PATH) -> Error:
 	return cfg.save(path)
 
 
+## Kullanılacak sunucu: oyuncunun girdiği adres; boşsa ve yayın derlemesiyse res://secrets.cfg [nakama].
+## {} = tek oyunculu.
+static func effective_server(typed_address: String, release: bool, secrets_path: String = "res://secrets.cfg") -> Dictionary:
+	var typed: Dictionary = parse_server_address(typed_address)
+	if not typed.is_empty() or not release:
+		return typed
+	var cfg: ConfigFile = ConfigFile.new()
+	if cfg.load(secrets_path) != OK or str(cfg.get_value("nakama", "host", "")).is_empty():
+		return {}
+	return {"host": str(cfg.get_value("nakama", "host")), "port": int(cfg.get_value("nakama", "port", 443)),
+		"ssl": bool(cfg.get_value("nakama", "ssl", true))}
+
+
 ## "192.168.1.5", "192.168.1.5:7350", "https://abc.trycloudflare.com" → {"host", "port", "ssl"}.
 ## Boş ya da geçersizse {} (tek oyunculu).
 static func parse_server_address(text: String) -> Dictionary:

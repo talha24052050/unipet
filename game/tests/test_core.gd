@@ -108,3 +108,30 @@ func test_display_name_cleaning() -> String:
 	if LP.name_from_email("ali.veli@gmail.com") != "ali veli":
 		return "mailden isim yanlış: %s" % LP.name_from_email("ali.veli@gmail.com")
 	return ""
+
+
+func test_effective_server_release_fallback() -> String:
+	var LS: GDScript = load("res://src/core/local_settings.gd")
+	var path: String = "user://test_secrets.cfg"
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("nakama", "host", "1-2-3-4.sslip.io")
+	cfg.set_value("nakama", "port", 443)
+	cfg.set_value("nakama", "ssl", true)
+	cfg.save(path)
+	var dev_empty: Dictionary = LS.effective_server("", false, path)
+	var rel_empty: Dictionary = LS.effective_server("", true, path)
+	var rel_typed: Dictionary = LS.effective_server("192.168.1.5", true, path)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	if not dev_empty.is_empty():
+		return "geliştirmede boş adres tek oyunculu olmalı"
+	if rel_empty.get("host") != "1-2-3-4.sslip.io" or rel_empty.get("ssl") != true:
+		return "yayında gömülü sunucu kullanılmalı: %s" % rel_empty
+	if rel_typed.get("host") != "192.168.1.5":
+		return "yazılan adres öncelikli olmalı"
+	return ""
+
+
+func test_dev_build_uses_mock_offline() -> String:
+	if not Config.IS_RELEASE and (Config.AUTH_BACKEND != "mock" or Config.NETWORK_BACKEND != "offline"):
+		return "geliştirme derlemesi mock/offline olmalı"
+	return ""

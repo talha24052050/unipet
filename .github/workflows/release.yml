@@ -1,0 +1,116 @@
+name: release
+# İmzalı yayın APK'sı (ROADMAP 6.2). Tetik: "v" ile başlayan etiket, ör. `git tag v0.1.0 && git push origin v0.1.0`.
+# Gerekli GitHub secret'ları (docs/RELEASE.md):
+#   RELEASE_KEYSTORE_B64, RELEASE_KEYSTORE_USER, RELEASE_KEYSTORE_PASSWORD
+#   SUPABASE_URL, SUPABASE_ANON_KEY, NAKAMA_HOST, NAKAMA_SERVER_KEY
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release-apk:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.7.2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Secret'lar var mı
+        env:
+          KS: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          SU: ${{ secrets.SUPABASE_URL }}
+          NH: ${{ secrets.NAKAMA_HOST }}
+        run: |
+          missing=""
+          [ -z "$KS" ] && missing="$missing RELEASE_KEYSTORE_B64"
+          [ -z "$SU" ] && missing="$missing SUPABASE_URL"
+          [ -z "$NH" ] && missing="$missing NAKAMA_HOST"
+          if [ -n "$missing" ]; then echo "Eksik secret:$missing (docs/RELEASE.md)"; exit 1; fi
+
+      - name: Godot kur
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+
+      - name: Export template önbelleği
+        id: tpl-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Export template indir (önbellekte yoksa)
+        if: steps.tpl-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sSL -o tpl.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q tpl.tpz
+          mkdir -p ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mv templates/android_* templates/version.txt ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable/
+          rm -rf templates tpl.tpz
+
+      - name: Godot editör ayarları (Android SDK / Java yolu)
+        run: |
+          mkdir -p ~/.config/godot
+          for f in editor_settings-4.tres editor_settings-4.7.tres; do
+            cat > ~/.config/godot/$f <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
+          EOF
+          done
+
+      - name: Yayın ayarları (secrets.cfg, keystore, export preset)
+        env:
+          KS: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NAKAMA_HOST: ${{ secrets.NAKAMA_HOST }}
+          NAKAMA_SERVER_KEY: ${{ secrets.NAKAMA_SERVER_KEY }}
+        run: |
+          echo "$KS" | base64 -d > ~/release.keystore
+          {
+            echo '[supabase]'
+            echo "url=\"$SUPABASE_URL\""
+            echo "anon_key=\"$SUPABASE_ANON_KEY\""
+            echo '[nakama]'
+            echo "host=\"$NAKAMA_HOST\""
+            echo 'port=443'
+            echo 'ssl=true'
+            echo "server_key=\"$NAKAMA_SERVER_KEY\""
+          } > game/secrets.cfg
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -e 's/^custom_features=.*/custom_features="unipet_release"/' \
+              -e "s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/" \
+              -e "s/^version\/name=.*/version\/name=\"${VERSION}\"/" \
+              -e 's/^export_path=.*/export_path="..\/build\/unipet-release.apk"/' \
+              tools/ci/export_presets.cfg > game/export_presets.cfg
+          grep -E "custom_features|version/" game/export_presets.cfg
+
+      - name: Testler
+        run: |
+          godot --headless --path game --import || true
+          godot --headless --path game -s res://tests/run_tests.gd
+
+      - name: Export (imzalı)
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: /home/runner/release.keystore
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: ${{ secrets.RELEASE_KEYSTORE_USER }}
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          mkdir -p build
+          godot --headless --path game --export-release "Android" ../build/unipet-release.apk 2>&1 | tee export.log
+          test -s build/unipet-release.apk
+          mv build/unipet-release.apk "build/unipet-${GITHUB_REF_NAME}.apk"
+          rm -f game/secrets.cfg ~/release.keystore
+
+      - name: GitHub sürümü
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "build/unipet-${GITHUB_REF_NAME}.apk" \
+            --title "UniPet ${GITHUB_REF_NAME}" --notes "İmzalı test sürümü (${GITHUB_SHA::7})."

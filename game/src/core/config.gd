@@ -18,8 +18,11 @@ const NET_TICK_RATE: int = 10
 const FREE_CHAT_ENABLED: bool = false
 
 ## Aktif servis implementasyonları. Değiştirmek = bu satırı değiştirmek.
-const NETWORK_BACKEND: String = "offline"  # "offline" | "nakama"
-const AUTH_BACKEND: String = "mock"  # "mock" | "supabase"
+## Yayın derlemesi (export preset'inde custom feature "unipet_release"): gerçek giriş + sunucu.
+## Geliştirme derlemesi: sahte giriş (000 / 000000) + tek oyunculu (sunucu adresi girilirse Nakama).
+var IS_RELEASE: bool = OS.has_feature("unipet_release")
+var NETWORK_BACKEND: String = "nakama" if IS_RELEASE else "offline"  # "offline" | "nakama"
+var AUTH_BACKEND: String = "supabase" if IS_RELEASE else "mock"  # "mock" | "supabase"
 
 ## Oyuncu hareketi (metre/saniye, radyan/saniye).
 const PLAYER_WALK_SPEED: float = 4.6

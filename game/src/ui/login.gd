@@ -135,7 +135,7 @@ func _on_code_sent(email: String) -> void:
 
 func _on_signed_in(_user_id: String, _token: String) -> void:
 	_status.text = "Giriş yapıldı."
-	Services.use_server(LocalSettings.parse_server_address(LocalSettings.load_or_default().server_address))
+	Services.use_server(LocalSettings.effective_server(LocalSettings.load_or_default().server_address, Config.IS_RELEASE))
 	# Supabase'deki profil (başka telefonda yapılan seçim) yerel kayda gelsin.
 	if Services.profile_sync != null and Services.profile_sync.is_active():
 		await Services.profile_sync.pull()
