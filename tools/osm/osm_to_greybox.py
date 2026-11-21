@@ -4,6 +4,9 @@ Kullanım:
     python tools/osm/osm_to_greybox.py art/reference/osm/davutpasa.json \
         --center-park "Ortabahçe" --radius 220 --out game/data/zones/ortabahce_greybox.json
 
+    python tools/osm/osm_to_greybox.py art/reference/osm/davutpasa.json \
+        --area-way 666081501 --origin-park "Ortabahçe" --out game/data/zones/davutpasa_campus.json
+
 Çıktı (metre, Godot ekseni: +X doğu, -Z kuzey, orijin = parkın merkezi):
     {"origin": {"lat", "lon"}, "radius",
      "buildings": [{"name", "points": [[x, z], ...], "height"}],
@@ -40,36 +43,79 @@ def centroid(pts: list[tuple[float, float]]) -> tuple[float, float]:
     return (sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n)
 
 
+def point_in_polygon(pt: tuple[float, float], poly: list[tuple[float, float]]) -> bool:
+    x, z = pt
+    inside = False
+    n = len(poly)
+    j = n - 1
+    for i in range(n):
+        xi, zi = poly[i]
+        xj, zj = poly[j]
+        if ((zi > z) != (zj > z)) and (x < (xj - xi) * (z - zi) / (zj - zi) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("osm_json")
-    ap.add_argument("--center-park", required=True)
-    ap.add_argument("--radius", type=float, default=220.0)
+    ap.add_argument("--center-park", default=None)
+    ap.add_argument("--origin-park", default=None)
+    ap.add_argument("--area-way", type=int, default=None)
+    ap.add_argument("--radius", type=float, default=None)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
     with open(args.osm_json, encoding="utf-8") as f:
         elements = json.load(f)["elements"]
 
-    park = next(
-        e for e in elements
-        if e.get("tags", {}).get("name") == args.center_park and "geometry" in e
-    )
-    lat0 = sum(g["lat"] for g in park["geometry"]) / len(park["geometry"])
-    lon0 = sum(g["lon"] for g in park["geometry"]) / len(park["geometry"])
+    origin_name = args.origin_park or args.center_park
+    if origin_name:
+        origin_el = next(
+            e for e in elements
+            if e.get("tags", {}).get("name") == origin_name and "geometry" in e
+        )
+        lat0 = sum(g["lat"] for g in origin_el["geometry"]) / len(origin_el["geometry"])
+        lon0 = sum(g["lon"] for g in origin_el["geometry"]) / len(origin_el["geometry"])
+    elif args.area_way is not None:
+        area_el = next(
+            e for e in elements
+            if e.get("id") == args.area_way and "geometry" in e
+        )
+        lat0 = sum(g["lat"] for g in area_el["geometry"]) / len(area_el["geometry"])
+        lon0 = sum(g["lon"] for g in area_el["geometry"]) / len(area_el["geometry"])
+    else:
+        raise ValueError("Either --center-park, --origin-park, or --area-way must be provided.")
 
     def pts_of(e) -> list[tuple[float, float]]:
         return [project(g["lat"], g["lon"], lat0, lon0) for g in e.get("geometry", [])]
 
-    def near(pts) -> bool:
-        cx, cz = centroid(pts)
-        return math.hypot(cx, cz) <= args.radius
+    if args.area_way is not None:
+        area_el = next(
+            e for e in elements
+            if e.get("id") == args.area_way and "geometry" in e
+        )
+        area_pts = pts_of(area_el)
+        area_poly = area_pts[:-1] if area_pts[0] == area_pts[-1] else area_pts
+        out_radius = args.radius if args.radius is not None else round(max(math.hypot(p[0], p[1]) for p in area_pts), 1)
+
+        def keep(e, pts: list[tuple[float, float]]) -> bool:
+            if e.get("id") == args.area_way:
+                return False
+            return point_in_polygon(centroid(pts), area_poly)
+    else:
+        out_radius = args.radius if args.radius is not None else 220.0
+
+        def keep(e, pts: list[tuple[float, float]]) -> bool:
+            cx, cz = centroid(pts)
+            return math.hypot(cx, cz) <= out_radius
 
     buildings, areas, paths = [], [], []
     for e in elements:
         tags = e.get("tags", {})
         pts = pts_of(e)
-        if len(pts) < 2 or not near(pts):
+        if len(pts) < 2 or not keep(e, pts):
             continue
         if "building" in tags and len(pts) >= 3:
             ring = pts[:-1] if pts[0] == pts[-1] else pts
@@ -92,7 +138,7 @@ def main() -> None:
     out = {
         "source": "OpenStreetMap contributors (ODbL)",
         "origin": {"lat": round(lat0, 7), "lon": round(lon0, 7)},
-        "radius": args.radius,
+        "radius": out_radius,
         "buildings": buildings, "areas": areas, "paths": paths,
     }
     with open(args.out, "w", encoding="utf-8") as f:
