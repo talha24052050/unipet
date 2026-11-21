@@ -2,7 +2,10 @@ extends Node
 ## Oyun genelindeki ayarlar. Gizli anahtar BURAYA YAZILMAZ;
 ## Supabase/Nakama bilgileri ileride user://secrets.cfg veya export ayarından okunacak.
 
-## Giriş izni verilen mail domainleri.
+## Okul maili zorunlu mu? Şimdilik kapalı (Talha, 2026-11-21): her geçerli mail girebilir.
+## Açılırsa sunucuda da açılmalı: Nakama UNIPET_REQUIRE_SCHOOL_EMAIL=true + Supabase hook (docs/SUPABASE.md).
+const REQUIRE_SCHOOL_EMAIL: bool = false
+## Okul maili zorunluyken izin verilen domainler.
 const ALLOWED_EMAIL_DOMAINS: PackedStringArray = ["std.yildiz.edu.tr"]
 
 ## Bir bölge odasının (kanal) maksimum oyuncu sayısı.

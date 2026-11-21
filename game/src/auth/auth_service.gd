@@ -8,13 +8,32 @@ signal signed_in(user_id: String, session_token: String)
 signal auth_failed(reason: String)
 
 
+## Girişe izin verilen mail mi? Config.REQUIRE_SCHOOL_EMAIL'e göre okul maili ya da herhangi geçerli mail.
 static func is_allowed_email(email: String) -> bool:
+	return is_school_email(email) if Config.REQUIRE_SCHOOL_EMAIL else is_valid_email(email)
+
+
+static func is_valid_email(email: String) -> bool:
 	var e := email.strip_edges().to_lower()
 	var at := e.rfind("@")
-	if at <= 0 or at == e.length() - 1:
+	if at <= 0 or at == e.length() - 1 or e.count("@") != 1 or " " in e:
 		return false
 	var domain := e.substr(at + 1)
-	return domain in Config.ALLOWED_EMAIL_DOMAINS
+	return "." in domain and not domain.begins_with(".") and not domain.ends_with(".")
+
+
+static func is_school_email(email: String) -> bool:
+	if not is_valid_email(email):
+		return false
+	var e := email.strip_edges().to_lower()
+	return e.substr(e.rfind("@") + 1) in Config.ALLOWED_EMAIL_DOMAINS
+
+
+## Mail reddedilince gösterilecek mesaj.
+static func email_rejected_message() -> String:
+	if Config.REQUIRE_SCHOOL_EMAIL:
+		return "Sadece YTÜ öğrenci maili (@std.yildiz.edu.tr) ile giriş yapılabilir."
+	return "Geçerli bir mail adresi gir."
 
 
 func request_code(_email: String) -> void:

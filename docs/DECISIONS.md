@@ -21,7 +21,8 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 |---|---|---|
 | Motor | Godot 4 (4.7.x), GDScript | 2026-11-21 |
 | Platform | Önce Android. iOS'a kolay geçiş korunur | 2026-11-21 |
-| Auth | Supabase Auth, sadece `@std.yildiz.edu.tr` mail doğrulaması (kesin) | 2026-11-21 |
+| Auth | Supabase Auth, mail + tek kullanımlık kod | 2026-11-21 |
+| Okul maili | **Şimdilik zorunlu değil**: her geçerli mail girer. Altyapı hazır, tek ayarla açılır (`Config.REQUIRE_SCHOOL_EMAIL` + sunucu env + Supabase hook) | 2026-11-21 |
 | Multiplayer | Nakama. Geliştirmede lokal Docker (ücretsiz), test için ücretsiz VPS. Ağ kodu arayüz arkasında | 2026-11-21 |
 | Dünya | Bölgeler (zone) + kapasite dolunca yeni kanal (oda) | 2026-11-21 |
 | Geliştirme | Talha Claude Code ile devam ediyor. Lokal işler Antigravity CLI (`agy`) ile | 2026-11-21 |

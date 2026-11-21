@@ -8,7 +8,7 @@ var _user_id := ""
 
 func request_code(email: String) -> void:
 	if not is_allowed_email(email):
-		auth_failed.emit("Sadece YTÜ öğrenci maili (@std.yildiz.edu.tr) ile giriş yapılabilir.")
+		auth_failed.emit(email_rejected_message())
 		return
 	code_sent.emit(email)
 

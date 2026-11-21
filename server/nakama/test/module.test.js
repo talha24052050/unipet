@@ -32,7 +32,9 @@ assert.strictEqual(req.account.vars.supabase_token, undefined, "token saklanmama
 assert.throws(function () { M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-1", vars: { supabase_token: "bad" } } }); });
 assert.throws(function () { M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "baskasi", vars: { supabase_token: "good" } } }); }, "id eşleşmeli");
 supaUser.email = "ali@gmail.com";
-assert.throws(function () { M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-1", vars: { supabase_token: "good" } } }); }, "domain");
+M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-1", vars: { supabase_token: "good" } } }); // okul maili zorunlu değil
+var envSchool = { SUPABASE_URL: env.SUPABASE_URL, SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY, UNIPET_REQUIRE_SCHOOL_EMAIL: "true" };
+assert.throws(function () { M.beforeAuthenticateCustom(ctx(envSchool), logger, nk, { account: { id: "u-1", vars: { supabase_token: "good" } } }); }, "domain");
 assert.throws(function () { M.beforeAuthenticateCustom(ctx({}), logger, nk, { account: { id: "mock-ali", vars: {} } }); }, "dev kapalıyken mock");
 M.beforeAuthenticateCustom(ctx({ UNIPET_DEV_AUTH: "true" }), logger, nk, { account: { id: "mock-ali", vars: {} } });
 

@@ -21,8 +21,9 @@ Aşağıdakiler senin hesabınla yapılır; ~10 dakika. Bitince bana sadece **Pr
 
 ## 3. Veritabanı
 1. **SQL Editor → New query** → `server/supabase/001_schema.sql` içeriğini yapıştır → **Run**.
-2. **Authentication → Hooks → Before User Created** → **Postgres function** → `public.hook_restrict_signup_domain` → Kaydet.
-   (Bu, `@std.yildiz.edu.tr` dışındaki maillerin kaydını SUNUCUDA reddeder; oyundaki kontrol atlatılsa bile.)
+2. **(Şimdilik ATLA — okul maili zorunluluğu kapalı.)** Açılacağı zaman: **Authentication → Hooks → Before User Created**
+   → **Postgres function** → `public.hook_restrict_signup_domain` → Kaydet. Bu, `@std.yildiz.edu.tr` dışındaki kayıtları
+   SUNUCUDA reddeder. Aynı anda oyunda `Config.REQUIRE_SCHOOL_EMAIL = true` ve Nakama'da `UNIPET_REQUIRE_SCHOOL_EMAIL=true`.
 
 ## 4. GitHub (APK'nın Supabase'i bilmesi için)
 Repo → **Settings → Secrets and variables → Actions → New repository secret**:

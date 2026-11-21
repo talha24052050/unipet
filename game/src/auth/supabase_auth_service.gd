@@ -2,8 +2,8 @@ extends "res://src/auth/auth_service.gd"
 ## Supabase Auth (GoTrue REST) ile mail + tek kullanımlık kod girişi.
 ## Ayarlar: res://secrets.cfg [supabase] url, anon_key  (repo'da yok; CI GitHub secret'tan yazar).
 ## Oturum cihazda şifreli saklanır (user://session.cfg, anahtar cihaz kimliğinden türetilir) ve
-## süresi dolmadan yenilenir. Domain kısıtı istemcide de kontrol edilir ama ASIL kontrol
-## sunucudadır (Supabase "before user created" hook'u, docs/SUPABASE.md).
+## süresi dolmadan yenilenir. Okul maili zorunluluğu (Config.REQUIRE_SCHOOL_EMAIL) istemcide de
+## kontrol edilir ama ASIL kontrol sunucudadır (Supabase hook'u + Nakama, docs/SUPABASE.md).
 
 const SECRETS_PATH: String = "res://secrets.cfg"
 const SESSION_PATH: String = "user://session.cfg"
@@ -39,7 +39,7 @@ func is_configured() -> bool:
 func request_code(email: String) -> void:
 	var e: String = email.strip_edges().to_lower()
 	if not is_allowed_email(e):
-		auth_failed.emit("Sadece YTÜ öğrenci maili (@std.yildiz.edu.tr) ile giriş yapılabilir.")
+		auth_failed.emit(email_rejected_message())
 		return
 	var res: Dictionary = await _post("/auth/v1/otp", {"email": e, "create_user": true})
 	if res["ok"]:

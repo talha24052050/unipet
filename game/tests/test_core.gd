@@ -4,16 +4,16 @@ const AuthService := preload("res://src/auth/auth_service.gd")
 
 
 func test_email_domain_allowed() -> String:
-	if not AuthService.is_allowed_email("ali.veli@std.yildiz.edu.tr"):
+	if not AuthService.is_school_email("ali.veli@std.yildiz.edu.tr"):
 		return "öğrenci maili reddedildi"
-	if not AuthService.is_allowed_email("  Ali@STD.Yildiz.edu.tr "):
+	if not AuthService.is_school_email("  Ali@STD.Yildiz.edu.tr "):
 		return "büyük harf/boşluk normalize edilmedi"
 	return ""
 
 
 func test_email_domain_rejected() -> String:
 	for bad in ["ali@gmail.com", "ali@yildiz.edu.tr.evil.com", "std.yildiz.edu.tr", "@std.yildiz.edu.tr", "ali@"]:
-		if AuthService.is_allowed_email(bad):
+		if AuthService.is_school_email(bad):
 			return "kabul edilmemeliydi: " + bad
 	return ""
 
@@ -66,4 +66,16 @@ func test_local_profile_roundtrip() -> String:
 	var empty: RefCounted = LocalProfile.load_or_default("user://yok.cfg")
 	if empty.pet_id != Config.DEFAULT_PET_ID:
 		return "kayıt yokken varsayılan pet gelmedi"
+	return ""
+
+
+func test_any_valid_email_when_school_not_required() -> String:
+	for good in ["ali@gmail.com", "a.b@outlook.com.tr", " Ali@STD.Yildiz.edu.tr "]:
+		if not AuthService.is_valid_email(good):
+			return "geçerli mail reddedildi: " + good
+	for bad in ["ali", "ali@", "@gmail.com", "ali@gmail", "a b@gmail.com", "a@@b.com", "ali@.com"]:
+		if AuthService.is_valid_email(bad):
+			return "geçersiz mail kabul edildi: " + bad
+	if AuthService.is_allowed_email("ali@gmail.com") == Config.REQUIRE_SCHOOL_EMAIL:
+		return "is_allowed_email Config.REQUIRE_SCHOOL_EMAIL'e uymuyor"
 	return ""

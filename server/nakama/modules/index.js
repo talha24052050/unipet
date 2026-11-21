@@ -5,6 +5,7 @@
 // Ortam değişkenleri (docker-compose → --runtime.env):
 //   SUPABASE_URL, SUPABASE_ANON_KEY   Supabase oturum doğrulaması
 //   UNIPET_DEV_AUTH=true              "mock-..." kimliklerine izin ver (sadece yerel geliştirme!)
+//   UNIPET_REQUIRE_SCHOOL_EMAIL=false sadece @std.yildiz.edu.tr (şimdilik kapalı; oyundaki Config ile aynı tutulmalı)
 //   UNIPET_ROOM_CAPACITY=40           oda kapasitesi (oyundaki Config.ROOM_CAPACITY ile aynı)
 //   UNIPET_FREE_CHAT=false            serbest yazı (kapalı; açılırsa filtre şart)
 //
@@ -66,7 +67,8 @@ function beforeAuthenticateCustom(ctx, logger, nk, req) {
   }
   var user = JSON.parse(res.body);
   var email = (user.email || "").toLowerCase();
-  if (user.id !== id || !ALLOWED_EMAIL.test(email)) {
+  var schoolOnly = env(ctx, "UNIPET_REQUIRE_SCHOOL_EMAIL", "false") === "true";
+  if (user.id !== id || (schoolOnly && !ALLOWED_EMAIL.test(email))) {
     logger.warn("Reddedildi: id eşleşmedi ya da domain dışı (%s)", email);
     throw Error("bu hesap kullanılamaz");
   }

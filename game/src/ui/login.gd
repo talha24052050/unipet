@@ -55,7 +55,7 @@ func _process(delta: float) -> void:
 func submit_email() -> void:
 	var e: String = _email_input.text.strip_edges().to_lower()
 	if not Services.auth.is_allowed_email(e):
-		_status.text = "Sadece @std.yildiz.edu.tr mailiyle giriş yapılabilir."
+		_status.text = Services.auth.email_rejected_message()
 		return
 	_email = e
 	_status.text = "Kod gönderiliyor..."
