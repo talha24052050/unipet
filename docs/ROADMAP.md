@@ -17,7 +17,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 1.2 Sanal joystick (sol alt, dokunmatik, çoklu dokunma güvenli)
 - [x] 1.3 Dokun-yürü: zemine dokun → NavigationAgent3D ile hedefe yürü; joystick dokunuşu iptal eder
 - [x] 1.4 Takip kamerası: üçüncü şahıs, iki parmakla döndürme/yakınlaştırma, duvara girmeme
-- [ ] 1.5 Greybox Ortabahçe: düz kutularla yerleşim (ölçek testi), navigation mesh
+- [x] 1.5 Greybox Ortabahçe: düz kutularla yerleşim (ölçek testi), navigation mesh
 - [ ] 1.6 Android test build'i (GitHub Actions'ta APK üret — Talha'nın internetini harcamamak için)
 - [ ] 1.7 Checkpoint: Talha telefonda yürüme hissini test eder
 

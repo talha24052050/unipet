@@ -4,6 +4,9 @@ extends NavigationRegion3D
 
 
 func _ready() -> void:
-	# CSG şekilleri ilk karede oluşur; ondan sonra pişir.
+	# Çocuklar (ör. GreyboxBuilder) _ready'de kurulur; bir kare bekleyip arka planda pişir.
 	await get_tree().process_frame
-	bake_navigation_mesh(false)
+	var started: int = Time.get_ticks_msec()
+	bake_finished.connect(func() -> void:
+		print_verbose("navmesh pişti: %d ms" % (Time.get_ticks_msec() - started)), CONNECT_ONE_SHOT)
+	bake_navigation_mesh(true)

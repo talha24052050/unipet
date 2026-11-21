@@ -17,6 +17,7 @@ unipet/
 ├─ art/reference/         referans fotoğraflar, OSM verisi
 ├─ agy-tasks/             Antigravity görev kutusu (inbox → done)
 ├─ tools/agy-runner/      görev kutusunu işleyen PowerShell scripti
+├─ tools/osm/             OSM → greybox bölge JSON (game/data/zones/), GreyboxBuilder sahneye kurar
 └─ docs/                  kararlar, yol haritası, mimari
 ```
 
