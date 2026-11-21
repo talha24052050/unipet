@@ -13,6 +13,8 @@ var host: String = "127.0.0.1"
 var port: int = 7350
 var ssl: bool = false
 var server_key: String = "unipet-dev-server-key"
+## Boşsa Services.auth.get_user_id(). Testler (aynı süreçte iki oyuncu) için doldurulabilir.
+var custom_id_override: String = ""
 
 var _socket: WebSocketPeer = WebSocketPeer.new()
 var _socket_open: bool = false
@@ -36,7 +38,7 @@ func _ready() -> void:
 
 ## session_token: Supabase erişim anahtarı (mock'ta "mock-token"). Kullanıcı kimliği Services.auth'tan.
 func connect_to_server(session_token: String) -> void:
-	var custom_id: String = Services.auth.get_user_id()
+	var custom_id: String = custom_id_override if not custom_id_override.is_empty() else Services.auth.get_user_id()
 	if custom_id.is_empty():
 		disconnected.emit("Önce giriş yapılmalı.")
 		return
