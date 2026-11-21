@@ -7,6 +7,7 @@ description: UniPet'te bir task veya parça bittiğinde kullan — test, commit,
 1. `godot-dev` skill'indeki test komutlarını çalıştır. Kırmızıysa commit etme, düzelt.
 2. `docs/ROADMAP.md`'de task'ı `[x]` yap.
 3. Commit mesajı: `<parça>.<task>: <kısa açıklama>` (ör. `1.2: sanal joystick`). Türkçe.
+   **Co-Authored-By / "Generated with" satırı EKLEME** (Talha'nın isteği; `.claude/settings.json`'da da kapalı).
 4. `git pull --rebase` → `git push`.
 5. Talha'ya 2-4 satır: ne yapıldı, nasıl denenir, varsa risk/soru.
 
