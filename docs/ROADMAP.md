@@ -44,8 +44,8 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 
 ## Parça 4 — Multiplayer (Nakama)
 - [x] 4.1 `server/docker-compose.yml` (Nakama + Postgres), lokal çalıştırma talimatı
-- [ ] 4.2 Supabase token → Nakama custom auth köprüsü (sunucu modülü)
-- [ ] 4.3 Bölge/kanal eşleştirme (zone → oda, kapasite)
+- [x] 4.2 Supabase token → Nakama custom auth köprüsü (sunucu modülü)
+- [x] 4.3 Bölge/kanal eşleştirme (zone → oda, kapasite)
 - [ ] 4.4 NakamaNetworkService: katıl/ayrıl, state gönder/al, interpolasyon
 - [ ] 4.5 Hazır cümleler + emote UI, baloncuk gösterimi
 - [ ] 4.6 İki cihazla test, Checkpoint

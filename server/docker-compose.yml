@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-nakama}"]
       interval: 3s
@@ -29,17 +29,23 @@ services:
       - "-ecx"
       - >
         /nakama/nakama migrate up --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable &&
-        exec /nakama/nakama --config /nakama/data/local.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS"
+        exec /nakama/nakama --config /nakama/data/local.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS" --runtime.env "SUPABASE_URL=$$SUPABASE_URL" --runtime.env "SUPABASE_ANON_KEY=$$SUPABASE_ANON_KEY" --runtime.env "UNIPET_DEV_AUTH=$$UNIPET_DEV_AUTH" --runtime.env "UNIPET_ROOM_CAPACITY=$$UNIPET_ROOM_CAPACITY" --runtime.env "UNIPET_FREE_CHAT=$$UNIPET_FREE_CHAT"
     environment:
       - NAKAMA_SERVER_KEY=${NAKAMA_SERVER_KEY:-unipet-dev-server-key}
       - NAKAMA_CONSOLE_USER=${NAKAMA_CONSOLE_USER:-admin}
       - NAKAMA_CONSOLE_PASS=${NAKAMA_CONSOLE_PASS:-password}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - UNIPET_DEV_AUTH=${UNIPET_DEV_AUTH:-false}
+      - UNIPET_ROOM_CAPACITY=${UNIPET_ROOM_CAPACITY:-40}
+      - UNIPET_FREE_CHAT=${UNIPET_FREE_CHAT:-false}
     volumes:
       - ./nakama/local.yml:/nakama/data/local.yml:ro
+      - ./nakama/modules:/nakama/data/modules:ro
     ports:
       - "7349:7349"
       - "7350:7350"
-      - "7351:7351"
+      - "127.0.0.1:7351:7351"
     healthcheck:
       test: ["CMD", "/nakama/nakama", "healthcheck"]
       interval: 5s
