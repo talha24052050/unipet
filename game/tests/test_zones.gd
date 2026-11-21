@@ -40,3 +40,18 @@ func test_navmesh_source_hash_changes_with_data() -> String:
 	if NavRegion.call("source_hash", c.get_zone("fef")) != a:
 		return "özet kararlı değil"
 	return ""
+
+
+func test_prebaked_navmeshes_up_to_date() -> String:
+	# Bölge verisi değişip tools/nav/bake_zone_navmeshes.gd çalıştırılmadıysa telefonda açılış yavaşlar.
+	var NavRegion: GDScript = load("res://src/world/runtime_nav_region.gd")
+	var c: RefCounted = ZoneCatalog.load_default()
+	var stale: PackedStringArray = []
+	for id: String in c.ids():
+		var path: String = "res://data/zones/%s_navmesh.res" % id
+		var nm: NavigationMesh = load(path) as NavigationMesh if ResourceLoader.exists(path) else null
+		if nm == null or str(nm.get_meta("source_hash", "")) != NavRegion.call("source_hash", c.get_zone(id)):
+			stale.append(id)
+	if not stale.is_empty():
+		return "hazır yürüme haritası eski/eksik: %s → tools/nav/bake_zone_navmeshes.gd çalıştır" % ", ".join(stale)
+	return ""

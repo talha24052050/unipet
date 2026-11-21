@@ -39,7 +39,13 @@ const TRASHCAN_BOX_SIZE: Vector3 = Vector3(0.6, 1.0, 0.6)
 var prop_count: int = 0
 
 
+## true ise data_path yerine Services.current_zone'un prop verisi kullanılır ("" = bu bölgede prop yok).
+@export var follow_current_zone: bool = true
+
+
 func _ready() -> void:
+	if follow_current_zone and Services.zones != null and Services.zones.has(Services.current_zone):
+		data_path = str(Services.zones.get_zone(Services.current_zone)["props"])
 	if data_path.is_empty():
 		return
 	var data: Dictionary = load_data(data_path)
