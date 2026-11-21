@@ -67,13 +67,16 @@ st = M.matchLoop(ctx(), logger, nk, dispatcher, 1, st, [
   msg(A, 2, { k: 0, p: "selam" }),
   msg(A, 2, { k: 0, p: "selam" }),                          // 1 sn dolmadı → yok say
   msg(B, 2, { k: 2, p: "küfür" }),                          // serbest chat kapalı
-  msg(B, 4, { pet: "yeti", acc: { head: "hat_cap", tail: "x" } })
+  msg(B, 4, { pet: "yeti", acc: { head: "hat_cap", tail: "x" }, name: "  Ali   Veli  " })
 ]).state;
 var ops = sent.map(function (s) { return s.op; });
 assert.deepEqual(ops, [1, 2, 5, 4], "sadece geçerli mesajlar yayınlanır (+sosyal bakım): " + ops);
 assert.deepEqual(sent[0].to, ["B"], "durum gönderene geri gitmez");
 assert.deepEqual(sent[1].to.sort(), ["A", "B"], "chat herkese");
 assert.deepEqual(sent[3].data.acc, { head: "hat_cap" }, "bilinmeyen slot atılır");
+assert.strictEqual(sent[3].data.name, "Ali Veli", "isim temizlenir");
+assert.strictEqual(M.cleanName("<script>"), "", "zararlı isim reddedilir");
+assert.strictEqual(M.cleanName("Şükrü_42"), "Şükrü_42");
 st = M.matchLeave(ctx(), logger, nk, dispatcher, 2, st, [A, B]).state;
 var r = { state: st };
 for (var t = 0; t < 400 && r; t++) r = M.matchLoop(ctx(), logger, nk, dispatcher, t, r.state, []);

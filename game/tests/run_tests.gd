@@ -12,6 +12,10 @@ func _initialize() -> void:
 		if not (file.begins_with("test_") and file.ends_with(".gd")):
 			continue
 		var script: GDScript = load("res://tests/" + file)
+		if script == null or not script.can_instantiate():
+			failed += 1
+			print("  FAIL %s -> script derlenemedi (yukarıdaki SCRIPT ERROR'a bak)" % file)
+			continue
 		var inst = script.new()
 		for m in script.get_script_method_list():
 			var name: String = m["name"]

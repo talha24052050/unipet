@@ -20,7 +20,7 @@ var EMPTY_TICKS_BEFORE_CLOSE = TICK_RATE * 30;
 var OP_STATE = 1;    // c→s {p:[x,y,z], y:yaw, a:anim}            s→c {id, p, y, a}
 var OP_CHAT = 2;     // c→s {k:0|1|2, p:payload}                 s→c {s:senderId, k, p}
 var OP_SNAPSHOT = 3; // s→c {players:[{id, p, y, a, pet, acc}]}  (sadece yeni katılana)
-var OP_PROFILE = 4;  // c→s {pet, acc:{slot:id}}                 s→c {id, pet, acc}
+var OP_PROFILE = 4;  // c→s {pet, acc:{slot:id}, name}           s→c {id, pet, acc, name}
 var OP_CARE = 5;     // c→s {act}                                s→c {ok, reason, state:{food,joy,energy,t}} (sadece o oyuncuya)
 
 // ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
@@ -109,6 +109,12 @@ var CHAT_PRESET = 0, CHAT_EMOTE = 1, CHAT_FREE = 2;
 var CHAT_MIN_INTERVAL_MS = 1000;
 var ID_PATTERN = /^[a-z0-9_]{1,32}$/;
 var WORLD_LIMIT = 2000;
+var NAME_PATTERN = /^[0-9A-Za-zÇĞİÖŞÜçğıöşü _-]{1,16}$/;
+
+function cleanName(raw) {
+  var n = String(raw || "").replace(/\s+/g, " ").trim().substring(0, 16);
+  return NAME_PATTERN.test(n) ? n : "";
+}
 
 function env(ctx, key, fallback) {
   var v = ctx.env && ctx.env[key];
@@ -215,14 +221,14 @@ function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, me
 function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
   for (var i = 0; i < presences.length; i++) {
     var p = presences[i];
-    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, lastChat: 0 };
+    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", lastChat: 0 };
     state.players[p.userId].presence = p;
     // Yeni gelene odadaki herkesin son durumu.
     var list = [];
     for (var id in state.players) {
       if (id === p.userId) continue;
       var o = state.players[id];
-      list.push({ id: id, p: o.p, y: o.y, a: o.a, pet: o.pet, acc: o.acc });
+      list.push({ id: id, p: o.p, y: o.y, a: o.a, pet: o.pet, acc: o.acc, name: o.name });
     }
     dispatcher.broadcastMessage(OP_SNAPSHOT, JSON.stringify({ players: list }), [p], null, true);
     var nowS = Math.floor(Date.now() / 1000);
@@ -319,10 +325,10 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         var a = data.acc && data.acc[slots[s]];
         if (a && ID_PATTERN.test(String(a))) acc[slots[s]] = String(a);
       }
-      pl.pet = String(data.pet); pl.acc = acc;
+      pl.pet = String(data.pet); pl.acc = acc; pl.name = cleanName(data.name);
       var rest = othersOf(state, uid);
       if (rest.length > 0) {
-        dispatcher.broadcastMessage(OP_PROFILE, JSON.stringify({ id: uid, pet: pl.pet, acc: acc }), rest, null, true);
+        dispatcher.broadcastMessage(OP_PROFILE, JSON.stringify({ id: uid, pet: pl.pet, acc: acc, name: pl.name }), rest, null, true);
       }
     }
   }

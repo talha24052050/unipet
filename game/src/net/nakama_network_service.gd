@@ -87,11 +87,11 @@ func send_chat(message: ChatMessage) -> void:
 	_send_match_data(OP_CHAT, {"k": int(message.kind), "p": message.payload})
 
 
-func send_profile(pet_id: StringName, accessories: Dictionary) -> void:
+func send_profile(pet_id: StringName, accessories: Dictionary, display_name: String = "") -> void:
 	var acc: Dictionary = {}
 	for slot: StringName in accessories:
 		acc[str(slot)] = str(accessories[slot])
-	_send_match_data(OP_PROFILE, {"pet": str(pet_id), "acc": acc})
+	_send_match_data(OP_PROFILE, {"pet": str(pet_id), "acc": acc, "name": display_name})
 
 
 func send_care_action(action: String) -> void:
@@ -245,7 +245,7 @@ static func decode_profile(d: Dictionary) -> Dictionary:
 	if raw is Dictionary:
 		for slot: String in raw:
 			acc[StringName(slot)] = StringName(str(raw[slot]))
-	return {"pet": StringName(str(d.get("pet", ""))), "acc": acc}
+	return {"pet": StringName(str(d.get("pet", ""))), "acc": acc, "name": str(d.get("name", ""))}
 
 
 ## Nakama oturum JWT'sinin içindeki kullanıcı kimliği (uid). İmza doğrulanmaz; sadece okumak için.

@@ -212,7 +212,7 @@ func send_local_profile() -> void:
 		var prof: LocalProfile = LocalProfile.load_or_default()
 		pet_id = prof.pet_id
 		accs = prof.accessories
-	net.send_profile(pet_id, accs)
+	net.send_profile(pet_id, accs, LocalProfile.load_or_default().display_name)
 
 
 func _process(delta: float) -> void:

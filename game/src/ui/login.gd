@@ -27,6 +27,7 @@ var _cooldown: float = 0.0
 @onready var _status: Label = %StatusLabel
 @onready var _sent_to: Label = %SentToLabel
 @onready var _server_input: LineEdit = %ServerInput
+@onready var _name_input: LineEdit = %NameInput
 
 
 func _ready() -> void:
@@ -40,6 +41,7 @@ func _ready() -> void:
 	_resend_btn.pressed.connect(_resend)
 	_back_btn.pressed.connect(func() -> void: _show(Step.EMAIL))
 	_server_input.text = LocalSettings.load_or_default().server_address
+	_name_input.text = LocalProfile.load_or_default().display_name
 	_show(Step.BUSY)
 	_status.text = "Oturum kontrol ediliyor..."
 	if await Services.auth.restore_session():
@@ -67,6 +69,10 @@ func submit_email() -> void:
 	var settings: RefCounted = LocalSettings.new()
 	settings.server_address = addr_text
 	settings.save()
+	var prof: RefCounted = LocalProfile.load_or_default()
+	var nick: String = LocalProfile.clean_name(_name_input.text)
+	prof.display_name = nick if not nick.is_empty() else LocalProfile.name_from_email(e)
+	prof.save()
 	_email = e
 	_status.text = "Kod gönderiliyor..."
 	_show(Step.BUSY)

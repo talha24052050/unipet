@@ -12,6 +12,8 @@ const CHAT_BUBBLE_OFFSET_Y: float = 0.35
 
 @export var player_id: String = ""
 var character_id: StringName = &""
+## Profil gelince takma ad; gelmediyse kimliğin başı gösterilir.
+var display_name: String = ""
 
 var _clock: float = 0.0
 var _buffer: Array[Dictionary] = []
@@ -46,7 +48,7 @@ func set_player_id(id: String) -> void:
 func _update_name_label() -> void:
 	_ensure_nodes()
 	if name_label != null:
-		name_label.text = player_id.substr(0, 6) if not player_id.is_empty() else ""
+		name_label.text = display_name if not display_name.is_empty() else (player_id.substr(0, 6) if not player_id.is_empty() else "")
 
 
 func _update_heights() -> void:
@@ -83,6 +85,8 @@ func apply_profile(profile: Dictionary) -> void:
 	if pet_id == &"" or Services.characters.get_def(pet_id) == null:
 		pet_id = Config.DEFAULT_PET_ID
 	set_character(pet_id)
+	display_name = str(profile.get("name", ""))
+	_update_name_label()
 
 	var raw_acc: Variant = profile.get("acc", {})
 	if raw_acc is Dictionary and visual != null:

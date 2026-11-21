@@ -5,6 +5,9 @@ extends RefCounted
 const PATH: String = "user://profile.cfg"
 
 var pet_id: StringName = &""
+## Oyunda diğerlerinin gördüğü takma ad (1-16 karakter).
+var display_name: String = ""
+const NAME_MAX: int = 16
 ## slot (StringName) -> aksesuar id (StringName)
 var accessories: Dictionary = {}
 
@@ -14,6 +17,7 @@ static func load_or_default(path: String = PATH) -> RefCounted:
 	var cfg: ConfigFile = ConfigFile.new()
 	if cfg.load(path) == OK:
 		p.pet_id = StringName(str(cfg.get_value("pet", "id", "")))
+		p.display_name = str(cfg.get_value("player", "name", ""))
 		for slot: String in CharacterDef.ACCESSORY_SLOTS:
 			var acc: String = str(cfg.get_value("accessories", slot, ""))
 			if not acc.is_empty():
@@ -26,9 +30,26 @@ static func load_or_default(path: String = PATH) -> RefCounted:
 func save(path: String = PATH) -> Error:
 	var cfg: ConfigFile = ConfigFile.new()
 	cfg.set_value("pet", "id", str(pet_id))
+	cfg.set_value("player", "name", display_name)
 	for slot: StringName in accessories:
 		cfg.set_value("accessories", str(slot), str(accessories[slot]))
 	return cfg.save(path)
+
+
+## Takma adı temizler: baştaki/sondaki boşluk, çoklu boşluk, izinsiz karakter; en çok NAME_MAX. Boş olabilir.
+static func clean_name(raw: String) -> String:
+	var out: String = ""
+	for ch: String in raw.strip_edges():
+		if ch == " " and out.ends_with(" "):
+			continue
+		if ch == " " or ch == "_" or ch == "-" or ch.is_valid_identifier() or ch.is_valid_int() or "çğıöşüÇĞİÖŞÜ".contains(ch):
+			out += ch
+	return out.strip_edges().substr(0, NAME_MAX)
+
+
+## Mailden varsayılan takma ad (@ öncesi, noktalar boşluk).
+static func name_from_email(email: String) -> String:
+	return clean_name(email.get_slice("@", 0).replace(".", " "))
 
 
 func has_saved(path: String = PATH) -> bool:

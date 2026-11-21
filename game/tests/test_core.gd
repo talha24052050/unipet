@@ -97,3 +97,14 @@ func test_server_address_parsing() -> String:
 		if not LS.parse_server_address(bad).is_empty():
 			return "geçersiz adres kabul edildi: %s" % bad
 	return ""
+
+
+func test_display_name_cleaning() -> String:
+	var LP: GDScript = load("res://src/core/local_profile.gd")
+	var cases: Dictionary = {"  Ali   Veli ": "Ali Veli", "Şükrü_42": "Şükrü_42", "<b>x</b>": "bxb", "çok uzun bir takma ad deneme": "çok uzun bir tak"}
+	for raw: String in cases:
+		if LP.clean_name(raw) != cases[raw]:
+			return "%s -> '%s' (beklenen '%s')" % [raw, LP.clean_name(raw), cases[raw]]
+	if LP.name_from_email("ali.veli@gmail.com") != "ali veli":
+		return "mailden isim yanlış: %s" % LP.name_from_email("ali.veli@gmail.com")
+	return ""

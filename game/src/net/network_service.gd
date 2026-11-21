@@ -10,7 +10,7 @@ signal player_left(player_id: String)
 ## state: {"pos": Vector3, "yaw": float, "anim": String}
 signal player_state(player_id: String, state: Dictionary)
 signal chat_received(message: ChatMessage)
-## Başka oyuncunun pet + aksesuar seçimi: profile = {"pet": StringName, "acc": {slot: id}}
+## Başka oyuncunun profili: {"pet": StringName, "acc": {slot: id}, "name": String}
 signal player_profile(player_id: String, profile: Dictionary)
 ## Yerel petin bakım durumu: state = {"food", "joy", "energy", "t"}; ok=false ise reason kullanıcıya gösterilir.
 signal care_updated(state: Dictionary, ok: bool, reason: String)
@@ -37,7 +37,7 @@ func send_chat(_message: ChatMessage) -> void:
 
 
 ## Yerel oyuncunun pet + aksesuarlarını odaya duyurur (katılınca ve değişince).
-func send_profile(_pet_id: StringName, _accessories: Dictionary) -> void:
+func send_profile(_pet_id: StringName, _accessories: Dictionary, _display_name: String = "") -> void:
 	pass
 
 
