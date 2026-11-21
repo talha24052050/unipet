@@ -19,7 +19,7 @@ const NETWORK_BACKEND: String = "offline"  # "offline" | "nakama"
 const AUTH_BACKEND: String = "mock"  # "mock" | "supabase"
 
 ## Oyuncu hareketi (metre/saniye, radyan/saniye).
-const PLAYER_WALK_SPEED: float = 4.0
+const PLAYER_WALK_SPEED: float = 4.6
 const PLAYER_ACCELERATION: float = 20.0
 const PLAYER_TURN_SPEED: float = 10.0
 ## Yerden kopmadan inilebilecek basamak/eğim için yere yapışma mesafesi.

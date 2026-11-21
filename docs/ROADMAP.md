@@ -12,14 +12,14 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 0.6 agy görev kutusu scripti + kurulum talimatı
 - [x] 0.7 (Talha) Godot 4.7.2 kur, projeyi aç, ana sahneyi çalıştır, ekran görüntüsünü onayla
 
-## Parça 1 — Tek oyunculu prototip
+## Parça 1 — Tek oyunculu prototip ✅
 - [x] 1.1 Oyuncu sahnesi: CharacterBody3D + yerçekimi + yer takibi (placeholder kapsül)
 - [x] 1.2 Sanal joystick (sol alt, dokunmatik, çoklu dokunma güvenli)
 - [x] 1.3 Dokun-yürü: zemine dokun → NavigationAgent3D ile hedefe yürü; joystick dokunuşu iptal eder
 - [x] 1.4 Takip kamerası: üçüncü şahıs, iki parmakla döndürme/yakınlaştırma, duvara girmeme
 - [x] 1.5 Greybox Ortabahçe: düz kutularla yerleşim (ölçek testi), navigation mesh
 - [x] 1.6 Android test build'i (GitHub Actions'ta APK üret — Talha'nın internetini harcamamak için)
-- [ ] 1.7 Checkpoint: Talha telefonda yürüme hissini test eder
+- [x] 1.7 Checkpoint: Talha telefonda yürüme hissini test eder
 
 ## Parça 2 — Karakter sistemi
 - [ ] 2.1 Quaternius Ultimate Monsters'tan 3-5 pet seçimi (Talha seçer, önizleme sayfası hazırlanır)
