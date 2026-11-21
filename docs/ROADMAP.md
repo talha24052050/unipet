@@ -22,7 +22,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 1.7 Checkpoint: Talha telefonda yürüme hissini test eder
 
 ## Parça 2 — Karakter sistemi
-- [ ] 2.1 Quaternius Ultimate Monsters'tan 3-5 pet seçimi (Talha seçer, önizleme sayfası hazırlanır)
+- [x] 2.1 Quaternius Ultimate Monsters'tan 3-5 pet seçimi (Talha seçer, önizleme sayfası hazırlanır)
 - [ ] 2.2 Blender scripti: FBX → glb, ölçek/eksen düzeltme, animasyon adlarını listeleme
 - [ ] 2.3 Her pet için `.tres` (animation_map, accessory_bones)
 - [ ] 2.4 PetVisual düğümü: CharacterDef'ten model yükle, mantıksal animasyon oynat

@@ -1,0 +1,11 @@
+{
+  "_note": "MVP petleri (Talha seçti, 2026-11-21). Kaynak: Quaternius Ultimate Monsters (CC0), poly.pizza üzerinden tek tek glb. 'poster' = pet seçim sayfasındaki numara.",
+  "pets": [
+    {"id": "shark",   "name": "Köpekbalığı", "poster": 24, "quaternius": "Big/Fish",  "polypizza": "ypEYhCImAB", "glb": "6c98561f-4fb5-404c-91e9-a54024e1f6c5", "tris": 5106},
+    {"id": "birb",    "name": "Mavi kuş",    "poster": 26, "quaternius": "Blob/Birb", "polypizza": "gZ2ExU9OAB", "glb": "05dac745-bdd0-4169-9e64-f497ca21f69a", "tris": 2668},
+    {"id": "mushnub", "name": "Mantar",      "poster": 36, "quaternius": "Blob/Mushnub", "polypizza": "LWKmS30Xxl", "glb": "55c64684-49a4-4fcc-b393-113126add89b", "tris": 1200},
+    {"id": "yeti",    "name": "Yeti",        "poster": 41, "quaternius": "Blob/Yeti", "polypizza": "S1E7idPFhe", "glb": "085b078d-b72a-4d8e-a030-000d36c58447", "tris": 2088},
+    {"id": "ninja",   "name": "Ninja",       "poster": 44, "quaternius": "Blob/Ninja", "polypizza": "mCNoqcqpvC", "glb": "42162a27-0aaa-40be-b50e-919776021a11", "tris": 2112},
+    {"id": "chicken", "name": "Tavuk",       "poster": 46, "quaternius": "Blob/Chicken", "polypizza": "ineV9pU5VL", "glb": "a0001762-9352-48c3-9abd-be91e42db114", "tris": 2648}
+  ]
+}

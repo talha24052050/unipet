@@ -9,6 +9,7 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 | Konsept | 3D sanal kampüs + pet + sosyal (İTÜPet benzeri). Fark: gerçek kampüs hayatına bağlanma, YTÜ-İTÜ rekabeti | 2026-11-21 |
 | Ana figür | YTÜ yıldızından esinlenen **özgün** yıldız karakteri (başka oyunun karakterinin kopyası değil). Şimdilik Quaternius petleri | 2026-11-21 |
 | Petler | MVP'de 3-5 seçilebilir pet (Quaternius Ultimate Monsters, CC0). Sonra genişler | 2026-11-21 |
+| MVP pet listesi | 6 pet: Köpekbalığı, Mavi kuş (Birb), Mantar (Mushnub), Yeti, Ninja, Tavuk — `art/pets.json` (3-5 yerine 6) | 2026-11-21 |
 | Aksesuar | Çekirdek özellik, baştan desteklenir | 2026-11-21 |
 | Çekirdek döngü | Şimdilik temel bakım (açlık/mutluluk/enerji). Detaylar sonra | 2026-11-21 |
 | Harita | Sadece bina **dışları**: tam Ortabahçe, tüm Davutpaşa fakülteleri, Büyükev, Hokka, fakülte kafeleri, yemekhane, büyük saha | 2026-11-21 |
