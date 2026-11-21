@@ -7,6 +7,8 @@ const LocalProfile := preload("res://src/core/local_profile.gd")
 const LocalSettings := preload("res://src/core/local_settings.gd")
 const PET_SELECT_SCENE: String = "res://scenes/ui/pet_select.tscn"
 const GAME_SCENE: String = "res://scenes/main.tscn"
+## Geliştirme modunda mail alanına yazılınca kodsuz giriş.
+const QUICK_LOGIN: String = "000"
 ## Yeni kod isteme bekleme süresi (saniye).
 const RESEND_COOLDOWN_S: float = 60.0
 
@@ -46,7 +48,7 @@ func _ready() -> void:
 	_status.text = "Oturum kontrol ediliyor..."
 	if await Services.auth.restore_session():
 		return  # signed_in sinyali sahneyi değiştirir
-	_status.text = "Geliştirme modu: kod 000000" if Config.AUTH_BACKEND == "mock" else ""
+	_status.text = "Geliştirme modu: mail yerine 000 yaz → direkt giriş (kod: 000000)" if Config.AUTH_BACKEND == "mock" else ""
 	_show(Step.EMAIL)
 
 
@@ -59,24 +61,41 @@ func _process(delta: float) -> void:
 
 func submit_email() -> void:
 	var e: String = _email_input.text.strip_edges().to_lower()
+	# Geliştirme kısayolu: "000" → kod sormadan giriş (sadece sahte auth'ta vardır).
+	if e == QUICK_LOGIN and Services.auth.has_method("quick_sign_in"):
+		if _save_settings_and_name("oyuncu"):
+			_status.text = "Hızlı giriş..."
+			_show(Step.BUSY)
+			Services.auth.call("quick_sign_in")
+		return
 	if not Services.auth.is_allowed_email(e):
 		_status.text = Services.auth.email_rejected_message()
 		return
+	if not _save_settings_and_name(e):
+		return
+	_email = e
+	_status.text = "Kod gönderiliyor..."
+	_show(Step.BUSY)
+	Services.auth.request_code(e)
+
+
+## Sunucu adresi ve takma adı kaydeder; adres geçersizse false.
+func _save_settings_and_name(email: String) -> bool:
 	var addr_text: String = _server_input.text.strip_edges()
 	if not addr_text.is_empty() and LocalSettings.parse_server_address(addr_text).is_empty():
 		_status.text = "Sunucu adresi geçersiz. Örnek: 192.168.1.5 ya da https://xxx.trycloudflare.com"
-		return
+		return false
 	var settings: RefCounted = LocalSettings.new()
 	settings.server_address = addr_text
 	settings.save()
 	var prof: RefCounted = LocalProfile.load_or_default()
 	var nick: String = LocalProfile.clean_name(_name_input.text)
-	prof.display_name = nick if not nick.is_empty() else LocalProfile.name_from_email(e)
+	if not nick.is_empty():
+		prof.display_name = nick
+	elif prof.display_name.is_empty():
+		prof.display_name = LocalProfile.name_from_email(email)
 	prof.save()
-	_email = e
-	_status.text = "Kod gönderiliyor..."
-	_show(Step.BUSY)
-	Services.auth.request_code(e)
+	return true
 
 
 func submit_code() -> void:
@@ -107,7 +126,7 @@ func _resend() -> void:
 
 func _on_code_sent(email: String) -> void:
 	_sent_to.text = "%s adresine kod gönderdik." % email
-	_status.text = "Geliştirme modu: kod 000000" if Config.AUTH_BACKEND == "mock" else ""
+	_status.text = "Geliştirme modu: mail yerine 000 yaz → direkt giriş (kod: 000000)" if Config.AUTH_BACKEND == "mock" else ""
 	_cooldown = RESEND_COOLDOWN_S
 	_code_input.text = ""
 	_show(Step.CODE)

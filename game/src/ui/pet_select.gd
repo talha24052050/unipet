@@ -12,6 +12,8 @@ const SLOT_NAMES: Dictionary = {
 }
 
 const ROTATION_SPEED: float = 0.5
+const LOGIN_SCENE: String = "res://scenes/ui/login.tscn"
+const LOGOUT_FONT_SIZE: int = 28
 const DRAG_SENSITIVITY: float = 0.01
 
 @export var profile_path: String = LocalProfile.PATH
@@ -37,6 +39,21 @@ func _ready() -> void:
 	_selectable_pets = Services.characters.selectable()
 	load_selection(profile_path)
 	_connect_signals()
+	_add_logout_button()
+
+
+## Sol üstte "Çıkış": oturumu kapatır, giriş ekranına döner (sunucu adresi/takma ad orada değişir).
+func _add_logout_button() -> void:
+	var b: Button = Button.new()
+	b.name = "LogoutButton"
+	b.text = "Çıkış"
+	b.add_theme_font_size_override("font_size", LOGOUT_FONT_SIZE)
+	b.position = Vector2(16, 16)
+	b.custom_minimum_size = Vector2(140, 96)
+	b.pressed.connect(func() -> void:
+		Services.auth.sign_out()
+		get_tree().change_scene_to_file(LOGIN_SCENE))
+	add_child(b)
 
 
 func _setup_ui() -> void:

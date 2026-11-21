@@ -28,3 +28,27 @@ func test_login_scene_loads() -> String:
 	var ok: bool = n.has_node("%EmailInput") and n.has_node("%CodeInput") and n.has_node("%StatusLabel")
 	n.free()
 	return "" if ok else "beklenen düğümler yok"
+
+
+
+func test_mock_quick_login_and_remembered_session() -> String:
+	var Mock: GDScript = load("res://src/auth/mock_auth_service.gd")
+	var path: String = ProjectSettings.globalize_path("user://mock_session.cfg")
+	DirAccess.remove_absolute(path)
+	var a: Node = Mock.new()
+	var got: Array = []
+	a.signed_in.connect(func(id: String, _t: String) -> void: got.append(id))
+	a.call("quick_sign_in")
+	var b: Node = Mock.new()
+	b.signed_in.connect(func(id: String, _t: String) -> void: got.append(id))
+	var restored: bool = await b.call("restore_session")
+	b.call("sign_out")
+	var c: Node = Mock.new()
+	var after_logout: bool = await c.call("restore_session")
+	for n: Node in [a, b, c]:
+		n.free()
+	if got.size() != 2 or got[0] != got[1] or not str(got[0]).begins_with("mock-dev-"):
+		return "hızlı giriş/hatırlama yanlış: %s" % [got]
+	if not restored or after_logout:
+		return "oturum hatırlama/çıkış yanlış: %s %s" % [restored, after_logout]
+	return ""
