@@ -21,3 +21,6 @@ agy-tasks/.runner.lock
 # OS
 .DS_Store
 Thumbs.db
+
+# Sunucu yerel verisi
+server/data/
