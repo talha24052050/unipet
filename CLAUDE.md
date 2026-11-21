@@ -13,7 +13,7 @@ Ekip: Talha (karar verici, test eden) + Claude (geliştirme) + Antigravity/agy (
 2. Her **parçanın** sonunda dur ve Talha'nın onayını bekle (`checkpoint` skill'i).
 3. Kararı Talha verir. Birden fazla makul seçenek varsa seçenekleri + önerini sun, kendin seçme.
 4. Talha'yla Türkçe, kısa ve dürüst konuş. Gereksiz açıklama yok.
-5. Talha'nın interneti kısıtlı: büyük indirmeleri (export template, Android SDK, büyük asset) ona yaptırma; mümkünse GitHub Actions'ta yap. Yapman gerekiyorsa önce boyutunu söyle.
+5. İndirmeler (2026-11-22'den beri internet sınırsız): gereken araç/asset'i indirebilirsin. Çok büyükse (~1 GB+) önce boyutunu söyle.
 
 ## Kod kuralları
 - Motor: **Godot 4.7**, dil: **GDScript**, tipler her yerde açık (`var x: int`, `-> void`).

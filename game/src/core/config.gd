@@ -22,8 +22,19 @@ const AUTH_BACKEND: String = "mock"  # "mock" | "supabase"
 const PLAYER_WALK_SPEED: float = 4.6
 const PLAYER_ACCELERATION: float = 20.0
 const PLAYER_TURN_SPEED: float = 10.0
+## Şimdilik koşu yok (hız tek); koşu eklenince run animasyonu bu hızda devreye girer.
+const PLAYER_RUN_SPEED: float = 7.0
 ## Yerden kopmadan inilebilecek basamak/eğim için yere yapışma mesafesi.
 const PLAYER_FLOOR_SNAP: float = 0.3
+
+## Pet görünümü. Seçim ekranı (2.6) gelene kadar bu pet kullanılır.
+const DEFAULT_PET_ID: StringName = &"mushnub"
+## Bu hızın altı "duruyor" sayılır (m/s).
+const PET_IDLE_SPEED: float = 0.2
+## Animasyon geçiş süresi (saniye).
+const PET_ANIM_BLEND: float = 0.15
+## Model genişliğinin ne kadarı çarpışmaya girsin (yuvarlak blob'lar köşelerden sıkışmasın).
+const PET_COLLISION_RADIUS_FACTOR: float = 0.8
 
 ## Sanal joystick (piksel; 720x1280 tasarım çözünürlüğüne göre).
 const JOYSTICK_RADIUS: float = 110.0
