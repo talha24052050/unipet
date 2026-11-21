@@ -18,6 +18,7 @@ var _navigating: bool = false
 var _touch_index: int = -1
 var _touch_start_pos: Vector2 = Vector2.ZERO
 var _touch_start_time: float = 0.0
+var _tap_cancelled: bool = false
 
 
 func _ready() -> void:
@@ -54,9 +55,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_touch_index = t.index
 			_touch_start_pos = t.position
 			_touch_start_time = now
+			_tap_cancelled = false
+		else:
+			# İkinci parmak = kamera hareketi (sıkıştırma); bu dokunuş artık tıklama değil.
+			_tap_cancelled = true
 	elif t.index == _touch_index:
 		_touch_index = -1
-		if is_tap(_touch_start_pos, t.position, now - _touch_start_time):
+		if not _tap_cancelled and is_tap(_touch_start_pos, t.position, now - _touch_start_time):
 			_try_walk_to_screen_point(t.position)
 
 

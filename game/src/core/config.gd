@@ -37,3 +37,16 @@ const TAP_MAX_MOVE_PX: float = 24.0
 const TAP_MAX_DURATION_S: float = 0.35
 ## Raycast uzunluğu (metre).
 const TAP_RAY_LENGTH: float = 200.0
+
+## Takip kamerası (metre, derece; pitch negatif = yukarıdan bakış).
+const CAMERA_DISTANCE_DEFAULT: float = 8.0
+const CAMERA_DISTANCE_MIN: float = 3.5
+const CAMERA_DISTANCE_MAX: float = 14.0
+const CAMERA_PITCH_DEFAULT_DEG: float = -35.0
+const CAMERA_PITCH_MIN_DEG: float = -75.0
+const CAMERA_PITCH_MAX_DEG: float = -10.0
+const CAMERA_TARGET_HEIGHT: float = 1.0
+const CAMERA_FOLLOW_SHARPNESS: float = 10.0
+## Radyan / piksel.
+const CAMERA_ROTATE_SENSITIVITY: float = 0.006
+const CAMERA_WHEEL_STEP: float = 0.8

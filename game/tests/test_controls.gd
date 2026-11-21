@@ -2,6 +2,7 @@ extends RefCounted
 
 const Joystick := preload("res://src/player/virtual_joystick.gd")
 const Controller := preload("res://src/player/player_controller.gd")
+const FollowCamera := preload("res://src/player/follow_camera.gd")
 const R: float = 100.0
 
 
@@ -79,4 +80,23 @@ func test_direction_to_ignores_height() -> String:
 		return "yön yanlış: %s" % d
 	if Controller.direction_to(Vector3.ONE, Vector3.ONE) != Vector3.ZERO:
 		return "hedefteyken sıfır olmalı"
+	return ""
+
+
+func test_camera_pitch_clamped() -> String:
+	var lo: float = FollowCamera.clamp_pitch(deg_to_rad(-120.0))
+	var hi: float = FollowCamera.clamp_pitch(deg_to_rad(30.0))
+	if not is_equal_approx(lo, deg_to_rad(Config.CAMERA_PITCH_MIN_DEG)) or not is_equal_approx(hi, deg_to_rad(Config.CAMERA_PITCH_MAX_DEG)):
+		return "pitch sınırlanmadı: %s %s" % [lo, hi]
+	return ""
+
+
+func test_camera_pinch_zoom() -> String:
+	var closer: float = FollowCamera.zoomed_distance(8.0, 100.0, 200.0)
+	if not is_equal_approx(closer, 4.0):
+		return "parmak açılınca yakınlaşmadı: %s" % closer
+	if FollowCamera.zoomed_distance(8.0, 100.0, 10.0) != Config.CAMERA_DISTANCE_MAX:
+		return "max sınırı aşıldı"
+	if FollowCamera.zoomed_distance(8.0, 0.0, 50.0) != 8.0:
+		return "sıfır mesafede değişmemeli"
 	return ""

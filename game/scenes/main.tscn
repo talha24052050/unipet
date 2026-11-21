@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://src/player/virtual_joystick.gd" id="2"]
 [ext_resource type="Script" path="res://src/player/player_controller.gd" id="3"]
 [ext_resource type="Script" path="res://src/world/runtime_nav_region.gd" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/follow_camera.tscn" id="5"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -30,6 +31,12 @@ size = Vector3(3, 0.2, 3)
 [sub_resource type="BoxMesh" id="step_mesh"]
 size = Vector3(3, 0.2, 3)
 
+[sub_resource type="BoxShape3D" id="wall_shape"]
+size = Vector3(6, 3, 0.5)
+
+[sub_resource type="BoxMesh" id="wall_mesh"]
+size = Vector3(6, 3, 0.5)
+
 [sub_resource type="TorusMesh" id="marker_mesh"]
 inner_radius = 0.25
 outer_radius = 0.35
@@ -39,9 +46,6 @@ shading_mode = 0
 albedo_color = Color(1, 0.85, 0.2, 1)
 
 [node name="Main" type="Node3D" unique_id=1159132603]
-
-[node name="Camera3D" type="Camera3D" parent="." unique_id=881670804]
-transform = Transform3D(1, 0, 0, 0, 0.819152, 0.573576, 0, -0.573576, 0.819152, 0, 6, 9)
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=322762779]
 transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 10, 0)
@@ -77,12 +81,24 @@ shape = SubResource("step_shape")
 [node name="Mesh" type="MeshInstance3D" parent="World/Step"]
 mesh = SubResource("step_mesh")
 
+[node name="Wall" type="StaticBody3D" parent="World"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.6, 5)
+
+[node name="Shape" type="CollisionShape3D" parent="World/Wall"]
+shape = SubResource("wall_shape")
+
+[node name="Mesh" type="MeshInstance3D" parent="World/Wall"]
+mesh = SubResource("wall_mesh")
+
 [node name="TapMarker" type="MeshInstance3D" parent="."]
 mesh = SubResource("marker_mesh")
 surface_material_override/0 = SubResource("marker_mat")
 
 [node name="Player" parent="." unique_id=270815988 instance=ExtResource("1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+
+[node name="FollowCamera" parent="." node_paths=PackedStringArray("target") instance=ExtResource("5")]
+target = NodePath("../Player")
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=461841732]
 
@@ -99,6 +115,6 @@ script = ExtResource("2")
 script = ExtResource("3")
 player = NodePath("../Player")
 joystick = NodePath("../UI/Joystick")
-camera = NodePath("../Camera3D")
+camera = NodePath("../FollowCamera/SpringArm3D/Camera3D")
 agent = NodePath("../Player/NavAgent")
 marker = NodePath("../TapMarker")
