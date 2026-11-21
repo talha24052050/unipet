@@ -31,3 +31,9 @@ const JOYSTICK_DEADZONE: float = 0.15
 ## Joystick'in dokunuş kabul ettiği bölge: ekranın sol-alt kısmı (oran).
 const JOYSTICK_ZONE_WIDTH: float = 0.5
 const JOYSTICK_ZONE_HEIGHT: float = 0.4
+
+## Dokun-yürü: bu sınırların altındaki dokunuş "tıklama" sayılır (daha uzunu kamera sürüklemesi).
+const TAP_MAX_MOVE_PX: float = 24.0
+const TAP_MAX_DURATION_S: float = 0.35
+## Raycast uzunluğu (metre).
+const TAP_RAY_LENGTH: float = 200.0

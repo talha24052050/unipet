@@ -61,3 +61,22 @@ func test_screen_to_world_camera_yaw() -> String:
 	if not turned.is_equal_approx(Vector3(-1, 0, 0)):
 		return "dönük kamerada ileri yanlış: %s" % turned
 	return ""
+
+
+func test_tap_vs_drag() -> String:
+	if not Controller.is_tap(Vector2(100, 100), Vector2(105, 102), 0.1):
+		return "kısa dokunuş tıklama sayılmadı"
+	if Controller.is_tap(Vector2(100, 100), Vector2(200, 100), 0.1):
+		return "sürükleme tıklama sayıldı"
+	if Controller.is_tap(Vector2(100, 100), Vector2(100, 100), 1.0):
+		return "uzun basma tıklama sayıldı"
+	return ""
+
+
+func test_direction_to_ignores_height() -> String:
+	var d: Vector3 = Controller.direction_to(Vector3(0, 0, 0), Vector3(3, 5, 4))
+	if not d.is_equal_approx(Vector3(0.6, 0, 0.8)):
+		return "yön yanlış: %s" % d
+	if Controller.direction_to(Vector3.ONE, Vector3.ONE) != Vector3.ZERO:
+		return "hedefteyken sıfır olmalı"
+	return ""
