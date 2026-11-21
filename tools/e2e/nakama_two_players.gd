@@ -80,8 +80,8 @@ func _initialize() -> void:
 	await create_timer(0.3).timeout
 	a.send_care_action("eat")
 	check(await _wait(func() -> bool: return not ev["a_care"].is_empty()) and ev["a_care"][0][0], "Yemekhane'de yemek kabul edildi")
-	a.send_state({"pos": Vector3(3, 0, -4), "yaw": 1.0, "anim": "walk"})
-	check(await _wait(func() -> bool: return ev["b_state"].any(func(x: Array) -> bool: return x[0] == a_id and (x[1]["pos"] as Vector3).is_equal_approx(Vector3(3, 0, -4)))), "B, A'nın konumunu aldı")
+	a.send_state({"pos": Vector3(-99, 0, -94), "yaw": 1.0, "anim": "walk"})
+	check(await _wait(func() -> bool: return ev["b_state"].any(func(x: Array) -> bool: return x[0] == a_id and (x[1]["pos"] as Vector3).is_equal_approx(Vector3(-99, 0, -94)))), "B, A'nın konumunu aldı")
 	a.send_chat(ChatMessage.preset("selam"))
 	check(await _wait(func() -> bool: return "selam" in ev["a_chat"] and "selam" in ev["b_chat"]), "chat ikisine de ulaştı")
 	check(await _wait(func() -> bool: return ev["a_care"].any(func(x: Array) -> bool: return x[0] and x[1] == "")), "chat sonrası sosyal bakım puanı")
