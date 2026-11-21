@@ -35,7 +35,7 @@ $Lock = Join-Path $Repo "agy-tasks\.runner.lock"
 function Write-Log($msg) { Write-Host ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $msg) }
 
 function Git([string[]]$GitArgs) {
-    & git -C $Repo @GitArgs
+    & git.exe -C $Repo @GitArgs
     if ($LASTEXITCODE -ne 0) { throw "git $($GitArgs -join ' ') başarısız ($LASTEXITCODE)" }
 }
 
@@ -74,7 +74,7 @@ function Invoke-AgyTask([string]$TaskPath) {
 
     Git @("mv", $rel, "agy-tasks/done/$name.md")
     Git @("add", "-A")
-    & git -C $Repo diff --cached --quiet
+    & git.exe -C $Repo diff --cached --quiet
     if ($LASTEXITCODE -ne 0) {
         Git @("commit", "-m", "agy: $name")
         if (-not $NoPush) {
