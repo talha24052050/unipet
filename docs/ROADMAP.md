@@ -13,7 +13,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 0.7 (Talha) Godot 4.7.2 kur, projeyi aç, ana sahneyi çalıştır, ekran görüntüsünü onayla
 
 ## Parça 1 — Tek oyunculu prototip
-- [ ] 1.1 Oyuncu sahnesi: CharacterBody3D + yerçekimi + yer takibi (placeholder kapsül)
+- [x] 1.1 Oyuncu sahnesi: CharacterBody3D + yerçekimi + yer takibi (placeholder kapsül)
 - [ ] 1.2 Sanal joystick (sol alt, dokunmatik, çoklu dokunma güvenli)
 - [ ] 1.3 Dokun-yürü: zemine dokun → NavigationAgent3D ile hedefe yürü; joystick dokunuşu iptal eder
 - [ ] 1.4 Takip kamerası: üçüncü şahıs, iki parmakla döndürme/yakınlaştırma, duvara girmeme
