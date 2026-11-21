@@ -37,3 +37,10 @@ C:\Users\<kullanıcı>\Documents\unipet      <- repo kökü: Claude Code'u BURAD
 
 ## Geliştirme
 Claude Code ile repo kök klasöründe çalış; kurallar `CLAUDE.md`, sıradaki iş `docs/ROADMAP.md`.
+
+## Telefona Godot'tan tek tıkla kurulum
+1. Android telefonunu USB kablosuyla bilgisayara bağla.
+2. Telefonda Geliştirici Seçenekleri'nden **USB hata ayıklama**yı aç ve ekrandaki bilgisayar yetki onayını kabul et.
+3. Godot editöründe projeyi aç (`game/project.godot`).
+4. Editörün sağ üst köşesinde (Oynat butonlarının yanında) beliren **Android simgesi**ne (One-click Deploy) tıkla.
+5. Proje derlenip APK otomatik olarak telefona kurulur ve Remote Debug eşliğinde çalıştırılır.
