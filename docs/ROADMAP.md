@@ -23,7 +23,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 
 ## Parça 2 — Karakter sistemi
 - [x] 2.1 Quaternius Ultimate Monsters'tan 3-5 pet seçimi (Talha seçer, önizleme sayfası hazırlanır)
-- [ ] 2.2 Blender scripti: FBX → glb, ölçek/eksen düzeltme, animasyon adlarını listeleme
+- [x] 2.2 Pet glb'lerini indirme scripti (poly.pizza, Blender gerekmedi) + inceleme scripti: boyut, yön, animasyon/kemik listesi (`art/pets_inspect.json`)
 - [ ] 2.3 Her pet için `.tres` (animation_map, accessory_bones)
 - [ ] 2.4 PetVisual düğümü: CharacterDef'ten model yükle, mantıksal animasyon oynat
 - [ ] 2.5 Aksesuar sistemi: slot'a BoneAttachment3D ile takma, 3-4 basit aksesuar (şapka, gözlük, atkı, çanta)

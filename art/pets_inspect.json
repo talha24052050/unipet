@@ -1,0 +1,226 @@
+{
+  "birb": {
+    "size": [
+      2.8,
+      2.61,
+      2.76
+    ],
+    "min_y": -0.03,
+    "center_xz": [
+      0.0,
+      0.64
+    ],
+    "triangles": 3164,
+    "animations": {
+      "CharacterArmature|Bite_Front": 0.38,
+      "CharacterArmature|Dance": 0.67,
+      "CharacterArmature|Death": 0.33,
+      "CharacterArmature|HitRecieve": 0.29,
+      "CharacterArmature|Idle": 2.0,
+      "CharacterArmature|Jump": 0.42,
+      "CharacterArmature|No": 1.0,
+      "CharacterArmature|Walk": 0.42,
+      "CharacterArmature|Yes": 0.96
+    },
+    "bones": [
+      "Body",
+      "Head",
+      "Head2",
+      "Head3"
+    ]
+  },
+  "chicken": {
+    "size": [
+      2.35,
+      2.35,
+      2.1
+    ],
+    "min_y": -0.01,
+    "center_xz": [
+      0.0,
+      0.25
+    ],
+    "triangles": 2904,
+    "animations": {
+      "CharacterArmature|Bite_Front": 0.38,
+      "CharacterArmature|Dance": 0.67,
+      "CharacterArmature|Death": 0.33,
+      "CharacterArmature|HitRecieve": 0.29,
+      "CharacterArmature|Idle": 2.0,
+      "CharacterArmature|Jump": 0.42,
+      "CharacterArmature|No": 1.0,
+      "CharacterArmature|Walk": 0.42,
+      "CharacterArmature|Yes": 0.96
+    },
+    "bones": [
+      "Body",
+      "Head",
+      "Head2",
+      "Head3"
+    ]
+  },
+  "mushnub": {
+    "size": [
+      2.75,
+      3.3,
+      2.75
+    ],
+    "min_y": -0.05,
+    "center_xz": [
+      0.0,
+      0.0
+    ],
+    "triangles": 1248,
+    "animations": {
+      "CharacterArmature|Bite_Front": 0.38,
+      "CharacterArmature|Dance": 0.67,
+      "CharacterArmature|Death": 0.33,
+      "CharacterArmature|HitRecieve": 0.29,
+      "CharacterArmature|Idle": 2.0,
+      "CharacterArmature|Jump": 0.42,
+      "CharacterArmature|No": 1.0,
+      "CharacterArmature|Walk": 0.42,
+      "CharacterArmature|Yes": 0.96
+    },
+    "bones": [
+      "Body",
+      "Head",
+      "Head2",
+      "Head3"
+    ]
+  },
+  "ninja": {
+    "size": [
+      2.48,
+      3.01,
+      2.66
+    ],
+    "min_y": -0.23,
+    "center_xz": [
+      0.09,
+      0.06
+    ],
+    "triangles": 2160,
+    "animations": {
+      "CharacterArmature|Bite_Front": 0.38,
+      "CharacterArmature|Dance": 0.67,
+      "CharacterArmature|Death": 0.33,
+      "CharacterArmature|HitRecieve": 0.29,
+      "CharacterArmature|Idle": 2.0,
+      "CharacterArmature|Jump": 0.42,
+      "CharacterArmature|No": 1.0,
+      "CharacterArmature|Walk": 0.42,
+      "CharacterArmature|Yes": 0.96
+    },
+    "bones": [
+      "Body",
+      "Head",
+      "Head2",
+      "Head3"
+    ]
+  },
+  "shark": {
+    "size": [
+      4.66,
+      3.76,
+      2.36
+    ],
+    "min_y": 0.0,
+    "center_xz": [
+      0.0,
+      -0.11
+    ],
+    "triangles": 6854,
+    "animations": {
+      "CharacterArmature|Death": 0.75,
+      "CharacterArmature|Duck": 1.67,
+      "CharacterArmature|HitReact": 0.58,
+      "CharacterArmature|Idle": 1.0,
+      "CharacterArmature|Jump": 0.33,
+      "CharacterArmature|Jump_Idle": 0.5,
+      "CharacterArmature|Jump_Land": 0.33,
+      "CharacterArmature|No": 1.67,
+      "CharacterArmature|Punch": 0.83,
+      "CharacterArmature|Run": 0.54,
+      "CharacterArmature|Walk": 1.0,
+      "CharacterArmature|Wave": 1.67,
+      "CharacterArmature|Weapon": 0.83,
+      "CharacterArmature|Yes": 1.67
+    },
+    "bones": [
+      "Root",
+      "Foot.L",
+      "Body",
+      "Hips",
+      "Abdomen",
+      "Torso",
+      "Neck",
+      "Head",
+      "Shoulder.L",
+      "UpperArm.L",
+      "LowerArm.L",
+      "Pinky1.L",
+      "Pinky2.L",
+      "Pinky3.L",
+      "Middle1.L",
+      "Middle2.L",
+      "Middle3.L",
+      "Index1.L",
+      "Index2.L",
+      "Index3.L",
+      "Thumb1.L",
+      "Thumb2.L",
+      "Shoulder.R",
+      "UpperArm.R",
+      "LowerArm.R",
+      "Pinky1.R",
+      "Pinky2.R",
+      "Pinky3.R",
+      "Middle1.R",
+      "Middle2.R",
+      "Middle3.R",
+      "Index1.R",
+      "Index2.R",
+      "Index3.R",
+      "Thumb1.R",
+      "Thumb2.R",
+      "UpperLeg.L",
+      "LowerLeg.L",
+      "UpperLeg.R",
+      "LowerLeg.R",
+      "PoleTarget.L",
+      "Foot.R",
+      "PoleTarget.R"
+    ]
+  },
+  "yeti": {
+    "size": [
+      2.55,
+      2.44,
+      2.59
+    ],
+    "min_y": -0.02,
+    "center_xz": [
+      0.0,
+      0.02
+    ],
+    "triangles": 2136,
+    "animations": {
+      "CharacterArmature|Bite_Front": 0.38,
+      "CharacterArmature|Dance": 0.67,
+      "CharacterArmature|Death": 0.33,
+      "CharacterArmature|HitRecieve": 0.29,
+      "CharacterArmature|Idle": 2.0,
+      "CharacterArmature|Jump": 0.42,
+      "CharacterArmature|No": 1.0,
+      "CharacterArmature|Walk": 0.42,
+      "CharacterArmature|Yes": 0.96
+    },
+    "bones": [
+      "Body",
+      "Head",
+      "Head2",
+      "Head3"
+    ]
+  }
+}
