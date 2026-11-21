@@ -28,3 +28,15 @@ func test_zone_data_valid_and_spawn_free() -> String:
 			if Greybox.extrude_polygon(poly, float(b["height"])) == null:
 				return "%s: üçgenlenemeyen bina %s" % [id, b.get("name", "?")]
 	return ""
+
+
+func test_navmesh_source_hash_changes_with_data() -> String:
+	var NavRegion: GDScript = load("res://src/world/runtime_nav_region.gd")
+	var c: RefCounted = ZoneCatalog.load_default()
+	var a: String = NavRegion.call("source_hash", c.get_zone("fef"))
+	var b: String = NavRegion.call("source_hash", c.get_zone("insaat"))
+	if a.length() != 16 or a == b:
+		return "bölge özeti yanlış: %s %s" % [a, b]
+	if NavRegion.call("source_hash", c.get_zone("fef")) != a:
+		return "özet kararlı değil"
+	return ""
