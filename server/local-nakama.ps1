@@ -62,10 +62,14 @@ if (Test-Path $envFile) {
         if ($line -match '^\s*(UNIPET_[A-Z_]+|SUPABASE_[A-Z_]+)\s*=\s*(.*)$') { $envVars[$Matches[1]] = $Matches[2].Trim() }
     }
 }
-$nkArgs = @("--config", (Join-Path $ServerDir "nakama\local.yml"), "--database.address", $Db,
+# Ortam değişkenleri ayrı YAML ile verilir: birden çok --runtime.env parametresinde Nakama sadece birini tutuyor.
+$envYml = Join-Path $Root "runtime-env.yml"
+$lines = @("runtime:", "  env:")
+foreach ($k in $envVars.Keys) { if ($envVars[$k] -ne "") { $lines += "    - `"$k=$($envVars[$k])`"" } }
+[IO.File]::WriteAllLines($envYml, $lines)
+$nkArgs = @("--config", (Join-Path $ServerDir "nakama\local.yml"), "--config", $envYml, "--database.address", $Db,
     "--runtime.path", (Join-Path $ServerDir "nakama\modules"), "--socket.server_key", "unipet-dev-server-key",
     "--logger.file", (Join-Path $Root "nakama.log"), "--logger.stdout", "false")
-foreach ($k in $envVars.Keys) { if ($envVars[$k] -ne "") { $nkArgs += @("--runtime.env", "$k=$($envVars[$k])") } }
 Start-Process -FilePath $nakamaExe -ArgumentList $nkArgs -WindowStyle Hidden | Out-Null
 
 for ($i = 0; $i -lt 30; $i++) {

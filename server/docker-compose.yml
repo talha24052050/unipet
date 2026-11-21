@@ -29,7 +29,8 @@ services:
       - "-ecx"
       - >
         /nakama/nakama migrate up --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable &&
-        exec /nakama/nakama --config /nakama/data/local.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS" --runtime.env "SUPABASE_URL=$$SUPABASE_URL" --runtime.env "SUPABASE_ANON_KEY=$$SUPABASE_ANON_KEY" --runtime.env "UNIPET_DEV_AUTH=$$UNIPET_DEV_AUTH" --runtime.env "UNIPET_ROOM_CAPACITY=$$UNIPET_ROOM_CAPACITY" --runtime.env "UNIPET_FREE_CHAT=$$UNIPET_FREE_CHAT" --runtime.env "UNIPET_REQUIRE_SCHOOL_EMAIL=$$UNIPET_REQUIRE_SCHOOL_EMAIL"
+        printf 'runtime:\n  env:\n    - "SUPABASE_URL=%s"\n    - "SUPABASE_ANON_KEY=%s"\n    - "UNIPET_DEV_AUTH=%s"\n    - "UNIPET_ROOM_CAPACITY=%s"\n    - "UNIPET_FREE_CHAT=%s"\n    - "UNIPET_REQUIRE_SCHOOL_EMAIL=%s"\n' "$$SUPABASE_URL" "$$SUPABASE_ANON_KEY" "$$UNIPET_DEV_AUTH" "$$UNIPET_ROOM_CAPACITY" "$$UNIPET_FREE_CHAT" "$$UNIPET_REQUIRE_SCHOOL_EMAIL" > /tmp/runtime-env.yml &&
+        exec /nakama/nakama --config /nakama/data/local.yml --config /tmp/runtime-env.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS"
     environment:
       - NAKAMA_SERVER_KEY=${NAKAMA_SERVER_KEY:-unipet-dev-server-key}
       - NAKAMA_CONSOLE_USER=${NAKAMA_CONSOLE_USER:-admin}
