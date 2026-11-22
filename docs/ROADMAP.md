@@ -54,7 +54,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 
 ## Parça 5 — Kampüs + pet döngüsü
 - [x] 5.1 OSM'den Davutpaşa bina yerleşimi çekme scripti
-- [ ] 5.2 Blender scriptiyle low-poly binalar (fotoğraf referanslı): fakülteler, Büyükev, Hokka, kafeler, yemekhane, büyük saha
+- [x] 5.2 Simge binalar: cephe tabelaları (61 bina), Kışla geçit çerçevesi, script ile üretilen low-poly süs modelleri (Kışla, Mescit kubbe+minare, Yemekhane, EEF, Hokka) — `tools/assets/make_landmarks.py` (Blender Smart App Control yüzünden çalışmadı; GLB doğrudan yazılıyor)
 - [~] 5.3 Ortabahçe detaylı: ağaçlar, banklar, yollar
 - [x] 5.4 Bölgeler arası geçiş (yapıldı, sonra kaldırılacak)
 - [x] 5.4b **Tek bölge: tüm kampüs** (Talha kararı 2026-11-22) — tek greybox + tek navmesh + mobil performans (görünürlük mesafeleri), tek oda ailesi, harita ekranı "buradasın" + yere dokun → ışınlan (Talha)

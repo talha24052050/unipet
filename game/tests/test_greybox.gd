@@ -103,3 +103,18 @@ func test_edge_outward_and_sign_edge() -> String:
 	if Greybox.sign_edge(sq, path, 3.0) != 2:
 		return "tabela yola bakan kenarda olmalı (2): %d" % Greybox.sign_edge(sq, path, 3.0)
 	return ""
+
+
+func test_landmark_models_load() -> String:
+	var f: FileAccess = FileAccess.open(Greybox.LANDMARKS_PATH, FileAccess.READ)
+	if f == null:
+		return "landmarks.json yok"
+	var names: Dictionary = (JSON.parse_string(f.get_as_text()) as Dictionary)["buildings"]
+	if names.size() < 5:
+		return "en az 5 simge bina bekleniyordu: %d" % names.size()
+	for n: String in names:
+		var d: Node3D = Greybox.landmark_decor(n)
+		if d == null:
+			return "süs modeli yüklenemedi: %s" % n
+		d.free()
+	return ""

@@ -27,6 +27,8 @@ const AREA_Y: float = 0.02
 const PATH_Y: float = 0.04
 const GROUND_MARGIN: float = 30.0
 const CampusMap := preload("res://src/ui/campus_map.gd")
+const LANDMARKS_PATH: String = "res://data/landmarks.json"
+static var _landmarks: Dictionary = {}
 ## Cephe tabelası.
 const SIGN_HEIGHT_M: float = 3.6
 const SIGN_PANEL_H: float = 0.9
@@ -338,6 +340,10 @@ func _build_building(b: Dictionary) -> void:
 		var sign: Node3D = build_sign(poly, height, near_paths, CampusMap.short_name(name_text), style == BuildingStyle.STYLE_HISTORIC)
 		if sign != null:
 			body.add_child(sign)
+	# Simge binalar: Blender'da üretilmiş süs modeli (korniş, baca, kubbe…; art/blender/landmarks.py).
+	var decor: Node3D = landmark_decor(name_text)
+	if decor != null:
+		body.add_child(decor)
 	# Tarihi binalarda (Kışla vb.) geçitlere taş kemer çerçevesi.
 	if style == BuildingStyle.STYLE_HISTORIC:
 		for portal: Node3D in build_portals(poly, near_paths, height):
@@ -513,6 +519,25 @@ func _count_gates(poly: PackedVector2Array, paths: Array[PackedVector2Array]) ->
 	for list: Array in find_gates(p, paths).values():
 		total += list.size()
 	return total
+
+
+## Bina adı -> süs modeli (game/data/landmarks.json). Yoksa null.
+static func landmark_decor(building_name: String) -> Node3D:
+	if building_name.is_empty():
+		return null
+	if _landmarks.is_empty():
+		var f: FileAccess = FileAccess.open(LANDMARKS_PATH, FileAccess.READ)
+		_landmarks = {"_loaded": true}
+		if f != null:
+			var data: Variant = JSON.parse_string(f.get_as_text())
+			if data is Dictionary:
+				_landmarks.merge((data as Dictionary).get("buildings", {}))
+	var path: String = str(_landmarks.get(building_name, ""))
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	var node: Node3D = (load(path) as PackedScene).instantiate() as Node3D
+	node.name = "Landmark"
+	return node
 
 
 ## Kenarın dışa bakan birim normali (XZ). Çokgen yönünden bağımsız: kenar ortasının hemen dışı çokgen dışında olmalı.

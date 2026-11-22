@@ -1,0 +1,10 @@
+{
+  "_note": "tools/assets/make_landmarks.py üretir; elle düzenleme. Bina adı -> süs modeli (sahne koordinatlarında).",
+  "buildings": {
+    "Yıldız Teknik Üniversitesi Davutpaşa Kışlası": "res://assets/buildings/kisla.glb",
+    "Davutpaşa Kışlası Mesciti": "res://assets/buildings/mescit.glb",
+    "Yemekhane": "res://assets/buildings/yemekhane.glb",
+    "Elektrik Elektronik Fakültesi": "res://assets/buildings/eef.glb",
+    "Hokka": "res://assets/buildings/hokka.glb"
+  }
+}
