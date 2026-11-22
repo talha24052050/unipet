@@ -51,16 +51,19 @@ jobs:
           unzip -q godot.zip && sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
       - name: Nakama başlat
         run: |
-          curl -sSL -o nakama.tgz "https://github.com/heroiclabs/nakama/releases/download/v${NAKAMA_VERSION}/nakama-${NAKAMA_VERSION}-linux-amd64.tar.gz"
-          tar -xzf nakama.tgz nakama
+          fail() { echo "::error title=nakama ($1)::$(tail -c 1500 nakama.out 2>/dev/null | tr '\n' ' ')"; exit 1; }
+          curl -sSL -o nakama.tgz "https://github.com/heroiclabs/nakama/releases/download/v${NAKAMA_VERSION}/nakama-${NAKAMA_VERSION}-linux-amd64.tar.gz" || fail indirme
+          tar -xzf nakama.tgz nakama 2>/dev/null || fail tar
           DB="postgres:localdb@127.0.0.1:5432/nakama?sslmode=disable"
-          ./nakama migrate up --database.address "$DB"
+          ./nakama migrate up --database.address "$DB" > nakama.out 2>&1 || fail migrate
           printf 'runtime:\n  env:\n    - "UNIPET_DEV_AUTH=true"\n' > runtime-env.yml
           ./nakama --config server/nakama/local.yml --config runtime-env.yml --database.address "$DB" \
             --runtime.path "$PWD/server/nakama/modules" --socket.server_key unipet-dev-server-key \
-            --logger.stdout false --logger.file "$PWD/nakama.log" &
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:7350/healthcheck && break; sleep 1; done
-          grep -q "UniPet modülü yüklendi" nakama.log
+            --logger.stdout true > nakama.out 2>&1 &
+          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:7350/healthcheck >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS http://127.0.0.1:7350/healthcheck >/dev/null 2>&1 || fail healthcheck
+          grep -q "UniPet modülü yüklendi" nakama.out || fail modül
+          cp nakama.out nakama.log
       - name: Import
         run: godot --headless --path game --import || true
       - name: Uçtan uca test
