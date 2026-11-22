@@ -55,7 +55,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 ## Parça 5 — Kampüs + pet döngüsü
 - [x] 5.1 OSM'den Davutpaşa bina yerleşimi çekme scripti
 - [x] 5.2 Simge binalar: cephe tabelaları (61 bina), Kışla geçit çerçevesi, script ile üretilen low-poly süs modelleri (Kışla, Mescit kubbe+minare, Yemekhane, EEF, Hokka) — `tools/assets/make_landmarks.py` (Blender Smart App Control yüzünden çalışmadı; GLB doğrudan yazılıyor)
-- [~] 5.3 Ortabahçe detaylı: ağaçlar, banklar, yollar
+- [x] 5.3 Ortabahçe + kampüs detaylı (Street View/drone/Google fotoğrafları): ~1770 ağaç (çınar/fıstık çamı/servi), pembe beton avlu yolları, parke + tuğla kenar, tarhlar, büfe, stadyum pisti, havuz; Kışla taş dış cephe + giriş bölümleri; Yemekhane tuğla; Büyük Ev; OSM etiketleriyle yükseklik/sundurma/köprü/çatı
 - [x] 5.4 Bölgeler arası geçiş (yapıldı, sonra kaldırılacak)
 - [x] 5.4b **Tek bölge: tüm kampüs** (Talha kararı 2026-11-22) — tek greybox + tek navmesh + mobil performans (görünürlük mesafeleri), tek oda ailesi, harita ekranı "buradasın" + yere dokun → ışınlan (Talha)
 - [x] 5.5 Pet bakımı: açlık/mutluluk/enerji, sunucuda saklama
@@ -63,5 +63,5 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 
 ## Parça 6 — Kapalı test
 - [~] 6.1 Ücretsiz VPS'e Nakama kurulumu
-- [~] 6.2 İmzalı release APK
-- [ ] 6.3 SKY LAB kapalı testi, geri bildirim formu
+- [~] 6.2 İmzalı release APK — keystore + GitHub secret'ları hazır (CI'da doğrulandı); kalıcı sunucu adresi (NAKAMA_HOST) bekleniyor
+- [~] 6.3 SKY LAB kapalı testi — oyun içi geri bildirim (Ayarlar → Supabase `feedback`) hazır; test turu kalıcı sunucudan sonra
