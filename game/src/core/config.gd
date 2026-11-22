@@ -21,8 +21,20 @@ const FREE_CHAT_ENABLED: bool = false
 ## Yayın derlemesi (export preset'inde custom feature "unipet_release"): gerçek giriş + sunucu.
 ## Geliştirme derlemesi: sahte giriş (000 / 000000) + tek oyunculu (sunucu adresi girilirse Nakama).
 var IS_RELEASE: bool = OS.has_feature("unipet_release")
+## Geliştirici modu (Ayarlar'dan açılıp kapanır; bkz. LocalSettings.dev_mode). Açık: sahte giriş, giriş ekranı yok.
+var DEV_MODE: bool = false
 var NETWORK_BACKEND: String = "nakama" if IS_RELEASE else "offline"  # "offline" | "nakama"
-var AUTH_BACKEND: String = "supabase" if IS_RELEASE else "mock"  # "mock" | "supabase"
+var AUTH_BACKEND: String = "supabase"  # "mock" | "supabase" — apply_dev_mode belirler
+
+
+func _init() -> void:
+	apply_dev_mode(preload("res://src/core/local_settings.gd").load_or_default().dev_mode)
+
+
+## Modu uygular (Services.reload_auth ile birlikte kullanılır).
+func apply_dev_mode(setting: int) -> void:
+	DEV_MODE = preload("res://src/core/local_settings.gd").resolve_dev_mode(setting, IS_RELEASE, OS.has_feature("editor"))
+	AUTH_BACKEND = "mock" if DEV_MODE else "supabase"
 
 ## Oyuncu hareketi (metre/saniye, radyan/saniye).
 const PLAYER_WALK_SPEED: float = 4.6

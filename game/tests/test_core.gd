@@ -132,6 +132,17 @@ func test_effective_server_release_fallback() -> String:
 
 
 func test_dev_build_uses_mock_offline() -> String:
-	if not Config.IS_RELEASE and (Config.AUTH_BACKEND != "mock" or Config.NETWORK_BACKEND != "offline"):
+	if not Config.IS_RELEASE and (Config.AUTH_BACKEND != ("mock" if Config.DEV_MODE else "supabase") or Config.NETWORK_BACKEND != "offline"):
 		return "geliştirme derlemesi mock/offline olmalı"
+	return ""
+
+
+func test_dev_mode_resolution() -> String:
+	var LS: GDScript = load("res://src/core/local_settings.gd")
+	# yayın: her zaman kapalı; varsayılan: editörde açık, APK'da kapalı; elle ayar her şeyi geçersiz kılar
+	var cases: Array = [[-1, true, true, false], [1, true, true, false], [-1, false, true, true], [-1, false, false, false],
+		[0, false, true, false], [1, false, false, true]]
+	for c: Array in cases:
+		if LS.resolve_dev_mode(c[0], c[1], c[2]) != c[3]:
+			return "yanlış: ayar=%d yayın=%s editör=%s" % [c[0], c[1], c[2]]
 	return ""

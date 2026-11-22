@@ -7,7 +7,7 @@ signal closed
 const LocalSettings := preload("res://src/core/local_settings.gd")
 
 const PANEL_WIDTH: float = 560.0
-const PANEL_HEIGHT: float = 960.0
+const PANEL_HEIGHT: float = 1040.0
 const MAIN_SCENE: String = "res://scenes/main.tscn"
 const MIN_CONTROL_HEIGHT: float = 64.0
 const FONT_SIZE_TITLE: int = 32
@@ -31,6 +31,9 @@ var feedback_status: Label
 var server_input: LineEdit
 var server_button: Button
 var server_status: Label
+## Geliştirici modu anahtarı (imzalı yayında gizli)
+var dev_check: CheckButton
+const LOGIN_SCENE: String = "res://scenes/ui/login.tscn"
 const FEEDBACK_INPUT_HEIGHT: float = 140.0
 
 # Erişilebilirlik ve test kolaylığı için kısayol
@@ -167,6 +170,15 @@ func _setup_layout() -> void:
 	server_status.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 4)
 	vbox.add_child(server_status)
 
+	dev_check = CheckButton.new()
+	dev_check.name = "DevModeCheck"
+	dev_check.text = "Geliştirici modu (giriş ekranı yok)"
+	dev_check.custom_minimum_size = Vector2(0, MIN_CONTROL_HEIGHT)
+	dev_check.add_theme_font_size_override("font_size", FONT_SIZE_LABEL)
+	dev_check.visible = not Config.IS_RELEASE
+	dev_check.toggled.connect(_on_dev_mode_toggled)
+	vbox.add_child(dev_check)
+
 	close_button = Button.new()
 	close_button.name = "CloseButton"
 	close_button.text = "Kapat"
@@ -253,7 +265,25 @@ func _on_server_pressed() -> void:
 	get_tree().change_scene_to_file.call_deferred(MAIN_SCENE)
 
 
+## Kaydeder ve modu uygular; çağıran sahneyi giriş ekranına götürür (geliştirici modunda o da kendiliğinden geçer).
+func set_dev_mode(on: bool) -> void:
+	var s: RefCounted = LocalSettings.load_or_default(settings_path)
+	s.set("dev_mode", 1 if on else 0)
+	s.call("save", settings_path)
+	Config.apply_dev_mode(1 if on else 0)
+
+
+func _on_dev_mode_toggled(on: bool) -> void:
+	Sfx.play(&"ui_click")
+	set_dev_mode(on)
+	Services.reload_auth()
+	close()
+	get_tree().change_scene_to_file.call_deferred(LOGIN_SCENE)
+
+
 func refresh_from_settings() -> void:
+	if dev_check != null:
+		dev_check.set_pressed_no_signal(Config.DEV_MODE)
 	if server_input != null:
 		server_input.text = str(LocalSettings.load_or_default(settings_path).get("server_address"))
 	if check_button != null:

@@ -45,6 +45,11 @@ func _ready() -> void:
 	_server_input.text = LocalSettings.load_or_default().server_address
 	_name_input.text = LocalProfile.load_or_default().display_name
 	_show(Step.BUSY)
+	if Config.DEV_MODE and Services.auth.has_method("quick_sign_in"):
+		# Geliştirici modu: giriş ekranı yok, cihaza özel hesapla doğrudan giriş (sunucu adresi Ayarlar'dan)
+		_status.text = "Geliştirici modu"
+		Services.auth.quick_sign_in()
+		return  # signed_in sinyali sahneyi değiştirir
 	_status.text = "Oturum kontrol ediliyor..."
 	if await Services.auth.restore_session():
 		return  # signed_in sinyali sahneyi değiştirir

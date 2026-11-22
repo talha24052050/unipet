@@ -70,6 +70,17 @@ func use_server(address: Dictionary) -> void:
 		n.ssl = bool(address["ssl"])
 
 
+## Geliştirici modu değişince: bağlantıyı kapat, auth servisini yenisiyle değiştir.
+func reload_auth() -> void:
+	if net != null:
+		net.disconnect_from_server()
+	if auth != null:
+		remove_child(auth)
+		auth.queue_free()
+	auth = _make_auth(Config.AUTH_BACKEND)
+	add_child(auth)
+
+
 func _make_network(kind: String) -> NetworkService:
 	match kind:
 		"offline":

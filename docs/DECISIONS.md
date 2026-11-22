@@ -43,3 +43,6 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 - Bina hassasiyeti (2026-11-22): `tools/osm/enrich_buildings.py` ham OSM etiketlerini greybox'a ekler (şekil/konum aynı):
   ölçülmüş yükseklik (kat sayısıyla tutarlıysa), `kind` (roof=duvarsız sundurma, greenhouse=cam, yurt/konut stili),
   `min_height` (havada köprü, altı açık), `roof` (hipped/pyramidal), `colour`. Greybox değişince navmesh yeniden pişirilir.
+- Geliştirici modu (Talha 2026-11-22): Ayarlar'dan aç/kapa (`LocalSettings.dev_mode`). Açık: giriş ekranı yok, cihaza
+  özel sahte hesapla otomatik giriş. Kapalı (normal): Supabase mail + kod. Varsayılan: Godot'tan çalışırken açık, APK'da
+  kapalı; imzalı yayında her zaman kapalı ve anahtar gizli.
