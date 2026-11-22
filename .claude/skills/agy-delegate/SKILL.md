@@ -31,7 +31,7 @@ Talha'nın prompt yazmasını bekleme; işi sen verirsin.
 ## Amaç
 <tek paragraf>
 ## Dokunabileceğin dosyalar
-- game/src/player/...   (bunların dışına dokunma)
+- `game/src/player/x.gd`   (her satırda TAM yol, backtick içinde; "`a.gd`, `b.tscn`" gibi kısaltma YOK — runner sadece bunları commit'ler)
 ## Yapılacaklar
 1. ...
 ## Kabul kriterleri
@@ -40,5 +40,7 @@ Talha'nın prompt yazmasını bekleme; işi sen verirsin.
 ## Kurallar
 - CLAUDE.md ve docs/DECISIONS.md'ye uy.
 - git commit/push YAPMA (runner yapar).
+- Testleri hileyle geçirme (başka testin kodunu bellekte değiştirmek, kontrolü atlamak vb.). İzin dışı bir dosyanın değişmesi
+  gerekiyorsa DUR ve rapora yaz.
 - Bitince raporu agy-tasks/done/NNN-kisa-ad.report.md'ye yaz: ne yaptın, hangi dosyalar, test sonucu, belirsiz kalanlar.
 ```
