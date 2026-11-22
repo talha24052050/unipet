@@ -185,8 +185,8 @@ func _on_care_updated(state: Dictionary, ok: bool, reason: String) -> void:
 		_update_bars()
 		_update_mood()
 	if ok:
-		Sfx.play(&"care_ok")
 		if not _pending_action.is_empty():
+			Sfx.play(&"care_ok")  # sadece oyuncunun eylemine yanıt; odaya katılımdaki ilk durum sessiz
 			var act: String = _pending_action
 			_last_action_time[act] = int(Time.get_unix_time_from_system())
 			_pending_action = ""

@@ -85,7 +85,7 @@ func _save_settings_and_name(email: String) -> bool:
 	if not addr_text.is_empty() and LocalSettings.parse_server_address(addr_text).is_empty():
 		_status.text = "Sunucu adresi geçersiz. Örnek: 192.168.1.5 ya da https://xxx.trycloudflare.com"
 		return false
-	var settings: RefCounted = LocalSettings.new()
+	var settings: RefCounted = LocalSettings.load_or_default()  # diğer ayarlar (ses) korunsun
 	settings.server_address = addr_text
 	settings.save()
 	var prof: RefCounted = LocalProfile.load_or_default()

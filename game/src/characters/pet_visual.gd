@@ -238,8 +238,19 @@ func set_locomotion(speed: float) -> void:
 
 
 ## Tek seferlik emote (dans, zıplama...). Bitince ya da hareket edilince loco'ya döner.
+## Modelde olmayan emote için yedekler (ör. köpekbalığında Dance yok → zıplama).
+const EMOTE_FALLBACKS: Dictionary = {&"emote_dance": [&"emote_jump", &"emote_yes"]}
+
+
 func play_emote(logical: StringName) -> bool:
-	if definition == null or definition.anim_name(logical).is_empty():
+	if definition == null:
+		return false
+	if definition.anim_name(logical).is_empty():
+		for alt: StringName in EMOTE_FALLBACKS.get(logical, []):
+			if not definition.anim_name(alt).is_empty():
+				logical = alt
+				break
+	if definition.anim_name(logical).is_empty():
 		return false
 	_emote = logical
 	_play(logical, true)

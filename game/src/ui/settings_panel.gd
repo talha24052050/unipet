@@ -40,6 +40,7 @@ var check_box: CheckButton:
 
 
 func _init() -> void:
+	add_to_group(&"joystick_blocker")  # açıkken joystick bu alandaki dokunuşları almasın
 	visible = false
 	z_index = 10
 	mouse_filter = Control.MOUSE_FILTER_STOP

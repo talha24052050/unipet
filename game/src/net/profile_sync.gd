@@ -28,8 +28,14 @@ func is_active() -> bool:
 func push(profile: RefCounted) -> void:
 	if not is_active():
 		return
+	var row: Dictionary = to_row(profile, Services.auth.get_user_id())
 	var res: Dictionary = await _request(HTTPClient.METHOD_POST, "/rest/v1/profiles?on_conflict=id",
-		["Prefer: resolution=merge-duplicates,return=minimal"], [to_row(profile, Services.auth.get_user_id())])
+		["Prefer: resolution=merge-duplicates,return=minimal"], [row])
+	if res["code"] == 409 and row.has("username"):
+		# Takma ad başkasında (benzersiz sütun): pet/aksesuar seçimi yine de kaydedilsin
+		row.erase("username")
+		res = await _request(HTTPClient.METHOD_POST, "/rest/v1/profiles?on_conflict=id",
+			["Prefer: resolution=merge-duplicates,return=minimal"], [row])
 	if not res["ok"]:
 		push_failed.emit("Profil kaydedilemedi (%d)." % res["code"])
 
@@ -47,15 +53,32 @@ func pull() -> void:
 	pulled.emit(p)
 
 
+const USERNAME_MIN: int = 3
+const USERNAME_MAX: int = 20
+const USERNAME_EXTRA: String = "çğıöşüÇĞİÖŞÜ"
+
+
+## Takma ad → profiles.username şemasına uygun hali (şema: harf/rakam/_ ve Türkçe harfler, 3–20).
+## İstemci boşluk ve tire kabul ediyor; şemada yok → 400 dönüp profil hiç kaydedilmiyordu.
+static func db_username(display_name: String) -> String:
+	var out: String = ""
+	for ch: String in LocalProfile.clean_name(display_name):
+		if ch == " " or ch == "-":
+			out += "_"
+		elif (ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or (ch >= "0" and ch <= "9") or ch == "_" or USERNAME_EXTRA.contains(ch):
+			out += ch
+	return out.substr(0, USERNAME_MAX)
+
+
 ## LocalProfile → tablo satırı.
 static func to_row(profile: RefCounted, user_id: String) -> Dictionary:
 	var acc: Dictionary = {}
 	for slot: StringName in profile.accessories:
 		acc[str(slot)] = str(profile.accessories[slot])
 	var row: Dictionary = {"id": user_id, "pet_id": str(profile.pet_id), "accessories": acc}
-	var name: String = LocalProfile.clean_name(profile.display_name)
-	if name.length() >= 3:
-		row["username"] = name.replace(" ", "_")
+	var name: String = db_username(profile.display_name)
+	if name.length() >= USERNAME_MIN:
+		row["username"] = name
 	return row
 
 

@@ -26,6 +26,8 @@ var _cid: int = 0
 ## cid -> Callable(response: Dictionary)
 var _pending: Dictionary = {}
 var _pending_zone: String = ""
+## connect_to_url çağrıldı, henüz açılmadı: bu sırada kapanırsa da "koptu" yayınlanmalı (yoksa sonsuz "Bağlanıyor…").
+var _connecting: bool = false
 
 
 func _ready() -> void:
@@ -62,6 +64,20 @@ func connect_to_server(session_token: String) -> void:
 	var err: Error = _socket.connect_to_url(url)
 	if err != OK:
 		disconnected.emit("Bağlantı kurulamadı.")
+		return
+	_connecting = true
+
+
+func disconnect_from_server() -> void:
+	leave_zone()
+	_pending_zone = ""
+	_pending.clear()
+	_connecting = false
+	if _socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
+		_socket.close()
+	_socket_open = false  # kasıtlı kapanış: "koptu" yayınlanmasın (yeniden bağlanma döngüsü başlamasın)
+	_nakama_token = ""
+	_user_id = ""
 
 
 func join_zone(zone_id: String) -> void:
@@ -113,7 +129,11 @@ func local_player_id() -> String:
 func _process(_delta: float) -> void:
 	_socket.poll()
 	var st: WebSocketPeer.State = _socket.get_ready_state()
+	if st == WebSocketPeer.STATE_CLOSED and _connecting:
+		_connecting = false
+		disconnected.emit("Bağlantı kurulamadı (%d)." % _socket.get_close_code())
 	if st == WebSocketPeer.STATE_OPEN and not _socket_open:
+		_connecting = false
 		_socket_open = true
 		connected.emit()
 		if not _pending_zone.is_empty():

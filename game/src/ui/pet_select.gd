@@ -50,11 +50,16 @@ func _add_logout_button() -> void:
 	b.add_theme_font_size_override("font_size", LOGOUT_FONT_SIZE)
 	b.position = Vector2(16, 16)
 	b.custom_minimum_size = Vector2(140, 96)
-	b.pressed.connect(func() -> void:
-		Sfx.play(&"ui_click")
-		Services.auth.sign_out()
-		get_tree().change_scene_to_file(LOGIN_SCENE))
+	b.pressed.connect(_logout)
 	add_child(b)
+
+
+func _logout() -> void:
+	Sfx.play(&"ui_click")
+	if Services.net != null:
+		Services.net.disconnect_from_server()  # aynı cihazda başka hesapla girilirse eski Nakama oturumu kalmasın
+	await Services.auth.sign_out()  # oturum dosyası silinmeden giriş ekranı açılırsa eski oturumu geri yüklüyordu
+	get_tree().change_scene_to_file(LOGIN_SCENE)
 
 
 func _setup_ui() -> void:

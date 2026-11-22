@@ -9,7 +9,8 @@ func _make() -> Control:
 	# Test runner SceneTree._initialize içinde çalışır; orada _ready çağrılmaz.
 	if m.get("catalog") == null:
 		m.call("_ready")
-	m.set_deferred("size", Vector2(720, 1280))
+	# Tam ekran çapalı kontrole doğrudan size vermek Godot uyarısı basıyor: test için sol-üst çapaya al
+	m.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	m.size = Vector2(720, 1280)
 	m.call("_fit")
 	return m

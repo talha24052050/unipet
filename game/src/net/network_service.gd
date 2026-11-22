@@ -24,6 +24,11 @@ func join_zone(_zone_id: String) -> void:
 	push_error("NetworkService.join_zone soyut")
 
 
+## Sunucu bağlantısını tamamen kapatır (çıkış / hesap değişimi). Varsayılan: odadan çık.
+func disconnect_from_server() -> void:
+	leave_zone()
+
+
 func leave_zone() -> void:
 	push_error("NetworkService.leave_zone soyut")
 

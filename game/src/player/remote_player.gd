@@ -93,6 +93,14 @@ func apply_profile(profile: Dictionary) -> void:
 	var raw_acc: Variant = profile.get("acc", {})
 	if raw_acc is Dictionary and visual != null:
 		var acc_dict: Dictionary = raw_acc
+		# Profilde artık olmayan slotları çıkar (set_character takılıları korur; şapka çıkarılınca diğerleri görmeye
+		# devam ediyordu)
+		var wanted: Dictionary = {}
+		for slot: Variant in acc_dict:
+			wanted[StringName(str(slot))] = true
+		for slot: StringName in (visual.equipped_ids() as Dictionary).keys():
+			if not wanted.has(slot):
+				visual.unequip(slot)
 		for slot: Variant in acc_dict:
 			var acc_id: StringName = StringName(str(acc_dict[slot]))
 			var acc_def: AccessoryDef = Services.accessories.get_def(acc_id)

@@ -30,6 +30,8 @@ func _ready() -> void:
 		_catalog = ChatCatalog.new()
 	_populate_items()
 	_connect_signals()
+	if _panel_overlay != null:
+		_panel_overlay.add_to_group(&"joystick_blocker")  # sohbet açıkken joystick dokunuşları almasın
 	close_panel()
 
 

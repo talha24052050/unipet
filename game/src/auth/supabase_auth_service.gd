@@ -17,6 +17,7 @@ var _refresh_token: String = ""
 var _user_id: String = ""
 var _expires_at: int = 0  # unix saniye
 var _refresh_timer: Timer
+const REFRESH_RETRY_S: float = 30.0
 
 
 func _ready() -> void:
@@ -70,13 +71,17 @@ func restore_session() -> bool:
 
 
 func sign_out() -> void:
-	if not _access_token.is_empty():
-		await _post("/auth/v1/logout", {}, true)
+	# Önce yerel oturumu sil: çağıran beklemese bile giriş ekranı eski oturumu geri yükleyemesin.
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))
+	_refresh_timer.stop()
+	var token: String = _access_token
 	_access_token = ""
 	_refresh_token = ""
 	_user_id = ""
-	_refresh_timer.stop()
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))
+	if not token.is_empty():
+		_access_token = token  # sunucu tarafı çıkış isteği için bir kez
+		await _post("/auth/v1/logout", {}, true)
+		_access_token = ""
 
 
 func is_signed_in() -> bool:
@@ -99,6 +104,9 @@ func _refresh() -> bool:
 		# Yenileme anahtarı geçersiz: tekrar giriş gerekir.
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))
 		_refresh_token = ""
+	elif not _refresh_token.is_empty() and _refresh_timer != null and _refresh_timer.is_inside_tree():
+		# Geçici hata (internet yok / sunucu 5xx): tek seferlik zamanlayıcı bir daha kurulmazsa oturum süresi dolar
+		_refresh_timer.start(REFRESH_RETRY_S)
 	return false
 
 

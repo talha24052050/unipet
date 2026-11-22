@@ -27,6 +27,21 @@ func _ready() -> void:
 	resized.connect(_reset)
 
 
+## Joystick _input'ta (arayüzden önce) çalışır: açık bir panelin (Ayarlar, sohbet) üstündeki dokunuşu almasın.
+## Panel kökleri bu gruba katılır.
+const BLOCKER_GROUP: StringName = &"joystick_blocker"
+
+
+func _blocked_at(pos: Vector2) -> bool:
+	if not is_inside_tree():
+		return false
+	for n: Node in get_tree().get_nodes_in_group(BLOCKER_GROUP):
+		var c: Control = n as Control
+		if c != null and c.is_visible_in_tree() and c.get_global_rect().has_point(pos):
+			return true
+	return false
+
+
 func is_active() -> bool:
 	return _touch_index != -1
 
@@ -45,7 +60,7 @@ func _input(event: InputEvent) -> void:
 ## Dokunuş olayını işler; joystick'e aitse true döner. `pos` ekran koordinatı.
 func handle_touch(index: int, pressed: bool, pos: Vector2) -> bool:
 	if pressed:
-		if _touch_index != -1 or not get_global_rect().has_point(pos):
+		if _touch_index != -1 or not get_global_rect().has_point(pos) or _blocked_at(pos):
 			return false
 		_touch_index = index
 		_center = pos - global_position
