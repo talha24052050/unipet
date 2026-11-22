@@ -28,47 +28,49 @@ void vertex() {
 	v_width = UV2.x > 0.0 ? UV2.x : road_width;
 }
 
-void fragment() {
-	// Kenar mesafesi: UV.x (0..1) ve road_width üzerinden hesaplanır
-	float dist_to_edge = min(UV.x, 1.0 - UV.x) * v_width;
-
-	// Küp taş deseni (~0.25 m)
-	vec2 cp = world_pos.xz;
+vec3 cobble(vec2 xz) {
+	// Küp taş (~0.25 m), sıralar yarım kaydırmalı
+	vec2 cp = xz;
 	float c_row = floor(cp.y / cobble_size);
 	cp.x += mod(c_row, 2.0) * (cobble_size * 0.5);
-	vec2 c_id = floor(cp / cobble_size);
 	vec2 c_f = fract(cp / cobble_size);
 	vec2 c_d = min(c_f, 1.0 - c_f);
-	float c_joint = min(c_d.x, c_d.y);
-	float c_mortar = smoothstep(0.03, 0.07, c_joint);
-	float c_h = hash(c_id);
-	vec3 c_stone = mix(cobble_color.rgb * 0.92, cobble_color.rgb * 1.08, c_h);
-	vec3 final_cobble = mix(mortar_color.rgb, c_stone, c_mortar);
+	float c_mortar = smoothstep(0.03, 0.07, min(c_d.x, c_d.y));
+	vec3 c_stone = cobble_color.rgb * mix(0.92, 1.08, hash(floor(cp / cobble_size)));
+	return mix(mortar_color.rgb, c_stone, c_mortar);
+}
 
-	// Kırmızı tuğla deseni (~0.125 x 0.25 m)
-	vec2 bp = world_pos.xz;
-	float b_row = floor(bp.y / 0.125);
-	bp.x += mod(b_row, 2.0) * 0.125;
-	vec2 b_id = floor(vec2(bp.x / 0.25, b_row));
-	vec2 b_f = vec2(fract(bp.x / 0.25), fract(bp.y / 0.125));
+vec3 brick(vec2 xz) {
+	// Tuğla (~0.125 x 0.25 m)
+	float b_row = floor(xz.y / 0.125);
+	float bx = xz.x + mod(b_row, 2.0) * 0.125;
+	vec2 b_f = vec2(fract(bx / 0.25), fract(xz.y / 0.125));
 	vec2 b_d = min(b_f, 1.0 - b_f);
-	float b_joint = min(b_d.x, b_d.y);
-	float b_mortar = smoothstep(0.04, 0.08, b_joint);
-	float b_h = hash(b_id);
-	vec3 b_stone = mix(brick_color.rgb * 0.90, brick_color.rgb * 1.10, b_h);
-	vec3 final_brick = mix(brick_mortar_color.rgb, b_stone, b_mortar);
+	float b_mortar = smoothstep(0.04, 0.08, min(b_d.x, b_d.y));
+	vec3 b_stone = brick_color.rgb * mix(0.90, 1.10, hash(vec2(floor(bx / 0.25), b_row)));
+	return mix(brick_mortar_color.rgb, b_stone, b_mortar);
+}
 
-	// Kenar şeridi geçişi (0.35 m kala kırmızı tuğla şerit)
-	float edge_blend = smoothstep(edge_margin - 0.02, edge_margin + 0.02, dist_to_edge);
+void fragment() {
+	// Sadece gereken desen hesaplanır (mobil GPU: her pikselde iki desen + hash pahalı)
 	if (pattern == 1) {
-		vec2 sp = world_pos.xz / 1.6;  // 1.6 m beton plaka
+		vec2 sp = world_pos.xz / 1.6;  // 1.6 m pembe beton plaka (Ortabahçe)
 		vec2 sf = fract(sp);
 		float joint = min(min(sf.x, 1.0 - sf.x), min(sf.y, 1.0 - sf.y));
 		float wear = hash(floor(sp)) * 0.12 + hash(floor(world_pos.xz * 1.7)) * 0.05;
 		vec3 slab = pink_color.rgb * (0.94 + wear);
 		ALBEDO = mix(slab * 0.82, slab, smoothstep(0.0, 0.025, joint));
 	} else {
-		ALBEDO = mix(final_brick, final_cobble, edge_blend);
+		// Kenar şeridi: kenara edge_margin kala tuğla, içi parke
+		float dist_to_edge = min(UV.x, 1.0 - UV.x) * v_width;
+		float edge_blend = smoothstep(edge_margin - 0.02, edge_margin + 0.02, dist_to_edge);
+		if (edge_blend <= 0.0) {
+			ALBEDO = brick(world_pos.xz);
+		} else if (edge_blend >= 1.0) {
+			ALBEDO = cobble(world_pos.xz);
+		} else {
+			ALBEDO = mix(brick(world_pos.xz), cobble(world_pos.xz), edge_blend);
+		}
 	}
 	ROUGHNESS = 0.88;
 	METALLIC = 0.0;
