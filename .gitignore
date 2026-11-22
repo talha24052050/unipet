@@ -24,3 +24,4 @@ Thumbs.db
 
 # Sunucu yerel verisi
 server/data/
+__pycache__/
