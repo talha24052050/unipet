@@ -324,3 +324,20 @@ func test_settings_button_toggles_panel() -> String:
 
 	_cleanup_node(btn)
 	return ""
+
+
+func test_server_address_in_settings() -> String:
+	var P: GDScript = load("res://src/ui/settings_panel.gd")
+	var p: Control = P.new()
+	p.set("settings_path", "user://test_settings_server.cfg")
+	var bad: bool = p.call("apply_server", "boşluklu adres ://")
+	var good: bool = p.call("apply_server", "https://abc-def.trycloudflare.com")
+	var LS: GDScript = load("res://src/core/local_settings.gd")
+	var saved: String = str(LS.call("load_or_default", "user://test_settings_server.cfg").get("server_address"))
+	p.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_settings_server.cfg"))
+	if bad or not good:
+		return "doğrulama yanlış: kötü=%s iyi=%s" % [bad, good]
+	if saved != "https://abc-def.trycloudflare.com":
+		return "adres kaydedilmedi: %s" % saved
+	return ""

@@ -7,7 +7,8 @@ signal closed
 const LocalSettings := preload("res://src/core/local_settings.gd")
 
 const PANEL_WIDTH: float = 560.0
-const PANEL_HEIGHT: float = 760.0
+const PANEL_HEIGHT: float = 960.0
+const MAIN_SCENE: String = "res://scenes/main.tscn"
 const MIN_CONTROL_HEIGHT: float = 64.0
 const FONT_SIZE_TITLE: int = 32
 const FONT_SIZE_CONTROLS: int = 28
@@ -26,6 +27,10 @@ var close_button: Button
 var feedback_input: TextEdit
 var feedback_button: Button
 var feedback_status: Label
+## Arkadaşlarla oynama: kayıtlı oturumda giriş ekranı atlandığı için sunucu adresi burada da değiştirilebilir.
+var server_input: LineEdit
+var server_button: Button
+var server_status: Label
 const FEEDBACK_INPUT_HEIGHT: float = 140.0
 
 # Erişilebilirlik ve test kolaylığı için kısayol
@@ -142,6 +147,25 @@ func _setup_layout() -> void:
 	feedback_status.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 4)
 	vbox.add_child(feedback_status)
 
+	server_input = LineEdit.new()
+	server_input.name = "ServerInput"
+	server_input.placeholder_text = "Sunucu adresi (boş = tek başına)"
+	server_input.custom_minimum_size = Vector2(0, MIN_CONTROL_HEIGHT)
+	server_input.add_theme_font_size_override("font_size", FONT_SIZE_LABEL)
+	vbox.add_child(server_input)
+	server_button = Button.new()
+	server_button.name = "ServerButton"
+	server_button.text = "Bağlan"
+	server_button.custom_minimum_size = Vector2(0, MIN_CONTROL_HEIGHT)
+	server_button.add_theme_font_size_override("font_size", FONT_SIZE_CONTROLS)
+	server_button.pressed.connect(_on_server_pressed)
+	vbox.add_child(server_button)
+	server_status = Label.new()
+	server_status.name = "ServerStatus"
+	server_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	server_status.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 4)
+	vbox.add_child(server_status)
+
 	close_button = Button.new()
 	close_button.name = "CloseButton"
 	close_button.text = "Kapat"
@@ -206,7 +230,31 @@ func _save_settings() -> void:
 	var _err: Error = s.call("save", settings_path)
 
 
+## Adresi doğrular, kaydeder, ağ servisini değiştirir ve oyun sahnesini yeniden yükler (yeni sunucuya bağlanır).
+func apply_server(text: String) -> bool:
+	var addr: String = text.strip_edges()
+	if not addr.is_empty() and LocalSettings.parse_server_address(addr).is_empty():
+		server_status.text = "Adres geçersiz. Örnek: 192.168.1.5 ya da https://xxx.trycloudflare.com"
+		return false
+	var s: RefCounted = LocalSettings.load_or_default(settings_path)
+	s.set("server_address", addr)
+	s.call("save", settings_path)
+	server_status.text = "Bağlanılıyor…" if not addr.is_empty() else "Tek başına moda geçildi."
+	return true
+
+
+func _on_server_pressed() -> void:
+	if not apply_server(server_input.text):
+		return
+	Services.net.leave_zone()
+	Services.use_server(LocalSettings.effective_server(server_input.text.strip_edges(), Config.IS_RELEASE))
+	close()
+	get_tree().change_scene_to_file.call_deferred(MAIN_SCENE)
+
+
 func refresh_from_settings() -> void:
+	if server_input != null:
+		server_input.text = str(LocalSettings.load_or_default(settings_path).get("server_address"))
 	if check_button != null:
 		check_button.set_pressed_no_signal(Sfx.enabled)
 	if volume_slider != null:

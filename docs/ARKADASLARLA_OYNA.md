@@ -13,7 +13,9 @@ istemez, ilk seferde ~320 MB indirir, `C:\Tools\nakama-local`). Docker sadece ka
    - Farklı yerlerdeyseniz: `powershell -ExecutionPolicy Bypass -File server/play-with-friends.ps1 -Internet`
 2. Script ekrana bir **adres** yazar (ör. `192.168.1.5` ya da `https://xxx.trycloudflare.com`).
 3. Herkes APK'yı kurar: https://github.com/talha24052050/unipet/releases/download/android-debug/unipet-debug.apk
-4. Giriş ekranında: mail → **Sunucu** alanına adres → Kod gönder → `000000` → pet seç → Başla.
+4. Giriş ekranında: **Sunucu** alanına adres → mail yerine `000` → pet seç → Başla.
+   Daha önce girmiş olan (giriş ekranı açılmayan) telefonlarda: oyunda **Ayarlar → Sunucu adresi → Bağlan**.
+   Sol altta "Çevrimiçi · N kişi" yazmalı.
 5. Hepiniz aynı kampüste, aynı odaya düşersiniz (Ortabahçe'de doğuş, oda 40 kişi; haritadan istenen yere ışınlanılabilir).
 
 ## Sorunlar
