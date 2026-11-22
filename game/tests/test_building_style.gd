@@ -50,8 +50,11 @@ func test_style_for_modern() -> String:
 		return "Elektrik Elektronik Fakültesi modern olmalı"
 	if BuildingStyle.style_for("Eğitim Fakültesi", 14.0, 4400.0) != BuildingStyle.STYLE_MODERN:
 		return "Eğitim Fakültesi modern olmalı"
-	if BuildingStyle.style_for("Yemekhane", 14.0, 2300.0) != BuildingStyle.STYLE_MODERN:
-		return "Yemekhane modern olmalı"
+	# Street View (2025-11-22): Yemekhane kırmızı tuğla + beyaz bant → kendi stili
+	if BuildingStyle.style_for("Yemekhane", 14.0, 2300.0) != BuildingStyle.STYLE_BRICK:
+		return "Yemekhane tuğla stili olmalı"
+	if BuildingStyle.style_for("Elektrik Elektronik Fakültesi", 10.5, 3000.0) != BuildingStyle.STYLE_MODERN:
+		return "EEF modern olmalı"
 	return ""
 
 

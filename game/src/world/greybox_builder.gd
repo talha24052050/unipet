@@ -345,6 +345,12 @@ func _build_building(b: Dictionary) -> void:
 	wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
 	wall_mat.set_shader_parameter("roof_color", sdata["roof_color"])
 	wall_mat.set_shader_parameter("style", sdata["shader_style"])
+	if name_text == KISLA_NAME and _courtyard_hull.size() >= 3:
+		var cc: Vector2 = Vector2.ZERO
+		for v: Vector2 in _courtyard_hull:
+			cc += v
+		wall_mat.set_shader_parameter("outer_stone", true)
+		wall_mat.set_shader_parameter("courtyard_center", cc / float(_courtyard_hull.size()))
 
 	mesh.surface_set_material(0, wall_mat)
 	var body: StaticBody3D = StaticBody3D.new()

@@ -6,6 +6,7 @@ const STYLE_HISTORIC: StringName = &"historic"
 const STYLE_DORM: StringName = &"dorm"
 const STYLE_MODERN: StringName = &"modern"
 const STYLE_SMALL: StringName = &"small"
+const STYLE_BRICK: StringName = &"brick"
 
 const FLOOR_HEIGHT: float = 3.5
 const SMALL_AREA_THRESHOLD: float = 300.0
@@ -22,6 +23,13 @@ const HISTORIC_KEYWORDS: PackedStringArray = [
 	"mescit",
 	"cami",
 ]
+
+## Kırmızı tuğla cepheli binalar (Street View: Yemekhane tuğla + katlarda beyaz beton bant).
+const BRICK_KEYWORDS: PackedStringArray = ["yemekhane"]
+const BRICK_WALL: Color = Color(0.64, 0.31, 0.24)
+const BRICK_BAND: Color = Color(0.92, 0.91, 0.88)
+const BRICK_WINDOW: Color = Color(0.17, 0.21, 0.26)
+const BRICK_ROOF: Color = Color(0.6, 0.62, 0.64)
 
 ## Renk paleti (YTÜ Davutpaşa harita stili)
 const HISTORIC_WALL: Color = Color(0.937, 0.890, 0.784)  # krem #EFE3C8
@@ -53,6 +61,7 @@ const PEDESTRIAN_PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # krem/açık gri
 const SHADER_STYLE_STRIP: int = 0
 const SHADER_STYLE_GRID: int = 1
 const SHADER_STYLE_HISTORIC: int = 2
+const SHADER_STYLE_BRICK: int = 3
 
 const STYLES: Dictionary = {
 	STYLE_HISTORIC: {
@@ -75,6 +84,13 @@ const STYLES: Dictionary = {
 		"window_color": DORM_WINDOW,
 		"frame_color": DORM_FRAME,
 		"shader_style": SHADER_STYLE_GRID,
+	},
+	STYLE_BRICK: {
+		"wall_color": BRICK_WALL,
+		"roof_color": BRICK_ROOF,
+		"window_color": BRICK_WINDOW,
+		"frame_color": BRICK_BAND,
+		"shader_style": SHADER_STYLE_BRICK,
 	},
 	STYLE_SMALL: {
 		"wall_color": SMALL_WALL,
@@ -116,6 +132,11 @@ static func polygon_area(poly: PackedVector2Array) -> float:
 ## Verilen bina adı, yüksekliği ve taban alanına göre görsel stil seçer.
 static func style_for(name: String, height: float, footprint_area: float) -> StringName:
 	var norm: String = normalize_name(name)
+
+	# 0. Tuğla cepheli bilinen binalar
+	for kw: String in BRICK_KEYWORDS:
+		if norm.contains(kw):
+			return STYLE_BRICK
 
 	# 1. Tarihi binalar
 	if not norm.is_empty():

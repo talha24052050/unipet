@@ -38,6 +38,12 @@ BUILDING_CLEAR = 4.0
 COURTYARD_WALL_CLEAR = 10.0
 EXISTING_TREE_CLEAR = 5.0
 BED_RADIUS = 3.2
+# Kampüs içi araç yolları iki yanı sık ağaçlı (Street View 2025, Google aracı çekimi)
+ROADSIDE_STEP = 10.0        # yol boyunca aralık
+ROADSIDE_OFFSET = 4.8       # yol ekseninden (yol 4 m: kenardan ~2.8 m)
+ROADSIDE_JITTER = 0.8
+ROADSIDE_SPACING = 8.0      # diğer ağaçlara en az
+ROADSIDE_SPECIES = {"tree_plane": 60, "tree_stonepine": 25, "tree_cypress": 15}
 TRACK_WIDTH = 7.5
 
 
@@ -244,6 +250,56 @@ def main():
             placed.add(p)
             trees.append([kind, round(p[0], 2), round(p[1], 2), round(rng.uniform(0, math.tau), 3), round(rng.uniform(0.85, 1.2), 3)])
             stats[region] = stats.get(region, 0) + 1
+
+    # Saha / oyun alanı / havuz çokgenleri (yol kenarı ağaçları buralara düşmesin)
+    no_go = []
+    for a in grey["areas"]:
+        if a.get("kind") in ("pitch", "playground") or "havuz" in str(a.get("name", "")).lower():
+            q = L.clean([tuple(v) for v in a["points"]])
+            if len(q) >= 3:
+                no_go.append(L.offset(q, 1.5))
+
+    # Kampüs kapıları (beton portal vb.) çevresi açık kalsın
+    GATE_CLEAR = 16.0
+    gates = json.load(open(os.path.join(ROOT, "tools/assets/landmarks.json"), encoding="utf-8")).get("gates", [])
+    for g in gates:
+        gx, gz = g["pos"]
+        no_go.append([(gx + GATE_CLEAR * math.cos(k * math.tau / 12), gz + GATE_CLEAR * math.sin(k * math.tau / 12)) for k in range(12)])
+    n_before = len(trees)
+    trees = [t for t in trees if not any(L.inside((t[1], t[2]), z) for z in no_go[-len(gates):])] if gates else trees
+    stats["kapı çevresinden çıkarılan"] = n_before - len(trees)
+
+    # Araç yollarının iki yanına ağaç sırası
+    road_lines = [line for line, tag in lines if tag == "road"]
+    n_road = 0
+    for line in road_lines:
+        acc = ROADSIDE_STEP / 2
+        for j in range(len(line) - 1):
+            a, c = line[j], line[j + 1]
+            seg = math.dist(a, c)
+            if seg < 1e-6:
+                continue
+            u = ((c[0] - a[0]) / seg, (c[1] - a[1]) / seg)
+            nrm = (-u[1], u[0])
+            t = acc
+            while t < seg:
+                for side in (-1, 1):
+                    off = ROADSIDE_OFFSET + rng.uniform(-ROADSIDE_JITTER, ROADSIDE_JITTER)
+                    p = (a[0] + u[0] * t + nrm[0] * side * off, a[1] + u[1] * t + nrm[1] * side * off)
+                    d, tag = sgrid.nearest(p)
+                    if d < (ROADSIDE_OFFSET - 1.2 if tag == "road" else PATH_CLEAR):
+                        continue  # kavşak / başka yol
+                    if placed.any_within(p, ROADSIDE_SPACING) or bgrid.near(p, BUILDING_CLEAR):
+                        continue
+                    if any(L.inside(p, z) for z in no_go):
+                        continue
+                    placed.add(p)
+                    trees.append([pick(ROADSIDE_SPECIES, rng), round(p[0], 2), round(p[1], 2),
+                                  round(rng.uniform(0, math.tau), 3), round(rng.uniform(0.9, 1.25), 3)])
+                    n_road += 1
+                t += ROADSIDE_STEP
+            acc = t - seg
+    stats["yol kenarı"] = n_road
 
     # Ortabahçe yol kavşakları → yuvarlak çiçek tarhı (≥3 yol ucu bir arada)
     ends = [line[i] for line, tag in lines if tag == "path" for i in range(len(line)) if in_courtyard(line[i], 15.0)]
