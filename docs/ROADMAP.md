@@ -2,7 +2,7 @@
 
 Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
 ## Talha'yı bekleyenler (Claude bunlar olmadan ilerleyemez)
-- [~] **Supabase** (3.1): proje+şema+mail bitti. Kalan: GitHub secret'ları `SUPABASE_URL`, `SUPABASE_ANON_KEY` (APK'nın Supabase'i bilmesi için)
+- [x] **Supabase** (3.1): proje+şema+mail+GitHub secret'ları tamam (CI APK'sında secrets.cfg doğrulandı, 2026-11-22)
 - [x] ~~Docker Desktop kurulumu~~ → gerek kalmadı: `server/local-nakama.ps1` Docker'sız çalışıyor (yerelde uçtan uca test geçti)
 - [ ] **Telefonda test**: pet seçimi/aksesuar, giriş (kod 000000), chat/emote, bakım
 - [ ] **Arkadaşlarla ilk oyun**: `docs/ARKADASLARLA_OYNA.md`
