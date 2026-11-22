@@ -5,6 +5,18 @@ extends Control
 
 const ZoneCatalog := preload("res://src/world/zone_catalog.gd")
 const CAMPUS_DATA: String = "res://data/zones/davutpasa_campus.json"
+const PLACES_DATA: String = "res://data/places.json"
+## Haritada adıyla gösterilen yer türleri (kalabalık olmasın diye hepsi değil).
+const PLACE_KINDS: Dictionary = {
+	"faculty": Color(0.12, 0.18, 0.42),
+	"food": Color(0.85, 0.35, 0.15),
+	"landmark": Color(0.73, 0.28, 0.23),
+	"sport": Color(0.2, 0.5, 0.2),
+	"dorm": Color(0.45, 0.35, 0.6),
+	"transport": Color(0.3, 0.3, 0.3),
+}
+const PLACE_FONT_SIZE: int = 15
+const PLACE_DOT: float = 5.0
 const GAME_SCENE: String = "res://scenes/main.tscn"
 
 const COLOR_BG: Color = Color(0.93, 0.93, 0.9)
@@ -34,6 +46,7 @@ var catalog: RefCounted
 var selected_zone: String = ""
 
 var _data: Dictionary = {}
+var _places: Array = []
 var _bounds: Rect2 = Rect2()
 var _scale: float = 1.0
 var _offset: Vector2 = Vector2.ZERO
@@ -53,6 +66,8 @@ func _ready() -> void:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(CAMPUS_DATA))
 	_data = parsed if parsed is Dictionary else {}
 	_bounds = compute_bounds(_data)
+	var pl: Variant = JSON.parse_string(FileAccess.get_file_as_string(PLACES_DATA))
+	_places = (pl as Dictionary).get("places", []) if pl is Dictionary else []
 	_build_ui()
 	resized.connect(_fit)
 	_fit()
@@ -114,6 +129,7 @@ func _draw() -> void:
 		outline.append(poly[0])
 		draw_polyline(outline, COLOR_HISTORIC_ROOF if historic else COLOR_ROAD.lightened(0.3), 2.0 if historic else 1.0, true)
 	var font: Font = get_theme_default_font()
+	_draw_places(font)
 	for id: String in catalog.ids():
 		var z: Dictionary = catalog.get_zone(id)
 		var c: Vector2 = world_to_map(z["center"])
@@ -129,6 +145,44 @@ func _draw() -> void:
 		var h: Vector2 = world_to_map(here)
 		draw_circle(h, 12.0, Color.WHITE)
 		draw_circle(h, 8.0, Color(0.85, 0.15, 0.15))
+
+
+## Yer adları: tür rengiyle küçük nokta + ad (bölge işaretlerinin altında kalır).
+func _draw_places(font: Font) -> void:
+	for p: Dictionary in _places:
+		var kind: String = str(p.get("kind", ""))
+		if not PLACE_KINDS.has(kind) or str(p.get("id", "")) == "ortabahce":
+			continue
+		var pos: Array = p.get("pos", [0, 0])
+		var m: Vector2 = world_to_map(Vector2(float(pos[0]), float(pos[1])))
+		if _near_marker(m):
+			continue  # bölge işaretinin altında okunmaz
+		var col: Color = PLACE_KINDS[kind]
+		draw_circle(m, PLACE_DOT + 1.5, Color.WHITE)
+		draw_circle(m, PLACE_DOT, col)
+		var label: String = short_name(str(p.get("name", "")))
+		var at: Vector2 = m + Vector2(PLACE_DOT + 3.0, PLACE_FONT_SIZE * 0.35)
+		draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, PLACE_FONT_SIZE, 4, Color.WHITE)
+		draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, PLACE_FONT_SIZE, col)
+
+
+func _near_marker(m: Vector2) -> bool:
+	for id: String in catalog.ids():
+		var c: Vector2 = world_to_map(catalog.get_zone(id)["center"])
+		if Rect2(c - Vector2(MARKER_RADIUS * 2.2, MARKER_RADIUS * 1.2), Vector2(MARKER_RADIUS * 4.4, MARKER_RADIUS * 2.9)).has_point(m):
+			return true
+	return false
+
+
+## Uzun resmi adları haritaya sığacak kısaltmaya çevirir.
+static func short_name(name: String) -> String:
+	var n: String = name.split(" / ")[0]
+	for pair: Array in [["Elektrik-Elektronik Fakültesi", "EEF"], ["Fen-Edebiyat Fakültesi", "FEF"],
+			["Kimya-Metalurji Fakültesi", "Kimya-Met."], ["İktisat ve İdari Bilimler Fakültesi", "İİBF"],
+			["Yabancı Diller Yüksekokulu", "YDYO"], ["Sanat ve Tasarım Fakültesi", "Sanat-Tasarım"],
+			[" Fakültesi", ""], [" Laboratuvarı", " Lab"], ["Öğrenci Yurdu", "Yurdu"]]:
+		n = n.replace(pair[0], pair[1])
+	return n if n.length() <= 18 else n.substr(0, 17) + "…"
 
 
 func _to_map(points: Array) -> PackedVector2Array:
