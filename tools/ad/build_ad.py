@@ -21,18 +21,17 @@ GODOT_SKIP = 51 / 30.0                       # cinematic.gd hazırlık süresi
 SFX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "game", "assets", "sfx")
 
 # (kaynak anahtarı, başlangıç, bitiş, hız, ekrandaki yazı)
+# cinematic.gd SHOTS: queue 0–2.8, drone 2.8–7.4, dance 7.4–9.4, gather 9.4–11.8, star 11.8–15.0
+# (Talha: Veo'nun 1., 2. ve 4. videosu çıkarıldı; yerlerine Godot çekimleri)
 SEGMENTS = [
-    ("queue", 0.0, 1.5, 1.0, "Yemekhane sırası: 45 dk..."),
-    ("queue", 5.3, 6.6, 1.0, "Yemekhane sırası: 45 dk..."),
-    ("godot", 0.6, 2.4, 1.0, "Bu kampüsü petinle gez"),
-    ("godot", 2.5, 4.3, 1.0, "Petin sırada beklemez"),
-    ("godot", 4.4, 6.5, 1.0, "Tüm Davutpaşa burada"),
+    ("godot", 0.0, 2.8, 1.0, "Yemekhane sırası: 45 dk..."),
+    ("godot", 3.0, 7.3, 1.0, "Bu kampüsü petinle gez"),
+    ("godot", 7.5, 9.3, 1.0, "Petin sırada beklemez"),
     ("library", 0.0, 1.4, 1.0, "Vize haftası mı?"),
-    ("library", 6.2, 7.8, 1.0, "Ama bir efsane var..."),
-    ("kutbi", 1.0, 4.4, 1.7, ""),
-    ("kutbi", 4.4, 7.0, 1.0, "KUTBİ"),
-    ("palm", 3.0, 5.4, 1.0, "Efsanevi pet sana geliyor"),
-    ("outro", 1.3, 7.8, 2.0, None),          # None = kapanış kartı yazıları
+    ("library", 6.2, 7.8, 1.0, "Vize haftası mı?"),
+    ("godot", 9.4, 11.7, 1.0, "Tüm Davutpaşa burada"),
+    ("godot", 11.8, 15.0, 1.0, "Ama bir efsane var..."),
+    ("outro", 1.3, 7.8, 2.0, None),          # None = kapanış kartı yazıları (Kutbi siluetten çıkıyor)
 ]
 
 
@@ -72,10 +71,7 @@ def outro_text(start, dur):
 def main():
     folder, godot_avi, out = sys.argv[1], sys.argv[2], sys.argv[3]
     src = {
-        "queue": find(folder, "Student_waiting_in_cafeteria_queue_*.mp4"),
         "library": find(folder, "Student_buried_under_textbooks_*.mp4"),
-        "kutbi": find(folder, "Star_creature_emerges_in_courtyard_*.mp4"),
-        "palm": find(folder, "Student_holds_glowing_smartphone*.mp4"),
         "outro": find(folder, "Golden_star_revealing_silhouette*.mp4"),
         "godot": godot_avi,
     }
@@ -91,7 +87,7 @@ def main():
         v += caption(text, 0.0, dur) if text else ""
         if text is None:
             v += outro_text(0.0, dur)
-        v += ",fade=t=in:st=0:d=0.08[v%d]" % i
+        v += "[v%d]" % i  # temiz kesme (karartmalı açılış her geçişte tek karelik siyah yanıp sönme yapıyordu)
         filters.append(v)
         if key == "godot":
             # Godot kaydında ses yok: sessiz taban + oyunun kendi efektleri (emote/sohbet)
@@ -106,10 +102,14 @@ def main():
     n = len(SEGMENTS)
     filters.append("%sconcat=n=%d:v=1:a=1[vout][abase]" % ("".join(concat), n))
     # oyun efektleri: dans anında emote, toplanmada sohbet sesleri
-    godot_start = sum((b - a) / s for (k, a, b, s, _t) in SEGMENTS[:2])
-    fx = [("emote.ogg", godot_start + 1.8 + 0.1), ("emote.ogg", godot_start + 1.8 + 1.0),
-          ("chat_receive.ogg", godot_start + 3.6 + 0.3), ("chat_receive.ogg", godot_start + 3.6 + 0.9),
-          ("chat_send.ogg", godot_start + 3.6 + 1.4), ("teleport.ogg", godot_start + 0.1)]
+    def seg_start(i):
+        return sum((b - a) / sp for (_k, a, b, sp, _t) in SEGMENTS[:i])
+    # segment sırası: 0 kuyruk, 1 drone, 2 dans, 3-4 kütüphane, 5 toplanma, 6 kayan yıldız, 7 kapanış
+    fx = [("care_fail.ogg", seg_start(0) + 2.0),                       # sondaki mantar üzülüyor
+          ("teleport.ogg", seg_start(1) + 0.05),                       # drone'a geçiş
+          ("emote.ogg", seg_start(2) + 0.1), ("emote.ogg", seg_start(2) + 1.0),
+          ("chat_receive.ogg", seg_start(5) + 0.3), ("chat_receive.ogg", seg_start(5) + 0.9), ("chat_send.ogg", seg_start(5) + 1.5),
+          ("teleport.ogg", seg_start(6) + 0.3), ("care_ok.ogg", seg_start(6) + 2.4)]   # yıldız düşer, iniş parıltısı
     base = len(SEGMENTS)
     mix = ["[abase]"]
     for j, (f, at) in enumerate(fx):
