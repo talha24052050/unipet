@@ -1,4 +1,9 @@
-# Supabase kurulumu (Parça 3) — Talha'nın yapacakları
+# Supabase kurulumu (Parça 3)
+
+> **Durum (2026-11-22):** Proje kuruldu, şema+izinler uygulandı (Supabase MCP ile), mail Gmail SMTP üzerinden
+> (smtp.gmail.com **465**, uygulama şifresi; 587 zaman aşımı verdi), Magic Link + Confirm signup şablonları kodlu.
+> Kod **8 hane** (oyun 6–10 kabul eder). Yeni projelerde tablo izinleri varsayılan kapalı → şemadaki `grant` satırları şart.
+> Kalan: GitHub secret'ları (aşağıda 4. bölüm).
 
 Kod hazır (`game/src/auth/supabase_auth_service.gd`, `server/supabase/001_schema.sql`).
 Aşağıdakiler senin hesabınla yapılır; ~10 dakika. Bitince bana sadece **Project URL** ve **anon public key**'i ver

@@ -2,7 +2,7 @@
 
 Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
 ## Talha'yı bekleyenler (Claude bunlar olmadan ilerleyemez)
-- [ ] **Supabase projesi** (3.1): `docs/SUPABASE.md` adımları → URL + anon key'i GitHub secret'a ekle
+- [~] **Supabase** (3.1): proje+şema+mail bitti. Kalan: GitHub secret'ları `SUPABASE_URL`, `SUPABASE_ANON_KEY` (APK'nın Supabase'i bilmesi için)
 - [x] ~~Docker Desktop kurulumu~~ → gerek kalmadı: `server/local-nakama.ps1` Docker'sız çalışıyor (yerelde uçtan uca test geçti)
 - [ ] **Telefonda test**: pet seçimi/aksesuar, giriş (kod 000000), chat/emote, bakım
 - [ ] **Arkadaşlarla ilk oyun**: `docs/ARKADASLARLA_OYNA.md`
@@ -38,7 +38,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [ ] 2.7 Checkpoint
 
 ## Parça 3 — Giriş (Supabase)
-- [ ] 3.1 Supabase projesi (Talha açar, ücretsiz katman) + domain kısıtlı OTP mail ayarı
+- [x] 3.1 Supabase projesi (xcltkhaupzmihadzqwjz), şema+RLS uygulandı, Gmail SMTP (465) + kodlu şablonlar; mail→kod→giriş ve RLS gerçek hesapla doğrulandı (2026-11-22). Okul maili hook'u hazır ama kapalı.
 - [x] 3.2 SupabaseAuthService (HTTPRequest ile REST), oturumu güvenli saklama, yenileme
 - [x] 3.3 Giriş ekranı: mail → kod → pet seçimi
 - [x] 3.4 Profil tablosu (kullanıcı adı, pet, aksesuarlar) + RLS kuralları

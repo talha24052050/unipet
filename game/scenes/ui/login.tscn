@@ -114,7 +114,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 44
 placeholder_text = "000000"
 alignment = 1
-max_length = 6
+max_length = 10
 virtual_keyboard_type = 2
 
 [node name="VerifyButton" type="Button" parent="Margin/VBox/CodeBox"]

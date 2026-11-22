@@ -4,9 +4,10 @@ const Login := preload("res://src/ui/login.gd")
 
 
 func test_code_validation() -> String:
-	if not Login.is_valid_code("123456"):
-		return "geçerli kod reddedildi"
-	for bad: String in ["12345", "1234567", "12a456", ""]:
+	for good: String in ["123456", "45774952"]:  # Supabase 6–10 hane (bizim proje 8)
+		if not Login.is_valid_code(good):
+			return "geçerli kod reddedildi: %s" % good
+	for bad: String in ["12345", "12345678901", "12a456", ""]:
 		if Login.is_valid_code(bad):
 			return "geçersiz kod kabul edildi: %s" % bad
 	return ""

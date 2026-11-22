@@ -101,15 +101,20 @@ func _save_settings_and_name(email: String) -> bool:
 func submit_code() -> void:
 	var c: String = _code_input.text.strip_edges()
 	if not is_valid_code(c):
-		_status.text = "Maile gelen 6 haneli kodu gir."
+		_status.text = "Maile gelen kodu gir."
 		return
 	_status.text = "Kontrol ediliyor..."
 	_show(Step.BUSY)
 	Services.auth.verify_code(_email, c)
 
 
+## Supabase kod uzunluğu projeye göre 6–10 hane (bizim proje 8).
+const CODE_MIN_LEN: int = 6
+const CODE_MAX_LEN: int = 10
+
+
 static func is_valid_code(code: String) -> bool:
-	return code.length() == 6 and code.is_valid_int()
+	return code.length() >= CODE_MIN_LEN and code.length() <= CODE_MAX_LEN and code.is_valid_int()
 
 
 ## Girişten sonra nereye: kayıtlı pet seçimi yoksa seçim ekranı, varsa oyun.
