@@ -40,3 +40,6 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
   (simge binalar, kapılar), `make_trees.py` (çınar/servi/fıstık çamı, tek yüzey + köşe rengi), `make_greenery.py`
   (ağaç konumları/tarhlar/pist → `kampus_greenery.json`). Greenery değişince navmesh yeniden pişirilir (hash'e dahil).
 - Mobil bütçe: düz yüzeyler gölge düşürmez, güneş gölgesi tek bölme 70 m; Ortabahçe'de ~120 çizim çağrısı (masaüstü ölçümü).
+- Bina hassasiyeti (2026-11-22): `tools/osm/enrich_buildings.py` ham OSM etiketlerini greybox'a ekler (şekil/konum aynı):
+  ölçülmüş yükseklik (kat sayısıyla tutarlıysa), `kind` (roof=duvarsız sundurma, greenhouse=cam, yurt/konut stili),
+  `min_height` (havada köprü, altı açık), `roof` (hipped/pyramidal), `colour`. Greybox değişince navmesh yeniden pişirilir.

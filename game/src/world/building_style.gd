@@ -7,6 +7,14 @@ const STYLE_DORM: StringName = &"dorm"
 const STYLE_MODERN: StringName = &"modern"
 const STYLE_SMALL: StringName = &"small"
 const STYLE_BRICK: StringName = &"brick"
+const STYLE_GLASS: StringName = &"glass"   # sera (OSM building=greenhouse)
+## OSM 'building' türü → stil (adından çıkarılamayanlar için)
+const KIND_STYLES: Dictionary = {
+	"dormitory": &"dorm", "apartments": &"dorm", "residential": &"dorm",
+	"greenhouse": &"glass", "mosque": &"historic",
+}
+const GLASS_WALL: Color = Color(0.62, 0.78, 0.78)
+const GLASS_FRAME: Color = Color(0.85, 0.88, 0.88)
 
 const FLOOR_HEIGHT: float = 3.5
 const SMALL_AREA_THRESHOLD: float = 300.0
@@ -92,6 +100,13 @@ const STYLES: Dictionary = {
 		"frame_color": BRICK_BAND,
 		"shader_style": SHADER_STYLE_BRICK,
 	},
+	STYLE_GLASS: {
+		"wall_color": GLASS_WALL,
+		"roof_color": GLASS_WALL,
+		"window_color": GLASS_WALL,
+		"frame_color": GLASS_FRAME,
+		"shader_style": SHADER_STYLE_GRID,
+	},
 	STYLE_SMALL: {
 		"wall_color": SMALL_WALL,
 		"roof_color": SMALL_ROOF,
@@ -130,13 +145,19 @@ static func polygon_area(poly: PackedVector2Array) -> float:
 
 
 ## Verilen bina adı, yüksekliği ve taban alanına göre görsel stil seçer.
-static func style_for(name: String, height: float, footprint_area: float) -> StringName:
+## kind: OSM 'building' etiketi (greybox "kind"); boşsa sadece ad/boyuttan karar verilir.
+static func style_for(name: String, height: float, footprint_area: float, kind: String = "") -> StringName:
 	var norm: String = normalize_name(name)
 
 	# 0. Tuğla cepheli bilinen binalar
 	for kw: String in BRICK_KEYWORDS:
 		if norm.contains(kw):
 			return STYLE_BRICK
+
+	# 0b. OSM türü (yurt/apartman/sera/cami) — tarihi ad anahtarlarından önce değil, onlardan sonra da değil:
+	# cami/mescit zaten tarihi; sera ve konutlar burada
+	if KIND_STYLES.has(kind) and KIND_STYLES[kind] != STYLE_HISTORIC:
+		return KIND_STYLES[kind]
 
 	# 1. Tarihi binalar
 	if not norm.is_empty():

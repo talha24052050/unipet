@@ -335,25 +335,37 @@ func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 func _build_building(b: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(b.get("points", []))
 	var height: float = landmark_height(str(b.get("name", "")), float(b.get("height", 10.0)))
+	var kind: String = str(b.get("kind", ""))
+	# OSM building=roof: duvarsız sundurma/gölgelik (eskiden dolu kutu çiziliyordu)
+	if kind == "roof":
+		_build_canopy(poly, height)
+		return
+	# OSM building:min_level: binalar arası havada köprü — altı açık (eskiden yerden yükselip yolu kapatıyordu)
+	var min_h: float = clampf(float(b.get("min_height", 0.0)), 0.0, height - 1.0)
 	# Sadece kutusu binanın kutusuyla kesişen yollar (kampüsün tamamında 300+ yol × 140 bina çok yavaştı).
 	var near_paths: Array[PackedVector2Array] = _paths_near(_poly_box(poly).grow(GATE_TOUCH_DIST + 1.0))
-	var mesh: ArrayMesh = extrude_polygon(poly, height, near_paths)
-	gate_count += _count_gates(poly, near_paths)
+	var no_paths: Array[PackedVector2Array] = []
+	var mesh: ArrayMesh = extrude_polygon(poly, height - min_h, near_paths if min_h <= 0.0 else no_paths)
+	if min_h <= 0.0:
+		gate_count += _count_gates(poly, near_paths)
 	if mesh == null:
 		push_warning("Bina üçgenlenemedi, atlandı: %s" % b.get("name", "?"))
 		return
 
 	var name_text: String = str(b.get("name", ""))
 	var area: float = BuildingStyle.polygon_area(poly)
-	var style: StringName = BuildingStyle.style_for(name_text, height, area)
+	var style: StringName = BuildingStyle.style_for(name_text, height, area, kind)
 	var sdata: Dictionary = BuildingStyle.get_style_data(style)
+	var colour: String = str(b.get("colour", ""))
+	var wall_color: Color = Color.html(colour) if Color.html_is_valid(colour) else sdata["wall_color"]
 
 	var is_kisla: bool = name_text == KISLA_NAME
-	var wall_mat: ShaderMaterial = _style_materials.get(style) if not is_kisla and _style_materials.has(style) else ShaderMaterial.new()
+	var mat_key: String = "%s|%s" % [style, colour]  # OSM rengi olan binalar kendi (ortak) malzemesini alır
+	var wall_mat: ShaderMaterial = _style_materials.get(mat_key) if not is_kisla and _style_materials.has(mat_key) else ShaderMaterial.new()
 	if not is_kisla:
-		_style_materials[style] = wall_mat
+		_style_materials[mat_key] = wall_mat
 	wall_mat.shader = BUILDING_WALL_SHADER
-	wall_mat.set_shader_parameter("wall_color", sdata["wall_color"])
+	wall_mat.set_shader_parameter("wall_color", wall_color)
 	wall_mat.set_shader_parameter("window_color", sdata["window_color"])
 	wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
 	wall_mat.set_shader_parameter("roof_color", sdata["roof_color"])
@@ -368,22 +380,25 @@ func _build_building(b: Dictionary) -> void:
 	mesh.surface_set_material(0, wall_mat)
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Building%d" % building_count
+	body.position.y = min_h
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	var shape: CollisionShape3D = CollisionShape3D.new()
 	var trimesh: ConcavePolygonShape3D = mesh.create_trimesh_shape()
 	trimesh.backface_collision = true
 	shape.shape = trimesh
-	if _batching and not is_kisla:
+	if _batching and not is_kisla and min_h <= 0.0:
 		_batch_mesh(mesh, wall_mat, _poly_box(poly).get_center())  # aynı stil + hücre → tek çizim
 		mi.free()
 	else:
 		body.add_child(mi)
 	body.add_child(shape)
 
-	# Tarihi binalara kırma çatı
-	if style == BuildingStyle.STYLE_HISTORIC:
-		var roof_mesh: ArrayMesh = build_hip_roof(poly, height, 2.5, 2.0)
+	# Tarihi binalara ve OSM'de roof:shape=hipped/pyramidal olanlara kırma çatı
+	var roof_shape: String = str(b.get("roof", ""))
+	if style == BuildingStyle.STYLE_HISTORIC or roof_shape in ["hipped", "pyramidal"]:
+		var roof_h: float = 2.5 if style == BuildingStyle.STYLE_HISTORIC else clampf(sqrt(area) * 0.12, 1.2, 3.0)
+		var roof_mesh: ArrayMesh = build_hip_roof(poly, height - min_h, roof_h, 2.0)
 		if roof_mesh != null:
 			var roof_mat: StandardMaterial3D = _material(sdata["roof_color"])
 			roof_mesh.surface_set_material(0, roof_mat)
@@ -392,7 +407,7 @@ func _build_building(b: Dictionary) -> void:
 			roof_mi.mesh = roof_mesh
 			body.add_child(roof_mi)
 
-	if show_labels and not name_text.is_empty():
+	if show_labels and not name_text.is_empty() and min_h <= 0.0:
 		# Havada asılı yazı yerine cepheye tabela: yola en yakın duvara, kapı hizasının üstüne.
 		var sign: Node3D = build_sign(poly, height, near_paths, CampusMap.short_name(name_text), style == BuildingStyle.STYLE_HISTORIC)
 		if sign != null:
@@ -410,6 +425,46 @@ func _build_building(b: Dictionary) -> void:
 	add_child(body)
 	building_count += 1
 
+
+
+## Sundurma/gölgelik (OSM building=roof): ince çatı tablası + köşelerde ince direkler; altından geçilir.
+const CANOPY_THICK: float = 0.3
+const CANOPY_POST: float = 0.25
+const CANOPY_COLOR: Color = Color(0.62, 0.64, 0.66)
+const CANOPY_MAX_POSTS: int = 10
+
+
+func _build_canopy(poly: PackedVector2Array, height: float) -> void:
+	var slab: ArrayMesh = extrude_polygon(poly, CANOPY_THICK)
+	if slab == null:
+		return
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "Canopy%d" % building_count
+	var mat: StandardMaterial3D = _shared_material(CANOPY_COLOR)
+	slab.surface_set_material(0, mat)
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.mesh = slab
+	mi.position.y = height - CANOPY_THICK
+	body.add_child(mi)
+	var step: int = maxi(1, ceili(float(poly.size()) / CANOPY_MAX_POSTS))
+	var post: BoxMesh = BoxMesh.new()
+	post.size = Vector3(CANOPY_POST, height - CANOPY_THICK, CANOPY_POST)
+	post.material = mat
+	var post_shape: BoxShape3D = BoxShape3D.new()
+	post_shape.size = post.size
+	for i: int in range(0, poly.size(), step):
+		# köşeden içeri 0.4 m: direk tablanın altında kalsın
+		var c: Vector2 = poly[i].lerp(_polygon_center(poly), clampf(0.4 / maxf(poly[i].distance_to(_polygon_center(poly)), 0.01), 0.0, 0.5))
+		var p: MeshInstance3D = MeshInstance3D.new()
+		p.mesh = post
+		p.position = Vector3(c.x, post.size.y * 0.5, c.y)
+		body.add_child(p)
+		var cs: CollisionShape3D = CollisionShape3D.new()
+		cs.shape = post_shape
+		cs.position = p.position
+		body.add_child(cs)
+	add_child(body)
+	building_count += 1
 
 
 func _build_area(a: Dictionary) -> void:
