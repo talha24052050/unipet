@@ -53,4 +53,5 @@ static func source_hash(zone: Dictionary) -> String:
 		var p: String = str(zone.get(key, ""))
 		if not p.is_empty() and FileAccess.file_exists(p):
 			text += FileAccess.get_file_as_string(p)
-	return text.sha256_text().substr(0, 16)
+	# Satır sonu farkı (Windows CRLF / CI LF) özeti değiştirmesin.
+	return text.replace("\r\n", "\n").sha256_text().substr(0, 16)

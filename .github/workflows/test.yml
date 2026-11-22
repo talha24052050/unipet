@@ -16,7 +16,10 @@ jobs:
       - name: Import
         run: godot --headless --path game --import || true
       - name: Testler
-        run: godot --headless --path game -s res://tests/run_tests.gd
+        run: |
+          godot --headless --path game -s res://tests/run_tests.gd 2>&1 | tee tests.log; status=${PIPESTATUS[0]}
+          if [ $status -ne 0 ]; then echo "::error title=tests::$(grep FAIL tests.log | head -5 | tr '\n' ' ')"; fi
+          exit $status
       - name: Ana sahne hatasız açılıyor mu
         run: |
           timeout 30 godot --headless --path game --quit-after 30 2>&1 | tee run.log
@@ -66,4 +69,8 @@ jobs:
           grep -q "E2E GEÇTİ" e2e.log
       - name: Nakama logu (hata olursa)
         if: failure()
-        run: tail -50 nakama.log || true
+        run: |
+          tail -50 nakama.log || true
+          # Hata notu olarak da yaz (API'den okunabilsin)
+          echo "::error title=nakama.log::$(grep -E '"level":"(error|fatal)"' nakama.log | tail -3 | cut -c1-300 | tr '\n' ' ')"
+          echo "::error title=e2e.log::$(grep -E 'FAIL|ERROR' e2e.log 2>/dev/null | head -5 | tr '\n' ' ')"
