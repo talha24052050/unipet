@@ -54,6 +54,10 @@ const PET_ANIM_BLEND: float = 0.15
 ## Model genişliğinin ne kadarı çarpışmaya girsin (yuvarlak blob'lar köşelerden sıkışmasın).
 const PET_COLLISION_RADIUS_FACTOR: float = 0.8
 
+## Kampüs keşfi: bir yere bu kadar yaklaşınca keşfedilir (m); ışınlandıktan sonra en az bu kadar yürümek gerekir (m).
+const DISCOVER_RADIUS: float = 22.0
+const DISCOVER_MIN_WALK: float = 30.0
+
 ## Sanal joystick (piksel; 720x1280 tasarım çözünürlüğüne göre).
 const JOYSTICK_RADIUS: float = 110.0
 const JOYSTICK_DEADZONE: float = 0.15

@@ -44,6 +44,8 @@ const COLOR_HISTORIC: Color = Color(0.94, 0.89, 0.78)
 const COLOR_HISTORIC_ROOF: Color = Color(0.73, 0.28, 0.23)
 const COLOR_MARKER: Color = Color(0.12, 0.18, 0.42)
 const COLOR_MARKER_HERE: Color = Color(0.96, 0.76, 0.2)
+const COLOR_DISCOVERED: Color = Color(0.98, 0.72, 0.1)
+const COLOR_UNDISCOVERED: Color = Color(0.6, 0.6, 0.6)
 const HISTORIC_KEYS: PackedStringArray = ["kışla", "taşbina", "sanat ve tasarım", "otağ", "sancak", "hamam", "mescit", "cami"]
 ## Harita kenar boşluğu (px) ve üst başlık/alt panel yükseklikleri.
 const MARGIN: float = 24.0
@@ -68,6 +70,9 @@ var _offset: Vector2 = Vector2.ZERO
 var _title: Label
 var _confirm: PanelContainer
 var _confirm_label: Label
+var _discovery_label: Label
+## Keşfedilen yer id'leri (profil); haritada altın halka, keşfedilmeyen küçük yerler gri nokta.
+var discovered: PackedStringArray = PackedStringArray()
 
 var care_spots: Dictionary:
 	get:
@@ -89,6 +94,7 @@ func _ready() -> void:
 	_places = (pl as Dictionary).get("places", []) if pl is Dictionary else []
 	var cs: Variant = JSON.parse_string(FileAccess.get_file_as_string(CARE_SPOTS_DATA))
 	_care_spots = cs if cs is Dictionary else {}
+	discovered = (load("res://src/core/local_profile.gd") as GDScript).call("load_or_default").get("discovered")
 	_build_ui()
 	resized.connect(_fit)
 	_fit()
@@ -267,10 +273,16 @@ func _draw_legend(font: Font) -> void:
 func _draw_places(font: Font) -> void:
 	for p: Dictionary in _places:
 		var kind: String = str(p.get("kind", ""))
-		if not PLACE_KINDS.has(kind) or str(p.get("id", "")) == "ortabahce":
-			continue
 		var pos: Array = p.get("pos", [0, 0])
 		var m: Vector2 = world_to_map(Vector2(float(pos[0]), float(pos[1])))
+		var found: bool = discovered.has(str(p.get("id", "")))
+		if found:
+			draw_circle(m, PLACE_DOT + 4.5, COLOR_DISCOVERED)
+		if not PLACE_KINDS.has(kind) or str(p.get("id", "")) == "ortabahce":
+			# adsız yerler (servis/kapı): keşfedilmediyse gri, edildiyse altın nokta
+			draw_circle(m, PLACE_DOT * 0.7 + 1.5, Color.WHITE)
+			draw_circle(m, PLACE_DOT * 0.7, COLOR_DISCOVERED if found else COLOR_UNDISCOVERED)
+			continue
 		var col: Color = PLACE_KINDS[kind]
 		draw_circle(m, PLACE_DOT + 1.5, Color.WHITE)
 		draw_circle(m, PLACE_DOT, col)
@@ -278,6 +290,10 @@ func _draw_places(font: Font) -> void:
 		var at: Vector2 = m + Vector2(PLACE_DOT + 3.0, PLACE_FONT_SIZE * 0.35)
 		draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, PLACE_FONT_SIZE, 4, Color.WHITE)
 		draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, PLACE_FONT_SIZE, col)
+
+
+static func discovery_text(found: int, total: int) -> String:
+	return "Keşif: %d/%d yer" % [found, total]
 
 
 ## Uzun resmi adları haritaya sığacak kısaltmaya çevirir.
@@ -369,8 +385,15 @@ func _build_ui() -> void:
 	_title.text = "Davutpaşa Kampüsü"
 	_title.add_theme_font_size_override("font_size", 40)
 	_title.add_theme_color_override("font_color", COLOR_MARKER)
-	_title.position = Vector2(MARGIN, 28)
+	_title.position = Vector2(MARGIN, 14)
 	add_child(_title)
+	_discovery_label = Label.new()
+	_discovery_label.name = "DiscoveryLabel"
+	_discovery_label.text = discovery_text(discovered.size(), _places.size())
+	_discovery_label.add_theme_font_size_override("font_size", 28)
+	_discovery_label.add_theme_color_override("font_color", COLOR_DISCOVERED.darkened(0.25))
+	_discovery_label.position = Vector2(MARGIN, 66)
+	add_child(_discovery_label)
 	var back: Button = Button.new()
 	back.text = "Kapat"
 	back.add_theme_font_size_override("font_size", 28)
