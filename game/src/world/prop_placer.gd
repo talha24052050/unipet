@@ -19,6 +19,7 @@ const PROP_PATHS: Dictionary = {
 	"tree_common": "res://assets/props/tree_common.glb",
 	"tree_plane": "res://assets/props/tree_plane.glb",
 	"tree_cypress": "res://assets/props/tree_cypress.glb",
+	"tree_stonepine": "res://assets/props/tree_stonepine.glb",
 	"bush_common": "res://assets/props/bush_common.glb",
 	"bush_berries": "res://assets/props/bush_berries.glb",
 	"bench": "res://assets/props/bench.glb",
@@ -34,6 +35,7 @@ const TYPE_SCALES: Dictionary = {
 	"tree_common": 1.1,
 	"tree_plane": 1.0,
 	"tree_cypress": 1.0,
+	"tree_stonepine": 1.0,
 	"bush_common": 1.0,
 	"bush_berries": 1.0,
 	"bench": 2.4,
@@ -111,7 +113,7 @@ func build_props(data: Dictionary) -> void:
 		# Çarpışma şekillerini kur (çalılara yok)
 		var yaw: float = float(item.get("yaw", 0.0))
 		match t:
-			"tree_birch", "tree_pine", "tree_common", "tree_plane", "tree_cypress", "lamp":
+			"tree_birch", "tree_pine", "tree_common", "tree_plane", "tree_cypress", "tree_stonepine", "lamp":
 				var col := CollisionShape3D.new()
 				col.shape = cylinder_shape
 				col.position = Vector3(px, CYLINDER_HEIGHT * 0.5, pz)
@@ -221,18 +223,18 @@ static func load_data(path: String) -> Dictionary:
 	return parsed
 
 
-## Davutpaşa'da ağaçların çoğu çınar, yollarda/tarihi binalarda servi var. Veri dosyasını (ve navmesh'i) değiştirmeden
-## genel türleri konuma bağlı, her açılışta aynı olacak şekilde yerel türlere çevirir.
-const PLANE_SHARE: float = 0.6     # "tree_common" → çınar oranı
-const CYPRESS_SHARE: float = 0.5   # "tree_pine" → servi oranı
+## Davutpaşa'da ağaçların çoğu çınar ve çam (Street View/drone). Veri dosyasını (ve navmesh'i) değiştirmeden genel türleri
+## konuma bağlı, her açılışta aynı olacak şekilde yerel türlere çevirir. Script ağaçları tek yüzey (tek çizim çağrısı);
+## dış paketin yuvarlak ağacı/çamı 2-3 yüzeyli. Huş (beyaz gövde) olduğu gibi kalır.
+const CYPRESS_SHARE: float = 0.5   # "tree_pine" → servi, kalanı fıstık çamı
 
 
 static func local_species(t: String, x: float, z: float) -> String:
 	var h: float = fposmod(sin(x * 12.9898 + z * 78.233) * 43758.5453, 1.0)
-	if t == "tree_common" and h < PLANE_SHARE:
+	if t == "tree_common":
 		return "tree_plane"
-	if t == "tree_pine" and h < CYPRESS_SHARE:
-		return "tree_cypress"
+	if t == "tree_pine":
+		return "tree_cypress" if h < CYPRESS_SHARE else "tree_stonepine"
 	return t
 
 
