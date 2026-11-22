@@ -30,7 +30,7 @@ Ortabahçe'de, yemekhanede veya fakülteler önünde diğer YTÜ'lülerle karş�
 2. **Giriş yapın:**  
    Giriş ekranında e-posta kutusuna `000` yazarak tek tıkla şifresiz geliştirme modunda girebilirsiniz (oturumunuz hatırlanır). Normal test için herhangi bir e-posta adresi yazıp kod alanına `000000` girebilirsiniz.
 3. **Petini giydir ve keşfe başla:**  
-   6 farklı petten birini seçip kepi, gözlük, atkı veya çanta takın. Joystick veya dokun-yürü ile gezinebilir, sağ üstteki "Harita" butonuyla Davutpaşa'nın 7 bölgesi arasında geçiş yapabilirsiniz. Bakım HUD'undaki butonlarla petinizi besleyebilir, dinlendirebilir ve oynatabilirsiniz.
+   6 farklı petten birini seçip kepi, gözlük, atkı veya çanta takın. Joystick veya dokun-yürü ile gezinebilir, sağ üstteki "Harita" butonuyla kampüs haritasını açıp yer adına dokunarak ışınlanabilirsiniz (herkes tek kampüste aynı odada buluşur, oda 40 kişi). Bakım HUD'undaki butonlarla petinizi besleyebilir, dinlendirebilir ve oynatabilirsiniz.
 
 ## Belgeler
 

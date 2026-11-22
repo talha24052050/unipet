@@ -14,7 +14,7 @@ istemez, ilk seferde ~320 MB indirir, `C:\Tools\nakama-local`). Docker sadece ka
 2. Script ekrana bir **adres** yazar (ör. `192.168.1.5` ya da `https://xxx.trycloudflare.com`).
 3. Herkes APK'yı kurar: https://github.com/talha24052050/unipet/releases/download/android-debug/unipet-debug.apk
 4. Giriş ekranında: mail → **Sunucu** alanına adres → Kod gönder → `000000` → pet seç → Başla.
-5. Hepiniz Ortabahçe'de aynı odaya düşersiniz (oda 40 kişi).
+5. Hepiniz aynı kampüste, aynı odaya düşersiniz (Ortabahçe'de doğuş, oda 40 kişi; haritadan istenen yere ışınlanılabilir).
 
 ## Sorunlar
 - **Bağlanamıyor (aynı Wi-Fi):** Windows Güvenlik Duvarı. Yönetici PowerShell'de

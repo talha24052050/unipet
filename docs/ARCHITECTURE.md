@@ -13,7 +13,7 @@ unipet/
 │  │  ├─ ui/                       Kullanıcı arayüzü sahneleri (giriş, pet seçimi, harita, chat ve bakım HUD)
 │  │  └─ world/                    Dünya inşası (GreyboxBuilder), bina stilleri, gece-gündüz, navmesh ve proplar
 │  ├─ scenes/                      Oyun sahneleri (main.tscn, player.tscn, remote_player.tscn, ui/*.tscn)
-│  ├─ data/                        Karakterler, aksesuarlar, sohbet şablonları ve bölge verileri (zones/)
+│  ├─ data/                        Karakterler, aksesuarlar, sohbet şablonları ve kampüs verileri (zones/)
 │  ├─ assets/                      Modeller (.glb), dokular, materyaller, ses ve arayüz ögeleri
 │  └─ tests/                       Test runner (run_tests.gd) ve test_*.gd birim/entegrasyon testleri
 ├─ server/                         Nakama ve Supabase arka uç bileşenleri
@@ -28,7 +28,7 @@ unipet/
 │  ├─ assets/                      Pet ve prop indirme/dönüştürme ve .tres üretme scriptleri
 │  ├─ ci/                          CI ve ihracat yapılandırmaları (export_presets.cfg)
 │  ├─ e2e/                         Gerçek Nakama sunucusuna karşı iki oyunculu uçtan uca test (nakama_two_players.gd)
-│  ├─ nav/                         Bölgelerin navmesh'lerini önceden pişiren araç (bake_zone_navmeshes.gd)
+│  ├─ nav/                         Kampüs navmesh'ini önceden pişiren araç (bake_zone_navmeshes.gd)
 │  ├─ osm/                         OpenStreetMap verisinden binalar, yollar, proplar ve yer listesi üretimi
 │  └─ deploy-phone.ps1             USB ile bağlı Android telefona derleyip kuran ve log/ekran görüntüsü alan script
 ├─ art/                            Referans materyalleri, harita verileri ve Blender scriptleri
@@ -36,8 +36,11 @@ unipet/
 └─ docs/                           Mimari, durum, kurulum, yol haritası ve kararlar
 ```
 
-## Bölgeler
-Kampüs 7 bölgeye ayrılmıştır (`game/data/zones/zones.json` ve `ZoneCatalog`). Aktif bölge `Services.current_zone` ile tutulur. `GreyboxBuilder`, `PropPlacer` ve `RuntimeNavRegion` bölgeye duyarlıdır; sadece aktif bölgenin bina, prop ve navmesh verisini yükler. Her bölgenin önceden pişirilmiş navmesh dosyası (`game/data/zones/<zone>.navmesh.res`) bulunur; sha256 kaynak özeti uyuşursa doğrudan yüklenir, uyuşmazsa çalışma anında yeniden pişirilir.
+## Kampüs (tek bölge)
+Tüm kampüs tek bölge olarak modellenmiştir (`game/data/zones/zones.json` ve `ZoneCatalog` içinde `"kampus"` tanımı: 140 bina, 141 alan, 309 yol; doğuş noktası Ortabahçe). Tek hazır yürüme haritası (`game/data/zones/kampus_navmesh.res`, hücre 0.5 m, 7053 poligon, ~70 KB) kullanılır; sha256 kaynak özeti uyuşursa doğrudan yüklenir, uyuşmazsa `RuntimeNavRegion` arka planda ~2-3 saniyede yeniden pişirir (`tools/nav/bake_zone_navmeshes.gd` önceden pişirme aracıdır).
+
+**Işınlanma akışı:**
+Oyuncu harita ekranında (`CampusMap`) 38 resmî yer adından birine dokunup "Git" dediğinde odadan ayrılır (`Services.net.leave_zone()`). Hedef koordinat `Services.pending_teleport`'a atanarak ana oyun sahnesi (`main.tscn`) yeniden yüklenir. Oyuncu hedef koordinata yerleştirilir ve yer bina ortasına denk gelse bile navmesh hazır olduğunda `player.gd` (`_try_snap_to_navmesh`) tarafından yürünebilir en yakın noktaya oturtulur; ardından odaya yeniden bağlanılır.
 
 ## Pet bakımı
 Pet bakım kuralları istemcide (`game/src/care/pet_care_rules.gd`) ve sunucuda (`server/nakama/modules/index.js`) birebir aynıdır; sunucu yetkilidir (durum Nakama storage'da saklanır, çevrimdışı modda yerelde hesaplanır). Açlık (food), mutluluk (joy) ve enerji (energy) değerleri 0-100 aralığındadır ve saatlik düşüşe tabidir (en fazla 12 saat). Oyuncu `OP_CARE` opcode'u ile eylem (`eat`, `rest`, `play`, `social`) gönderir; bekleme süreleri ve konum gereksinimleri (ör. yemek sadece Yemekhane, Hokka veya Kayıntı'da) sunucuda denetlenir.
@@ -61,7 +64,7 @@ Nakama yetkili maç odasında (`server/nakama/modules/index.js`) ikili JSON mesa
 ## Testler
 - **Godot test koşucusu (`game/tests/run_tests.gd`):** Başsız (headless) modda `res://tests/test_*.gd` dosyalarını bulur ve çalıştırır. Assertion ve çalışma zamanı çökmelerini hata sayacında toplar; hata varsa 1, yoksa 0 koduyla çıkar.
 - **Birim ve entegrasyon testleri:** `test_*.gd` dosyaları çekirdek sistemleri (auth, controls, core, net, pet, ui, greybox, building_style, campus_map, care, care_hud, places, props, zones, day_night) bağımsız test eder.
-- **Nakama modül testleri (`server/nakama/test/module.test.js`):** Node.js ortamında bakım kurallarını, küfür filtresini, bölge eşleşmelerini ve sunucu veri yapılarını doğrular.
+- **Nakama modül testleri (`server/nakama/test/module.test.js`):** Node.js ortamında bakım kurallarını, küfür filtresini, kampüs oda eşleşmelerini ve sunucu veri yapılarını doğrular.
 - **Uçtan uca test (`tools/e2e/nakama_two_players.gd`):** Gerçek Nakama sunucusuna iki oyuncu bağlayarak eşleştirme, hareket senkronu, hız koruması, chat ve bakım akışını test eder.
 - **Sürekli Entegrasyon (CI):** GitHub Actions üzerinde `.github/workflows/test.yml` (Godot birim testleri + Nakama modül testi + gerçek Nakama E2E), `.github/workflows/android.yml` (Android debug APK) ve `.github/workflows/release.yml` (imzalı yayın APK) otomatik koşar.
 
@@ -77,4 +80,4 @@ Nakama yetkili maç odasında (`server/nakama/modules/index.js`) ikili JSON mesa
 3. **Tek mesaj formatı:** `ChatMessage{kind, payload, sender_id, t}`.
 4. **Ağ durumu:** `{pos: Vector3, yaw: float, anim: String}`; saniyede `Config.NET_TICK_RATE` kez,
    karşı tarafta interpolasyon. Hareket girişi (joystick/dokun) yerel karakteri yürütür, ağ sadece sonucu taşır.
-5. **Bölge/oda:** `zone_id` (ör. `ortabahce`) → sunucu `ortabahce-1`, `ortabahce-2` kanallarına dağıtır.
+5. **Kampüs/oda:** Tek bölge (`kampus`) üzerinden sunucu `kampus-1`, `kampus-2` kanallarına dağıtır (oda kapasitesi: `Config.ROOM_CAPACITY = 40` oyuncu).
