@@ -505,10 +505,11 @@ FIELD_MARGIN = 1.0
 
 
 def drop_on_fields(props: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
-    """Saha/oyun alanı (ve stadyum pisti) üstüne düşen propları atar (ağaç sahanın ortasında olmasın)."""
+    """Saha/oyun alanı, havuz ve stadyum pisti üstüne düşen propları atar (ağaç sahanın/suyun ortasında olmasın)."""
     fields: list[tuple[list[list[float]], float]] = []
     for a in data.get("areas", []):
-        if a.get("kind") not in ("pitch", "playground"):
+        is_pool = "havuz" in str(a.get("name", "")).lower()  # oyunda su olarak çizilir
+        if a.get("kind") not in ("pitch", "playground") and not is_pool:
             continue
         poly = a["points"]
         area = abs(sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1]

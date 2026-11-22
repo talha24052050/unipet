@@ -206,6 +206,8 @@ def main():
         poly = L.clean([tuple(q) for q in a["points"]])
         if len(poly) < 3:
             continue
+        if "havuz" in str(a.get("name", "")).lower():
+            continue  # su (greybox_builder havuzu su olarak çizer)
         if kind in ("park", "garden") and a.get("name") != ORTABAHCE:
             areas.append(("park", poly))
         elif kind == "grass":

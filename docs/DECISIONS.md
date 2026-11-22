@@ -32,3 +32,11 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 ## Claude'un varsayılanları (Talha değiştirebilir)
 - Ekran: dikey (portrait). İTÜPet de dikey.
 - Harita yerleşimi OpenStreetMap verisinden üretilir, binalar low-poly stilize.
+- Görsel gerçekçilik referansı (2026-11-22): Google Street View drone panoraması + Ortabahçe 360° çekimleri ve Wikimedia
+  fotoğrafları — SADECE bakılır, oyuna/repoya girmez. Bulgular: Ortabahçe ağaçla dolu (fıstık çamı + çınar), avlu yolları
+  pembe beton, kavşaklarda kırmızı çiçekli tarhlar; Kışla 3 kat krem, kiremit çatı, geçitlerde alınlıklı giriş bölümleri;
+  stadyumda oval kırmızı pist; çim doğal koyu yeşil.
+- Görsel üretim script ile (Blender bu makinede Smart App Control yüzünden çalışmıyor): `tools/assets/make_landmarks.py`
+  (simge binalar, kapılar), `make_trees.py` (çınar/servi/fıstık çamı, tek yüzey + köşe rengi), `make_greenery.py`
+  (ağaç konumları/tarhlar/pist → `kampus_greenery.json`). Greenery değişince navmesh yeniden pişirilir (hash'e dahil).
+- Mobil bütçe: düz yüzeyler gölge düşürmez, güneş gölgesi tek bölme 70 m; Ortabahçe'de ~120 çizim çağrısı (masaüstü ölçümü).

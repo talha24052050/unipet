@@ -244,6 +244,18 @@ static func flat_polygon_mesh(poly: PackedVector2Array, y: float) -> ArrayMesh:
 	return st.commit()
 
 
+const WATER_COLOR: Color = Color(0.22, 0.47, 0.6)
+
+
+func _water_material() -> StandardMaterial3D:
+	var m: StandardMaterial3D = StandardMaterial3D.new()
+	m.albedo_color = WATER_COLOR
+	m.roughness = 0.08
+	m.metallic = 0.25
+	m.metallic_specular = 0.8
+	return m
+
+
 func _material(color: Color) -> StandardMaterial3D:
 	var m: StandardMaterial3D = StandardMaterial3D.new()
 	m.albedo_color = color
@@ -383,7 +395,10 @@ func _build_area(a: Dictionary) -> void:
 	if mesh == null:
 		return
 	var color: Color = AREA_COLORS.get(str(a.get("kind", "grass")), AREA_COLORS["grass"])
-	mesh.surface_set_material(0, _material(color))
+	if str(a.get("name", "")).to_lower().contains("havuz"):
+		mesh.surface_set_material(0, _water_material())  # Süs Havuzu (drone'da mavi su)
+	else:
+		mesh.surface_set_material(0, _material(color))
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # düz yüzey: gölge geçişinde boşa çizilmesin

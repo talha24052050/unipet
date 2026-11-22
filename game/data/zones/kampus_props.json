@@ -5842,15 +5842,6 @@
       "scale": 1.14
     },
     {
-      "type": "tree_pine",
-      "pos": [
-        -17.22,
-        708.04
-      ],
-      "yaw": 4.784,
-      "scale": 1.03
-    },
-    {
       "type": "tree_common",
       "pos": [
         -132.1,
@@ -6209,15 +6200,6 @@
       ],
       "yaw": 2.44,
       "scale": 1.05
-    },
-    {
-      "type": "bush_common",
-      "pos": [
-        -11.39,
-        716.8
-      ],
-      "yaw": 1.486,
-      "scale": 1.0
     },
     {
       "type": "tree_birch",
@@ -7075,15 +7057,6 @@
       "scale": 1.06
     },
     {
-      "type": "tree_common",
-      "pos": [
-        61.03,
-        709.41
-      ],
-      "yaw": 4.804,
-      "scale": 0.97
-    },
-    {
       "type": "tree_birch",
       "pos": [
         236.11,
@@ -7145,15 +7118,6 @@
       ],
       "yaw": 4.811,
       "scale": 1.1
-    },
-    {
-      "type": "bush_berries",
-      "pos": [
-        34.96,
-        713.05
-      ],
-      "yaw": 0.308,
-      "scale": 1.0
     },
     {
       "type": "bush_common",
@@ -7460,15 +7424,6 @@
       ],
       "yaw": 4.835,
       "scale": 1.0
-    },
-    {
-      "type": "tree_birch",
-      "pos": [
-        43.49,
-        713.01
-      ],
-      "yaw": 3.734,
-      "scale": 1.11
     },
     {
       "type": "tree_pine",
@@ -8090,15 +8045,6 @@
       ],
       "yaw": 4.015,
       "scale": 1.02
-    },
-    {
-      "type": "bush_berries",
-      "pos": [
-        -64.45,
-        718.25
-      ],
-      "yaw": 1.891,
-      "scale": 1.0
     },
     {
       "type": "tree_pine",
@@ -8992,15 +8938,6 @@
       "scale": 0.93
     },
     {
-      "type": "tree_common",
-      "pos": [
-        -38.02,
-        716.4
-      ],
-      "yaw": 5.542,
-      "scale": 1.07
-    },
-    {
       "type": "bush_berries",
       "pos": [
         -281.64,
@@ -9061,15 +8998,6 @@
         381.65
       ],
       "yaw": 6.216,
-      "scale": 1.0
-    },
-    {
-      "type": "bush_common",
-      "pos": [
-        -45.55,
-        718.21
-      ],
-      "yaw": 0.977,
       "scale": 1.0
     },
     {
@@ -9143,15 +9071,6 @@
       ],
       "yaw": 6.11,
       "scale": 0.92
-    },
-    {
-      "type": "tree_birch",
-      "pos": [
-        -4.35,
-        710.01
-      ],
-      "yaw": 3.72,
-      "scale": 1.07
     },
     {
       "type": "tree_pine",
@@ -10308,15 +10227,6 @@
     {
       "type": "bush_common",
       "pos": [
-        18.77,
-        717.09
-      ],
-      "yaw": 2.876,
-      "scale": 1.0
-    },
-    {
-      "type": "bush_common",
-      "pos": [
         -291.82,
         -633.24
       ],
@@ -10657,15 +10567,6 @@
       "scale": 1.06
     },
     {
-      "type": "tree_pine",
-      "pos": [
-        57.44,
-        711.33
-      ],
-      "yaw": 1.955,
-      "scale": 0.95
-    },
-    {
       "type": "tree_birch",
       "pos": [
         274.25,
@@ -10783,15 +10684,6 @@
       "scale": 1.11
     },
     {
-      "type": "tree_birch",
-      "pos": [
-        5.23,
-        710.81
-      ],
-      "yaw": 1.294,
-      "scale": 1.12
-    },
-    {
       "type": "bush_berries",
       "pos": [
         -116.33,
@@ -10835,15 +10727,6 @@
       ],
       "yaw": 4.186,
       "scale": 0.93
-    },
-    {
-      "type": "tree_birch",
-      "pos": [
-        -16.65,
-        713.1
-      ],
-      "yaw": 3.112,
-      "scale": 1.11
     },
     {
       "type": "tree_birch",
@@ -10961,15 +10844,6 @@
       ],
       "yaw": 5.75,
       "scale": 1.06
-    },
-    {
-      "type": "tree_pine",
-      "pos": [
-        -41.2,
-        709.18
-      ],
-      "yaw": 5.642,
-      "scale": 0.96
     },
     {
       "type": "tree_pine",
@@ -11338,15 +11212,6 @@
         -175.44
       ],
       "yaw": 5.701,
-      "scale": 1.0
-    },
-    {
-      "type": "bush_common",
-      "pos": [
-        20.1,
-        710.7
-      ],
-      "yaw": 0.089,
       "scale": 1.0
     },
     {
