@@ -1,7 +1,9 @@
-"""Ortabahçe prop yerleşimi üretici scripti.
+"""Ortabahçe ve kampüs prop yerleşimi üretici scripti.
 
 Kullanım:
+    python tools/osm/place_props.py
     python tools/osm/place_props.py game/data/zones/ortabahce_greybox.json --out game/data/zones/ortabahce_props.json
+    python tools/osm/place_props.py --greybox game/data/zones/kampus_greybox.json --out game/data/zones/kampus_props.json
 
 Çıktı:
     {"props": [{"type": "...", "pos": [x, z], "yaw": rad, "scale": s}]}
@@ -10,9 +12,8 @@ Kurallar:
 - Standart kütüphane, random.Random(42)
 - Ağaç (tree_birch, tree_pine, tree_common) ve çalı (bush_common, bush_berries):
   areas çokgenleri içine, birbirinden >= 4m, yollardan >= 2.5m, binalardan >= 3m, orijinden >= 6m.
-  Ağaç <= 120, çalı <= 80.
-- Bank (bench): "Ortabahçe" alanı içindeki yollar boyunca her ~18m'de, yolun 1.8m yanına, yola dönük.
-- Lamba (lamp): her ~25m, yola dönük.
+- Ortabahçe: Ağaç <= 120, çalı <= 80, bank her ~18m, lamba her ~25m (Ortabahçe içi).
+- Kampüs: Ağaç <= 700, çalı <= 300, bank <= 250, lamba <= 200 (tüm yaya yolları).
 - Çöp kutusu (trashcan): her 3 bankın birinin yanında.
 - Bina ve orijin (>= 6m) kuralları hepsi için geçerli.
 """
@@ -22,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 from typing import Any
 
@@ -80,16 +82,7 @@ def is_valid_building_dist(x: float, z: float, buildings: list[dict[str, Any]], 
     return True
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Ortabahçe prop yerleşimi üretici")
-    parser.add_argument("greybox_json", nargs="?", default="game/data/zones/ortabahce_greybox.json")
-    parser.add_argument("--out", default="game/data/zones/ortabahce_props.json")
-    parser.add_argument("--seed", type=int, default=42)
-    args = parser.parse_args()
-
-    with open(args.greybox_json, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
+def _run_ortabahce(data: dict[str, Any], out_path: str, seed: int) -> None:
     buildings: list[dict[str, Any]] = data.get("buildings", [])
     areas: list[dict[str, Any]] = data.get("areas", [])
     paths: list[dict[str, Any]] = data.get("paths", [])
@@ -99,7 +92,7 @@ def main() -> None:
         raise ValueError("Ortabahçe alanı greybox verisinde bulunamadı!")
     ortabahce_poly: list[list[float]] = ortabahce_area["points"]
 
-    rng = random.Random(args.seed)
+    rng = random.Random(seed)
 
     props: list[dict[str, Any]] = []
     benches: list[dict[str, Any]] = []
@@ -269,13 +262,265 @@ def main() -> None:
             props.append(obj)
 
     out_data = {"props": props}
-    with open(args.out, "w", encoding="utf-8") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out_data, f, ensure_ascii=False, indent=2)
 
     print(
         f"Üretildi: {len(props)} prop "
-        f"({len(trees)} ağaç, {len(bushes)} çalı, {len(benches)} bank, {len(lamps)} lamba, {len(trashcans)} çöp kutusu) -> {args.out}"
+        f"({len(trees)} ağaç, {len(bushes)} çalı, {len(benches)} bank, {len(lamps)} lamba, {len(trashcans)} çöp kutusu) -> {out_path}"
     )
+
+
+def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
+    buildings: list[dict[str, Any]] = data.get("buildings", [])
+    areas: list[dict[str, Any]] = data.get("areas", [])
+    all_paths: list[dict[str, Any]] = data.get("paths", [])
+    ped_paths: list[dict[str, Any]] = [p for p in all_paths if p.get("kind") != "service"]
+
+    # Hızlandırma için sınırlayıcı kutular (bounding boxes)
+    b_boxes = []
+    for b in buildings:
+        pts = b["points"]
+        b_boxes.append((min(p[0] for p in pts), max(p[0] for p in pts), min(p[1] for p in pts), max(p[1] for p in pts), pts))
+
+    p_boxes = []
+    for p in all_paths:
+        pts = p["points"]
+        p_boxes.append((min(pt[0] for pt in pts), max(pt[0] for pt in pts), min(pt[1] for pt in pts), max(pt[1] for pt in pts), pts))
+
+    a_boxes = []
+    for a in areas:
+        pts = a["points"]
+        a_boxes.append((min(pt[0] for pt in pts), max(pt[0] for pt in pts), min(pt[1] for pt in pts), max(pt[1] for pt in pts), pts))
+
+    def fast_is_valid_building_dist(x: float, z: float, min_dist: float = 3.0) -> bool:
+        for min_x, max_x, min_z, max_z, pts in b_boxes:
+            if x < min_x - min_dist or x > max_x + min_dist or z < min_z - min_dist or z > max_z + min_dist:
+                continue
+            if point_in_polygon(x, z, pts):
+                return False
+            if dist_pt_poly_boundary(x, z, pts) < min_dist:
+                return False
+        return True
+
+    def fast_dist_paths(x: float, z: float, min_dist: float = 2.5) -> bool:
+        for min_x, max_x, min_z, max_z, pts in p_boxes:
+            if x < min_x - min_dist or x > max_x + min_dist or z < min_z - min_dist or z > max_z + min_dist:
+                continue
+            if dist_pt_polyline(x, z, pts) < min_dist:
+                return False
+        return True
+
+    # Mekansal ızgara (spatial hash) ile prop mesafe kontrolleri O(1)
+    grid: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    cell_size = 10.0
+
+    def add_to_grid(pr: dict[str, Any]) -> None:
+        cx, cz = pr["pos"]
+        gx, gz = int(cx // cell_size), int(cz // cell_size)
+        grid.setdefault((gx, gz), []).append(pr)
+
+    def is_far_from_props(x: float, z: float, min_dist: float) -> bool:
+        min_dist_sq = min_dist * min_dist
+        gx, gz = int(x // cell_size), int(z // cell_size)
+        r = int(math.ceil(min_dist / cell_size))
+        for dx in range(-r, r + 1):
+            for dz in range(-r, r + 1):
+                cell = grid.get((gx + dx, gz + dz))
+                if cell:
+                    for pr in cell:
+                        px, pz = pr["pos"]
+                        if (x - px) ** 2 + (z - pz) ** 2 < min_dist_sq:
+                            return False
+        return True
+
+    props: list[dict[str, Any]] = []
+    benches: list[dict[str, Any]] = []
+    lamps: list[dict[str, Any]] = []
+    trashcans: list[dict[str, Any]] = []
+
+    bench_interval = 38.0
+    lamp_interval = 45.0
+    max_benches = 250
+    max_lamps = 200
+
+    # 1. Banklar, lambalar ve çöp kutuları (tüm yaya yolları boyunca)
+    for p in ped_paths:
+        pts: list[list[float]] = p["points"]
+        for i in range(len(pts) - 1):
+            p1 = pts[i]
+            p2 = pts[i + 1]
+            dx = p2[0] - p1[0]
+            dz = p2[1] - p1[1]
+            seg_len = math.hypot(dx, dz)
+            if seg_len < 0.1:
+                continue
+            ux = dx / seg_len
+            uz = dz / seg_len
+            nx = -uz
+            nz = ux
+
+            s = 2.0
+            while s < seg_len:
+                px = p1[0] + ux * s
+                pz = p1[1] + uz * s
+                s += 3.0
+
+                # Bank yerleşimi
+                if len(benches) < max_benches and not any(math.hypot(px - b["pos"][0], pz - b["pos"][1]) < bench_interval for b in benches):
+                    candidates = [
+                        (px + nx * 1.8, pz + nz * 1.8),
+                        (px - nx * 1.8, pz - nz * 1.8),
+                    ]
+                    for cx, cz in candidates:
+                        if math.hypot(cx, cz) < 6.0:
+                            continue
+                        if not fast_is_valid_building_dist(cx, cz, 3.0):
+                            continue
+                        if any(math.hypot(cx - b["pos"][0], cz - b["pos"][1]) < bench_interval for b in benches):
+                            continue
+                        fx = px - cx
+                        fz = pz - cz
+                        yaw = math.atan2(-fx, -fz)
+                        bench_obj = {
+                            "type": "bench",
+                            "pos": [round(cx, 2), round(cz, 2)],
+                            "yaw": round(yaw, 3),
+                            "scale": 1.0,
+                        }
+                        benches.append(bench_obj)
+                        props.append(bench_obj)
+                        add_to_grid(bench_obj)
+
+                        # Her 3 bankın birinin yanına çöp kutusu
+                        if (len(benches) - 1) % 3 == 0:
+                            for sign in [1, -1]:
+                                tx = cx + ux * 1.4 * sign
+                                tz = cz + uz * 1.4 * sign
+                                if math.hypot(tx, tz) >= 6.0 and fast_is_valid_building_dist(tx, tz, 3.0):
+                                    if is_far_from_props(tx, tz, 0.8):
+                                        tc_obj = {
+                                            "type": "trashcan",
+                                            "pos": [round(tx, 2), round(tz, 2)],
+                                            "yaw": 0.0,
+                                            "scale": 1.0,
+                                        }
+                                        trashcans.append(tc_obj)
+                                        props.append(tc_obj)
+                                        add_to_grid(tc_obj)
+                                        break
+                        break
+
+                # Lamba yerleşimi
+                if len(lamps) < max_lamps and not any(math.hypot(px - l["pos"][0], pz - l["pos"][1]) < lamp_interval for l in lamps):
+                    candidates = [
+                        (px - nx * 1.8, pz - nz * 1.8),
+                        (px + nx * 1.8, pz + nz * 1.8),
+                    ]
+                    for cx, cz in candidates:
+                        if math.hypot(cx, cz) < 6.0:
+                            continue
+                        if not fast_is_valid_building_dist(cx, cz, 3.0):
+                            continue
+                        if any(math.hypot(cx - l["pos"][0], cz - l["pos"][1]) < lamp_interval for l in lamps):
+                            continue
+                        if any(math.hypot(cx - b["pos"][0], cz - b["pos"][1]) < 2.5 for b in benches):
+                            continue
+                        fx = px - cx
+                        fz = pz - cz
+                        yaw = math.atan2(fx, fz)
+                        lamp_obj = {
+                            "type": "lamp",
+                            "pos": [round(cx, 2), round(cz, 2)],
+                            "yaw": round(yaw, 3),
+                            "scale": 1.0,
+                        }
+                        lamps.append(lamp_obj)
+                        props.append(lamp_obj)
+                        add_to_grid(lamp_obj)
+                        break
+
+    # 2. Ağaçlar ve çalılar (tüm kampüs alanları içine)
+    rng = random.Random(seed)
+    tree_types = ["tree_birch", "tree_pine", "tree_common"]
+    bush_types = ["bush_common", "bush_berries"]
+
+    trees: list[dict[str, Any]] = []
+    bushes: list[dict[str, Any]] = []
+    target_trees = 600
+    target_bushes = 250
+
+    attempts = 0
+    max_attempts = 150000
+
+    while attempts < max_attempts and (len(trees) < target_trees or len(bushes) < target_bushes):
+        attempts += 1
+        a_box = rng.choice(a_boxes)
+        cx = rng.uniform(a_box[0], a_box[1])
+        cz = rng.uniform(a_box[2], a_box[3])
+
+        if not point_in_polygon(cx, cz, a_box[4]):
+            continue
+        if math.hypot(cx, cz) < 6.0:
+            continue
+        if not fast_is_valid_building_dist(cx, cz, 3.0):
+            continue
+        if not fast_dist_paths(cx, cz, 2.5):
+            continue
+        if not is_far_from_props(cx, cz, 4.0):
+            continue
+
+        if len(trees) < target_trees and (len(bushes) >= target_bushes or rng.random() < 0.70):
+            ttype = rng.choice(tree_types)
+            scale = round(rng.uniform(0.9, 1.2), 2)
+            yaw = round(rng.uniform(0.0, 2 * math.pi), 3)
+            obj = {"type": ttype, "pos": [round(cx, 2), round(cz, 2)], "yaw": yaw, "scale": scale}
+            trees.append(obj)
+            props.append(obj)
+            add_to_grid(obj)
+        elif len(bushes) < target_bushes:
+            btype = rng.choice(bush_types)
+            scale = 1.0
+            yaw = round(rng.uniform(0.0, 2 * math.pi), 3)
+            obj = {"type": btype, "pos": [round(cx, 2), round(cz, 2)], "yaw": yaw, "scale": scale}
+            bushes.append(obj)
+            props.append(obj)
+            add_to_grid(obj)
+
+    out_data = {"props": props}
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(out_data, f, ensure_ascii=False, indent=2)
+
+    print(
+        f"Üretildi: {len(props)} prop "
+        f"({len(trees)} ağaç, {len(bushes)} çalı, {len(benches)} bank, {len(lamps)} lamba, {len(trashcans)} çöp kutusu) -> {out_path}"
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Prop yerleşimi üretici")
+    parser.add_argument("greybox_json_pos", nargs="?", default=None, help="Greybox JSON yolu (opsiyonel)")
+    parser.add_argument("--greybox", default=None, help="Greybox JSON yolu")
+    parser.add_argument("--out", default=None, help="Çıktı JSON yolu")
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    greybox_path = args.greybox or args.greybox_json_pos or "game/data/zones/ortabahce_greybox.json"
+
+    with open(greybox_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    is_campus = "kampus" in os.path.basename(greybox_path).lower()
+
+    if args.out:
+        out_path = args.out
+    else:
+        out_path = "game/data/zones/kampus_props.json" if is_campus else "game/data/zones/ortabahce_props.json"
+
+    if is_campus:
+        _run_campus(data, out_path, args.seed)
+    else:
+        _run_ortabahce(data, out_path, args.seed)
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@
         0
       ],
       "greybox": "res://data/zones/kampus_greybox.json",
-      "props": "res://data/zones/ortabahce_props.json"
+      "props": "res://data/zones/kampus_props.json"
     }
   ]
 }
