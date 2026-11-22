@@ -37,6 +37,10 @@ COLORS = {
     "white": (0.95, 0.95, 0.93),
     "brick": (0.62, 0.30, 0.22),
     "awning": (0.85, 0.35, 0.20),
+    "column": (0.94, 0.94, 0.92),
+    "palm_trunk": (0.50, 0.38, 0.26),
+    "palm_leaf": (0.30, 0.55, 0.25),
+    "cut_stone": (0.82, 0.77, 0.66),
 }
 
 
@@ -340,7 +344,104 @@ def recipe_kiosk(b, poly, h, spec, rng):
     b.prism([a, c, (c[0] + nx * 1.8, c[1] + nz * 1.8), (a[0] + nx * 1.8, a[1] + nz * 1.8)], y0 - 0.12, y0, "awning")
 
 
-RECIPES = {"modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
+def nearest_edge_to_paths(poly, paths):
+    """Yollara en yakın (giriş) kenarı: orta noktası herhangi bir yol noktasına en yakın, en az 8 m uzun kenar."""
+    n = len(poly)
+    best, best_d = 0, float("inf")
+    for i in range(n):
+        a, c = poly[i], poly[(i + 1) % n]
+        if math.dist(a, c) < 8.0:
+            continue
+        mid = ((a[0] + c[0]) / 2, (a[1] + c[1]) / 2)
+        for line in paths:
+            for j in range(len(line) - 1):
+                d = math.dist(mid, seg_closest(mid, line[j], line[j + 1]))
+                if d < best_d:
+                    best, best_d = i, d
+    return best
+
+
+def palm(b, x, z, h, rng):
+    """Alçak poligon palmiye: hafif eğik gövde + sarkık yapraklar."""
+    lean = (rng.uniform(-0.6, 0.6), rng.uniform(-0.6, 0.6))
+    segs = 4
+    for k in range(segs):
+        y0, y1 = h * k / segs, h * (k + 1) / segs
+        t0, t1 = k / segs, (k + 1) / segs
+        r = 0.28 - 0.06 * t0
+        cx, cz = x + lean[0] * t0 * t0, z + lean[1] * t0 * t0
+        b.cylinder(cx, cz, r, y0, y1 + 0.02, "palm_trunk", seg=6)
+    tx, tz = x + lean[0], z + lean[1]
+    for k in range(7):
+        ang = 2 * math.pi * k / 7 + rng.uniform(-0.2, 0.2)
+        dx, dz = math.cos(ang), math.sin(ang)
+        px, pz = -dz * 0.35, dx * 0.35  # yaprak genişliği yönü
+        L = rng.uniform(2.6, 3.2)
+        root = (tx, h, tz)
+        mid = (tx + dx * L * 0.55, h + 0.5, tz + dz * L * 0.55)
+        tip = (tx + dx * L, h - 1.1, tz + dz * L)
+        leaf = [[root, (mid[0] + px, mid[1], mid[2] + pz), tip], [root, tip, (mid[0] - px, mid[1], mid[2] - pz)]]
+        # ince yaprak: iki üçgen, her iki yüz için ters kopya (kapalı katı değil)
+        out = b.tris.setdefault("palm_leaf", [])
+        for f in leaf:
+            a, c, d = f
+            n = norm(cross(sub(c, a), sub(d, a)))
+            if n[1] < 0:
+                c, d = d, c
+                n = (-n[0], -n[1], -n[2])
+            out.append((a, c, d, n))
+            out.append((a, d, c, (-n[0], -n[1], -n[2])))
+
+
+def recipe_library(b, poly, h, spec, rng):
+    """Merkez Kütüphane: düz çatı + parapet, giriş cephesinde yüksek beyaz sütunlu revak, önünde palmiyeler."""
+    bands(b, poly, h, "trim", True)
+    i = nearest_edge_to_paths(poly, spec["_paths"])
+    a, c = poly[i], poly[(i + 1) % len(poly)]
+    nx, nz = edge_normal(a, c, signed_area(poly) > 0)
+    L = math.dist(a, c)
+    ux, uz = (c[0] - a[0]) / L, (c[1] - a[1]) / L
+    depth = 2.8
+    span = min(L * 0.6, 26.0)
+    s0 = (L - span) / 2
+    count = max(4, int(span // 4.0) + 1)
+    top = h - 0.6
+    for k in range(count):
+        t = s0 + span * k / (count - 1)
+        x, z = a[0] + ux * t + nx * depth, a[1] + uz * t + nz * depth
+        b.cylinder(x, z, 0.4, 0.0, top, "column", seg=8)
+    # revak çatısı (sütunlardan duvara)
+    e0 = (a[0] + ux * (s0 - 1.0), a[1] + uz * (s0 - 1.0))
+    e1 = (a[0] + ux * (s0 + span + 1.0), a[1] + uz * (s0 + span + 1.0))
+    slab = [e0, e1, (e1[0] + nx * (depth + 0.8), e1[1] + nz * (depth + 0.8)), (e0[0] + nx * (depth + 0.8), e0[1] + nz * (depth + 0.8))]
+    b.prism(slab, top, top + 0.6, "column")
+    # palmiyeler: girişe giden yolun iki yanında
+    for k, side in enumerate((-1, 1, -1, 1)):
+        dist = 9.0 + 7.0 * (k // 2)
+        mx, mz = a[0] + ux * L / 2 + nx * dist, a[1] + uz * L / 2 + nz * dist
+        palm(b, mx + ux * side * 4.5, mz + uz * side * 4.5, rng.uniform(6.0, 7.5), rng)
+
+
+def recipe_domed(b, poly, h, spec, rng):
+    """Otağ-ı Hümayun / tarihi hamam: kesme taş korniş, kurşun kubbe(ler), bacalar."""
+    bands(b, poly, h, "cut_stone", False)
+    cx, cz = centroid(poly)
+    n = len(poly)
+    edge_d = min(math.dist((cx, cz), seg_closest((cx, cz), poly[i], poly[(i + 1) % n])) for i in range(n))
+    domes = int(spec.get("domes", 1))
+    r = edge_d * (0.6 if domes == 1 else 0.38)
+    drum = h + 2.6  # Godot'taki kırma çatının üstünden çıksın
+    centers = [(cx, cz)] if domes == 1 else interior_points(poly, r * 2.1, domes, rng) or [(cx, cz)]
+    for x, z in centers:
+        b.cylinder(x, z, r * 1.05, h, drum, "cut_stone", seg=10)
+        b.dome(x, z, r, drum, "dome")
+        b.cylinder(x, z, 0.07, drum + r - 0.1, drum + r + 1.0, "dark", seg=4)
+    for q in interior_points(poly, 3.0, int(spec.get("chimneys", 0)), rng):
+        b.cylinder(q[0], q[1], 0.45, h, drum + 1.5, "cut_stone", seg=8)
+        b.cylinder(q[0], q[1], 0.6, drum + 1.5, drum + 2.2, "dome", seg=8, cone=True)
+
+
+RECIPES = {"library": recipe_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
 
 
 def main():
@@ -357,6 +458,7 @@ def main():
         poly = clean([tuple(q) for q in bdata["points"]])
         h = float(bdata.get("height", 10.0))
         b = Builder()
+        spec = dict(spec, _paths=[[tuple(q) for q in p["points"]] for p in grey.get("paths", []) if p.get("kind") != "service"])
         RECIPES[spec["recipe"]](b, poly, h, spec, random.Random(spec["id"]))
         tris = b.tri_count()
         assert tris <= MAX_TRIS, "%s: %d üçgen > %d" % (spec["id"], tris, MAX_TRIS)

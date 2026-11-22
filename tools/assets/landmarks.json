@@ -1,10 +1,51 @@
 {
   "_note": "Simge binalar için Blender süs tarifleri. tools/assets/make_landmarks.py okur. 'match' greybox'taki bina adıyla birebir aynı. Süsler duvarı değiştirmez (kapılar/çarpışma Godot'ta): sadece kapı yüksekliğinin üstüne korniş/kat silmesi, çatıya parapet/baca/kubbe/minare.",
   "buildings": [
-    {"match": "Yıldız Teknik Üniversitesi Davutpaşa Kışlası", "id": "kisla", "recipe": "historic"},
-    {"match": "Davutpaşa Kışlası Mesciti", "id": "mescit", "recipe": "mosque"},
-    {"match": "Yemekhane", "id": "yemekhane", "recipe": "modern", "stacks": 2},
-    {"match": "Elektrik Elektronik Fakültesi", "id": "eef", "recipe": "modern", "mast": true},
-    {"match": "Hokka", "id": "hokka", "recipe": "kiosk"}
+    {
+      "match": "Yıldız Teknik Üniversitesi Davutpaşa Kışlası",
+      "id": "kisla",
+      "recipe": "historic"
+    },
+    {
+      "match": "Davutpaşa Kışlası Mesciti",
+      "id": "mescit",
+      "recipe": "mosque"
+    },
+    {
+      "match": "Yemekhane",
+      "id": "yemekhane",
+      "recipe": "modern",
+      "stacks": 2
+    },
+    {
+      "match": "Elektrik Elektronik Fakültesi",
+      "id": "eef",
+      "recipe": "modern",
+      "mast": true
+    },
+    {
+      "match": "Hokka",
+      "id": "hokka",
+      "recipe": "kiosk"
+    },
+    {
+      "match": "Şehit Prof. Dr. İlhan Varank Kütüphanesi",
+      "id": "kutuphane",
+      "recipe": "library"
+    },
+    {
+      "match": "Otağ-ı Hümayun",
+      "id": "otag",
+      "recipe": "domed",
+      "domes": 1,
+      "chimneys": 3
+    },
+    {
+      "match": "Tarihi Hamam",
+      "id": "hamam",
+      "recipe": "domed",
+      "domes": 3,
+      "chimneys": 0
+    }
   ]
 }

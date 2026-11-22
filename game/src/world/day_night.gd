@@ -22,6 +22,11 @@ const SKY_HORIZON_DAY: Color = Color(0.75, 0.86, 0.96)
 const SKY_TOP_NIGHT: Color = Color(0.03, 0.05, 0.14)
 const SKY_HORIZON_NIGHT: Color = Color(0.1, 0.12, 0.25)
 const SKY_HORIZON_GOLDEN: Color = Color(0.98, 0.62, 0.42)
+## Ortam ışığı: gökyüzü rengi tek başına krem/beyaz binaları mavi-griye boyuyordu (Kışla krem değil mavi görünüyordu).
+## Gökyüzünün payını azaltıp nötr-sıcak bir ortam rengiyle karıştırıyoruz.
+const AMBIENT_DAY: Color = Color(0.86, 0.85, 0.82)
+const AMBIENT_NIGHT: Color = Color(0.32, 0.36, 0.5)
+const AMBIENT_SKY_CONTRIBUTION: float = 0.3
 
 var _timer: float = 0.0
 
@@ -74,6 +79,8 @@ func apply(hour: float) -> void:
 	if environment != null and environment.environment != null:
 		var env: Environment = environment.environment
 		env.ambient_light_energy = s["ambient"]
+		env.ambient_light_sky_contribution = AMBIENT_SKY_CONTRIBUTION
+		env.ambient_light_color = AMBIENT_NIGHT.lerp(AMBIENT_DAY, float(s["ambient"] - 0.6) / 0.4)
 		if env.sky != null and env.sky.sky_material is ProceduralSkyMaterial:
 			var sky: ProceduralSkyMaterial = env.sky.sky_material
 			sky.sky_top_color = s["sky_top"]

@@ -6,6 +6,11 @@ uniform vec4 window_color : source_color = vec4(0.18, 0.24, 0.32, 1.0);
 uniform vec4 frame_color : source_color = vec4(0.78, 0.82, 0.85, 1.0);
 uniform vec4 roof_color : source_color = vec4(0.68, 0.71, 0.74, 1.0);
 uniform int style : hint_range(0, 2) = 0;
+// Tarihi binalar: pilastır (dikey taş şerit) ve kaide rengi (gerçek Kışla cephesi: krem duvar, gri-bej taş pilastırlar).
+uniform vec4 stone_color : source_color = vec4(0.80, 0.76, 0.68, 1.0);
+const float PILASTER_SPACING = 9.0;
+const float PILASTER_WIDTH = 0.9;
+const float PLINTH_HEIGHT = 0.9;
 
 varying vec3 world_pos;
 varying vec3 world_normal;
@@ -67,16 +72,23 @@ void fragment() {
 					}
 				}
 			} else if (style == 2) {
-				// 2: Tarihi binalar: kemerli hissi için dikdörtgen + kemer tepe + çerçeve
+				// 2: Tarihi binalar: taş kaide, pilastırlar, kat silmesi, kemerli pencereler
+				float pil = mod(wall_u, PILASTER_SPACING);
+				bool on_pilaster = pil < PILASTER_WIDTH;
+				bool on_band = floor_y > FLOOR_HEIGHT - 0.22;  // kat silmesi
 				float u_mod = mod(wall_u, 3.0);
+				if (world_pos.y < PLINTH_HEIGHT || on_pilaster || on_band) {
+					col = stone_color.rgb;
+					roughness = 0.95;
+				} else
 				if (u_mod >= 0.9 && u_mod <= 2.1) {
 					float center_u = 1.5;
 					float half_w = 0.6;
 					float dx = (u_mod - center_u) / half_w;
-					float arch_top = 2.3 + 0.35 * sqrt(max(0.0, 1.0 - dx * dx));
+					float arch_top = 2.55 + 0.4 * sqrt(max(0.0, 1.0 - dx * dx));
 
 					if (floor_y >= 0.9 && floor_y <= arch_top) {
-						float inner_arch = 2.2 + 0.3 * sqrt(max(0.0, 1.0 - dx * dx));
+						float inner_arch = 2.45 + 0.35 * sqrt(max(0.0, 1.0 - dx * dx));
 						if (floor_y <= 1.0 || floor_y >= inner_arch || u_mod <= 1.0 || u_mod >= 2.0) {
 							col = frame_color.rgb;
 						} else {
