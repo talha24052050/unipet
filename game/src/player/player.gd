@@ -26,6 +26,9 @@ var _snap_to_navmesh: bool = false
 ## Navigasyon haritası hazırsa en yakın yürünebilir noktaya taşınır (hazır değilse sonraki kare dener).
 func _try_snap_to_navmesh() -> void:
 	var map: RID = get_world_3d().navigation_map
+	# İlk senkrondan önce sorgu hata basıyor (telefonda log kirliliği): harita hazır olana kadar bekle
+	if NavigationServer3D.map_get_iteration_id(map) == 0:
+		return
 	var probe: Vector3 = Vector3(global_position.x, 0.0, global_position.z)
 	var closest: Vector3 = NavigationServer3D.map_get_closest_point(map, probe)
 	if closest == Vector3.ZERO and probe.length() > 1.0:

@@ -284,6 +284,7 @@ func _build_ground_rect(rect: Rect2) -> void:
 	bm.size = box.size
 	bm.material = _material(GROUND_COLOR)
 	mesh.mesh = bm
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body.add_child(shape)
 	body.add_child(mesh)
 	add_child(body)
@@ -303,6 +304,7 @@ func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 	bm.size = box.size
 	bm.material = _material(GROUND_COLOR)
 	mesh.mesh = bm
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body.add_child(shape)
 	body.add_child(mesh)
 	add_child(body)
@@ -382,6 +384,7 @@ func _build_area(a: Dictionary) -> void:
 	mesh.surface_set_material(0, _material(color))
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # düz yüzey: gölge geçişinde boşa çizilmesin
 	add_child(mi)
 
 
@@ -421,6 +424,7 @@ func _build_path(p: Dictionary) -> void:
 		mesh.surface_set_material(0, _get_cobble_material(width, PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE))
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 
 

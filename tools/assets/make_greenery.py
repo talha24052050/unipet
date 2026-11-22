@@ -28,8 +28,9 @@ GRID = 25.0
 REGIONS = {
     #             aralık  yol-yakın kabul  uzak kabul  yol-yakın bandı (m)   türler (ağırlık)
     "courtyard": (9.0, 1.0, 1.0, (3.2, 99.0), {"tree_stonepine": 55, "tree_plane": 45}),
-    "park":      (11.0, 0.85, 0.3, (3.5, 13.0), {"tree_plane": 40, "tree_stonepine": 25, "tree_birch": 15, "tree_cypress": 10, "tree_common": 10}),
-    "grass":     (14.0, 0.55, 0.12, (3.5, 11.0), {"tree_plane": 45, "tree_common": 25, "tree_cypress": 15, "tree_birch": 15}),
+    # Sadece tek yüzeyli (script) ağaçlar: dış paket ağaçları 2-3 yüzey = 2-3 kat çizim çağrısı (telefon)
+    "park":      (11.0, 0.85, 0.3, (3.5, 13.0), {"tree_plane": 55, "tree_stonepine": 30, "tree_cypress": 15}),
+    "grass":     (14.0, 0.55, 0.12, (3.5, 11.0), {"tree_plane": 60, "tree_cypress": 20, "tree_stonepine": 20}),
 }
 PATH_CLEAR = 3.2
 ROAD_CLEAR = 5.5           # araç yolu (service)

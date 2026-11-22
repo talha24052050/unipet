@@ -153,5 +153,6 @@ func _build_track(t: Dictionary) -> void:
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.name = "Track"
 	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 	track_count += 1
