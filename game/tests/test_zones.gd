@@ -6,7 +6,7 @@ const Greybox := preload("res://src/world/greybox_builder.gd")
 
 func test_catalog_loads_all_zones() -> String:
 	var c: RefCounted = ZoneCatalog.load_default()
-	if c.ids().size() != 7 or not c.has("ortabahce") or c.default_id != "ortabahce":
+	if c.ids().size() != 1 or not c.has("kampus") or c.default_id != "kampus":
 		return "bölge listesi yanlış: %s" % [c.ids()]
 	return ""
 
@@ -33,11 +33,14 @@ func test_zone_data_valid_and_spawn_free() -> String:
 func test_navmesh_source_hash_changes_with_data() -> String:
 	var NavRegion: GDScript = load("res://src/world/runtime_nav_region.gd")
 	var c: RefCounted = ZoneCatalog.load_default()
-	var a: String = NavRegion.call("source_hash", c.get_zone("fef"))
-	var b: String = NavRegion.call("source_hash", c.get_zone("insaat"))
+	var z: Dictionary = c.get_zone("kampus")
+	var a: String = NavRegion.call("source_hash", z)
+	var no_props: Dictionary = z.duplicate()
+	no_props["props"] = ""
+	var b: String = NavRegion.call("source_hash", no_props)
 	if a.length() != 16 or a == b:
 		return "bölge özeti yanlış: %s %s" % [a, b]
-	if NavRegion.call("source_hash", c.get_zone("fef")) != a:
+	if NavRegion.call("source_hash", c.get_zone("kampus")) != a:
 		return "özet kararlı değil"
 	return ""
 

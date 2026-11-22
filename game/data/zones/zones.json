@@ -1,111 +1,21 @@
 {
-  "_note": "Kampüs bölgeleri (ROADMAP 5.4). Koordinatlar Ortabahçe merkezli metre (+X doğu, -Z kuzey). Her bölge ayrı oda/sahne. server/nakama/modules/index.js ZONES ile aynı id'ler (module.test.js kontrol eder). greybox: tools/osm/split_zones.py üretir (ortabahce hariç; o tools/osm/osm_to_greybox.py ile). Bölge adları ve konumları YTÜ Davutpaşa krokisi referans alınarak (görsel oyuna gömülmez) belirlendi.",
-  "default": "ortabahce",
+  "_note": "Tek bölge: tüm kampüs (Talha kararı 2026-11-22; önceki 7 bölge kaldırıldı). Koordinatlar Ortabahçe merkezli metre (+X doğu, -Z kuzey). server/nakama/modules/index.js ZONES ile aynı (module.test.js kontrol eder). greybox: tools/osm/split_zones.py üretir (davutpasa_campus.json'dan). Haritadan yerlere ışınlanılır.",
+  "default": "kampus",
   "zones": [
     {
-      "id": "ortabahce",
-      "name": "Ortabahçe",
+      "id": "kampus",
+      "name": "Davutpaşa Kampüsü",
       "center": [
-        0,
-        0
+        200,
+        75
       ],
-      "radius": 220,
+      "radius": 1050,
       "spawn": [
         0,
         0
       ],
-      "greybox": "res://data/zones/ortabahce_greybox.json",
+      "greybox": "res://data/zones/kampus_greybox.json",
       "props": "res://data/zones/ortabahce_props.json"
-    },
-    {
-      "id": "fef",
-      "name": "EEF / FEF / Kimya-Metalurji",
-      "center": [
-        130,
-        -230
-      ],
-      "radius": 240,
-      "spawn": [
-        135.7,
-        -224.3
-      ],
-      "greybox": "res://data/zones/fef_greybox.json",
-      "props": ""
-    },
-    {
-      "id": "insaat",
-      "name": "İnşaat / Uygulamalı Bilimler",
-      "center": [
-        -60,
-        300
-      ],
-      "radius": 230,
-      "spawn": [
-        -64.2,
-        295.8
-      ],
-      "greybox": "res://data/zones/insaat_greybox.json",
-      "props": ""
-    },
-    {
-      "id": "egitim",
-      "name": "Eğitim / Yurtlar",
-      "center": [
-        -290,
-        -260
-      ],
-      "radius": 230,
-      "spawn": [
-        -281.3,
-        -249.1
-      ],
-      "greybox": "res://data/zones/egitim_greybox.json",
-      "props": ""
-    },
-    {
-      "id": "guney",
-      "name": "YDYO / Merkez Lab",
-      "center": [
-        60,
-        580
-      ],
-      "radius": 270,
-      "spawn": [
-        60,
-        580
-      ],
-      "greybox": "res://data/zones/guney_greybox.json",
-      "props": ""
-    },
-    {
-      "id": "saha",
-      "name": "YTÜ Stadyumu / Kulüpler Vadisi",
-      "center": [
-        -250,
-        -40
-      ],
-      "radius": 170,
-      "spawn": [
-        -250,
-        -40
-      ],
-      "greybox": "res://data/zones/saha_greybox.json",
-      "props": ""
-    },
-    {
-      "id": "kutuphane",
-      "name": "Kütüphane / Kongre Merkezi",
-      "center": [
-        440,
-        360
-      ],
-      "radius": 160,
-      "spawn": [
-        440,
-        360
-      ],
-      "greybox": "res://data/zones/kutuphane_greybox.json",
-      "props": ""
     }
   ]
 }

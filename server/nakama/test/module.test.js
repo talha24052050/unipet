@@ -43,15 +43,15 @@ M.beforeAuthenticateCustom(ctx({ UNIPET_DEV_AUTH: "true" }), logger, nk, { accou
 
 // --- eşleştirme
 assert.throws(function () { M.rpcFindRoom(ctx({}, "u-1"), logger, nk, '{"zone":"mars"}'); });
-assert.throws(function () { M.rpcFindRoom(ctx({}, null), logger, nk, '{"zone":"ortabahce"}'); });
-assert.strictEqual(JSON.parse(M.rpcFindRoom(ctx({}, "u-1"), logger, nk, '{"zone":"ortabahce"}')).match_id, "new-match");
+assert.throws(function () { M.rpcFindRoom(ctx({}, null), logger, nk, '{"zone":"kampus"}'); });
+assert.strictEqual(JSON.parse(M.rpcFindRoom(ctx({}, "u-1"), logger, nk, '{"zone":"kampus"}')).match_id, "new-match");
 nk._matches = [{ matchId: "a", size: 3 }, { matchId: "b", size: 10 }];
-assert.strictEqual(JSON.parse(M.rpcFindRoom(ctx({}, "u-1"), logger, nk, '{"zone":"ortabahce"}')).match_id, "b", "en kalabalık dolu olmayan");
+assert.strictEqual(JSON.parse(M.rpcFindRoom(ctx({}, "u-1"), logger, nk, '{"zone":"kampus"}')).match_id, "b", "en kalabalık dolu olmayan");
 
 // --- oda
 var sent = [];
 var dispatcher = { broadcastMessage: function (op, data, to) { sent.push({ op: op, data: JSON.parse(data), to: (to || []).map(function (p) { return p.userId; }) }); } };
-var st = M.matchInit(ctx({ UNIPET_ROOM_CAPACITY: "2" }), logger, nk, { zone: "ortabahce" }).state;
+var st = M.matchInit(ctx({ UNIPET_ROOM_CAPACITY: "2" }), logger, nk, { zone: "kampus" }).state;
 var A = { userId: "A" }, B = { userId: "B" }, C = { userId: "C" };
 st = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st, [A]).state;
 st = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st, [B]).state;
@@ -99,7 +99,7 @@ var spots = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "..", "g
 assert.deepEqual(JSON.parse(JSON.stringify(M.CARE_SPOTS.eat)), spots.eat, "CARE_SPOTS ≠ care_spots.json");
 // odada: uzakta yemek reddedilir, yakında kabul, sosyal chat ile gelir
 sent = [];
-var st2 = M.matchInit(ctx({}), logger, nk, { zone: "ortabahce" }).state;
+var st2 = M.matchInit(ctx({}), logger, nk, { zone: "kampus" }).state;
 var X = { userId: "X" }, Y = { userId: "Y" };
 st2 = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st2, [X, Y]).state;
 var careMsgs = function () { return sent.filter(function (s) { return s.op === 5; }); };
@@ -132,7 +132,7 @@ assert.deepEqual(JSON.parse(JSON.stringify(M.ZONES)), zonesJson.zones.map(functi
 
 // --- hız koruması
 sent = [];
-var st3 = M.matchInit(ctx({}), logger, nk, { zone: "ortabahce" }).state;
+var st3 = M.matchInit(ctx({}), logger, nk, { zone: "kampus" }).state;
 var P = { userId: "P" }, Q = { userId: "Q" };
 st3 = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st3, [P, Q]).state;
 sent = [];

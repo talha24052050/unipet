@@ -1,5 +1,5 @@
 extends Control
-## Kampüs haritası (ROADMAP 5.4): OSM verisinden çizilir, bölgelere dokunup ışınlanılır.
+## Kampüs haritası: OSM verisinden çizilir; yer adlarına dokunup ışınlanılır (tek bölge: tüm kampüs).
 ## Görsel dil YTÜ'nün resmi kampüs haritasından esinlenir (renkler/tarz); görselin kendisi kullanılmaz.
 ## Sahne: scenes/ui/campus_map.tscn. Açan sahne `CampusMap.open_from(here_pos)` ile çağırır.
 
@@ -17,6 +17,8 @@ const PLACE_KINDS: Dictionary = {
 }
 const PLACE_FONT_SIZE: int = 15
 const PLACE_DOT: float = 5.0
+## Yere dokunma toleransı (px).
+const PLACE_TOUCH_RADIUS: float = 28.0
 const GAME_SCENE: String = "res://scenes/main.tscn"
 
 const COLOR_BG: Color = Color(0.93, 0.93, 0.9)
@@ -43,7 +45,7 @@ const ROAD_WIDTH: float = 6.0
 static var here: Vector2 = Vector2.INF
 
 var catalog: RefCounted
-var selected_zone: String = ""
+var selected_place: Dictionary = {}
 
 var _data: Dictionary = {}
 var _places: Array = []
@@ -130,17 +132,11 @@ func _draw() -> void:
 		draw_polyline(outline, COLOR_HISTORIC_ROOF if historic else COLOR_ROAD.lightened(0.3), 2.0 if historic else 1.0, true)
 	var font: Font = get_theme_default_font()
 	_draw_places(font)
-	for id: String in catalog.ids():
-		var z: Dictionary = catalog.get_zone(id)
-		var c: Vector2 = world_to_map(z["center"])
-		var active: bool = id == Services.current_zone
-		draw_circle(c, MARKER_RADIUS, COLOR_MARKER_HERE if active else COLOR_MARKER)
-		draw_circle(c, MARKER_RADIUS - 6.0, Color.WHITE if id == selected_zone else (COLOR_MARKER_HERE if active else COLOR_MARKER).lightened(0.25))
-		var label: String = str(z["name"]).get_slice(" / ", 0)
-		var tw: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, 22).x
-		var pos: Vector2 = c + Vector2(-tw * 0.5, MARKER_RADIUS + 26.0)
-		draw_string_outline(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, 6, Color.WHITE)
-		draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, COLOR_MARKER)
+	if not selected_place.is_empty():
+		var sp: Array = selected_place.get("pos", [0, 0])
+		var sm: Vector2 = world_to_map(Vector2(float(sp[0]), float(sp[1])))
+		draw_circle(sm, PLACE_DOT + 8.0, COLOR_MARKER_HERE)
+		draw_circle(sm, PLACE_DOT + 3.0, Color.WHITE)
 	if here != Vector2.INF:
 		var h: Vector2 = world_to_map(here)
 		draw_circle(h, 12.0, Color.WHITE)
@@ -155,8 +151,6 @@ func _draw_places(font: Font) -> void:
 			continue
 		var pos: Array = p.get("pos", [0, 0])
 		var m: Vector2 = world_to_map(Vector2(float(pos[0]), float(pos[1])))
-		if _near_marker(m):
-			continue  # bölge işaretinin altında okunmaz
 		var col: Color = PLACE_KINDS[kind]
 		draw_circle(m, PLACE_DOT + 1.5, Color.WHITE)
 		draw_circle(m, PLACE_DOT, col)
@@ -164,14 +158,6 @@ func _draw_places(font: Font) -> void:
 		var at: Vector2 = m + Vector2(PLACE_DOT + 3.0, PLACE_FONT_SIZE * 0.35)
 		draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, PLACE_FONT_SIZE, 4, Color.WHITE)
 		draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, PLACE_FONT_SIZE, col)
-
-
-func _near_marker(m: Vector2) -> bool:
-	for id: String in catalog.ids():
-		var c: Vector2 = world_to_map(catalog.get_zone(id)["center"])
-		if Rect2(c - Vector2(MARKER_RADIUS * 2.2, MARKER_RADIUS * 1.2), Vector2(MARKER_RADIUS * 4.4, MARKER_RADIUS * 2.9)).has_point(m):
-			return true
-	return false
 
 
 ## Uzun resmi adları haritaya sığacak kısaltmaya çevirir.
@@ -200,15 +186,18 @@ static func is_historic(name: String) -> bool:
 	return false
 
 
-## Ekran noktasına en yakın bölge işareti (dokunma alanı içindeyse), yoksa "".
-func zone_at(screen_pos: Vector2) -> String:
-	var best: String = ""
-	var best_d: float = MARKER_RADIUS * 1.6
-	for id: String in catalog.ids():
-		var d: float = world_to_map(catalog.get_zone(id)["center"]).distance_to(screen_pos)
+## Ekran noktasına en yakın gösterilen yer (dokunma alanı içindeyse), yoksa {}.
+func place_at(screen_pos: Vector2) -> Dictionary:
+	var best: Dictionary = {}
+	var best_d: float = PLACE_TOUCH_RADIUS
+	for p: Dictionary in _places:
+		if not PLACE_KINDS.has(str(p.get("kind", ""))) or str(p.get("id", "")) == "ortabahce":
+			continue
+		var pos: Array = p.get("pos", [0, 0])
+		var d: float = world_to_map(Vector2(float(pos[0]), float(pos[1]))).distance_to(screen_pos)
 		if d < best_d:
 			best_d = d
-			best = id
+			best = p
 	return best
 
 
@@ -220,30 +209,27 @@ func _gui_input(event: InputEvent) -> void:
 		pressed_at = (event as InputEventMouseButton).position
 	if pressed_at == Vector2.INF:
 		return
-	var id: String = zone_at(pressed_at)
-	if not id.is_empty():
-		select_zone(id)
+	var p: Dictionary = place_at(pressed_at)
+	if not p.is_empty():
+		select_place(p)
 		accept_event()
 
 
-func select_zone(id: String) -> void:
-	selected_zone = id
-	var z: Dictionary = catalog.get_zone(id)
-	if id == Services.current_zone:
-		_confirm_label.text = "Zaten buradasın: %s" % z["name"]
-	else:
-		_confirm_label.text = "%s bölgesine git?" % z["name"]
-	_confirm.get_node("VBox/Row/Go").visible = id != Services.current_zone
+func select_place(p: Dictionary) -> void:
+	selected_place = p
+	_confirm_label.text = "%s — buraya ışınlan?" % str(p.get("name", ""))
 	_confirm.visible = true
 	queue_redraw()
 
 
-## Seçili bölgeye geç: oyun sahnesi Services.current_zone'u yükler.
+## Seçili yere ışınlan: oyun sahnesi yeniden yüklenir, oyuncu o noktada (yürünebilir en yakın yerde) doğar.
+## Odadan çıkılıp yeniden girilir (sunucunun hız koruması ışınlanmayı hile saymasın).
 func travel() -> void:
-	if selected_zone.is_empty() or not catalog.has(selected_zone):
+	if selected_place.is_empty():
 		return
+	var pos: Array = selected_place.get("pos", [0, 0])
 	Services.net.leave_zone()
-	Services.current_zone = selected_zone
+	Services.pending_teleport = Vector2(float(pos[0]), float(pos[1]))
 	here = Vector2.INF
 	get_tree().change_scene_to_file(GAME_SCENE)
 
@@ -303,7 +289,7 @@ func _build_ui() -> void:
 	cancel.add_theme_font_size_override("font_size", 30)
 	cancel.pressed.connect(func() -> void:
 		_confirm.visible = false
-		selected_zone = ""
+		selected_place = {}
 		queue_redraw())
 	row.add_child(go)
 	row.add_child(cancel)

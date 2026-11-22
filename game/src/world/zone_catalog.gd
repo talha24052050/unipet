@@ -3,7 +3,7 @@ extends RefCounted
 
 const PATH: String = "res://data/zones/zones.json"
 
-var default_id: String = "ortabahce"
+var default_id: String = "kampus"
 ## id -> {"id", "name", "center": Vector2, "radius": float, "spawn": Vector2, "greybox": String, "props": String}
 var _zones: Dictionary = {}
 var _order: PackedStringArray = []

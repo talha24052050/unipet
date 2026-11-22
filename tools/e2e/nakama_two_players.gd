@@ -61,11 +61,11 @@ func _initialize() -> void:
 
 	await process_frame  # düğümler sahne ağacına girsin (HTTPRequest ancak o zaman çalışır)
 	a.connect_to_server("mock-token")
-	a.join_zone("ortabahce")
+	a.join_zone("kampus")
 	check(await _wait(func() -> bool: return ev["a_room"] != "" or not ev["err"].is_empty()), "A odaya girdi %s %s" % [ev["a_room"], ev["err"]])
 	a.send_profile(&"yeti", {&"head": &"hat_cap"}, "  Ali   Test ")
 	b.connect_to_server("mock-token")
-	b.join_zone("ortabahce")
+	b.join_zone("kampus")
 	check(await _wait(func() -> bool: return ev["b_room"] != ""), "B odaya girdi")
 	check(ev["a_room"] == ev["b_room"], "ikisi aynı odada")
 	var a_id: String = a.local_player_id()

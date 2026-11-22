@@ -14,6 +14,7 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 | Çekirdek döngü | Şimdilik temel bakım (açlık/mutluluk/enerji). Detaylar sonra | 2026-11-21 |
 | Harita | Sadece bina **dışları**: tam Ortabahçe, tüm Davutpaşa fakülteleri, Büyükev, Hokka, fakülte kafeleri, yemekhane, büyük saha | 2026-11-21 |
 | Hareket | Joystick **ve** dokun-yürü birlikte | 2026-11-21 |
+| Kampüs içi hızlı ulaşım | Haritadan bir yere dokununca **ışınlanma** | 2026-11-22 |
 | Chat | Başlangıç: hazır cümleler + emote. Serbest chat altyapısı hazır, sonra açılacak | 2026-11-21 |
 
 ## Teknik

@@ -8,7 +8,7 @@
         17.6,
         26.9
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
     },
@@ -20,7 +20,7 @@
         -2.1,
         5.3
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Ortabahçe"
     },
@@ -32,7 +32,7 @@
         -103.5,
         -95.2
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Yemekhane"
     },
@@ -44,7 +44,7 @@
         47.1,
         -254.7
       ],
-      "zone": "fef",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Elektrik Elektronik Fakültesi"
     },
@@ -56,7 +56,7 @@
         164.2,
         -184.8
       ],
-      "zone": "fef",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "A Blok - Fen Edebiyat Fakültesi Dekanlığı"
     },
@@ -68,7 +68,7 @@
         240.0,
         -230.0
       ],
-      "zone": "fef",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -79,7 +79,7 @@
         353.8,
         -183.8
       ],
-      "zone": "fef",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -90,7 +90,7 @@
         210.0,
         -95.0
       ],
-      "zone": "fef",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -101,7 +101,7 @@
         434.4,
         255.3
       ],
-      "zone": "kutuphane",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Otağ-ı Hümayun"
     },
@@ -113,7 +113,7 @@
         549.2,
         305.7
       ],
-      "zone": "kutuphane",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -124,7 +124,7 @@
         405.0,
         463.4
       ],
-      "zone": "kutuphane",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Şehit Prof. Dr. İlhan Varank Kütüphanesi"
     },
@@ -136,7 +136,7 @@
         165.1,
         506.7
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Yabancı Diller Yüksekokulu"
     },
@@ -148,7 +148,7 @@
         53.5,
         660.5
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -159,7 +159,7 @@
         -55.3,
         512.3
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "YTÜ Merkez Laboratuvarı"
     },
@@ -171,7 +171,7 @@
         -168.4,
         429.9
       ],
-      "zone": "insaat",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Hidrolik Laboratuarı"
     },
@@ -183,7 +183,7 @@
         -109.5,
         300.8
       ],
-      "zone": "insaat",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "E Blok - İnşaat Mühendisliği"
     },
@@ -195,7 +195,7 @@
         130.4,
         300.3
       ],
-      "zone": "insaat",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -206,7 +206,7 @@
         -285.5,
         49.3
       ],
-      "zone": "saha",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -217,7 +217,7 @@
         -280.0,
         -20.0
       ],
-      "zone": "saha",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -228,7 +228,7 @@
         -298.8,
         -213.6
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -239,7 +239,7 @@
         -260.0,
         -115.0
       ],
-      "zone": "saha",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -250,7 +250,7 @@
         -127.8,
         -68.0
       ],
-      "zone": "saha",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -261,7 +261,7 @@
         -179.8,
         -197.8
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -272,7 +272,7 @@
         -280.0,
         -304.8
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Eğitim Fakültesi"
     },
@@ -284,7 +284,7 @@
         -373.1,
         -315.7
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -295,7 +295,7 @@
         -374.7,
         -370.5
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -306,7 +306,7 @@
         -354.9,
         -474.6
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -317,7 +317,7 @@
         -170.0,
         -450.0
       ],
-      "zone": "egitim",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -328,7 +328,7 @@
         -100.0,
         50.0
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -339,7 +339,7 @@
         300.0,
         350.0
       ],
-      "zone": "kutuphane",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -350,7 +350,7 @@
         -77.2,
         -182.7
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Merkez Kütüphanesi"
     },
@@ -362,7 +362,7 @@
         95.4,
         426.2
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -373,7 +373,7 @@
         10.0,
         470.0
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -384,7 +384,7 @@
         -140.9,
         551.0
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -395,7 +395,7 @@
         -200.0,
         530.0
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -406,7 +406,7 @@
         -37.4,
         350.7
       ],
-      "zone": "insaat",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Academic Lounge"
     },
@@ -418,7 +418,7 @@
         516.5,
         368.8
       ],
-      "zone": "kutuphane",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Misafirhane"
     },
@@ -430,7 +430,7 @@
         -70.0,
         -345.0
       ],
-      "zone": "fef",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -441,7 +441,7 @@
         800.0,
         575.0
       ],
-      "zone": "",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -452,7 +452,7 @@
         -70.0,
         -470.0
       ],
-      "zone": "",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -463,7 +463,7 @@
         15.0,
         830.0
       ],
-      "zone": "guney",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -474,7 +474,7 @@
         -40.0,
         -560.0
       ],
-      "zone": "",
+      "zone": "kampus",
       "source": "manual"
     },
     {
@@ -485,7 +485,7 @@
         -75.2,
         -106.6
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Hokka"
     },
@@ -497,7 +497,7 @@
         -99.9,
         -124.7
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "KAYINTI KAFE"
     },
@@ -509,7 +509,7 @@
         -15.5,
         -74.5
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "BÜYÜK EV"
     },
@@ -521,7 +521,7 @@
         133.6,
         339.7
       ],
-      "zone": "insaat",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "Eskafe"
     },
@@ -533,7 +533,7 @@
         216.6,
         -2.8
       ],
-      "zone": "ortabahce",
+      "zone": "kampus",
       "source": "osm",
       "osm_name": "YILDIZ CAFE"
     }

@@ -10,7 +10,7 @@ const YAW_EPSILON: float = 0.02          # 0.02 radyan (~1.15 derece)
 const HEARTBEAT_INTERVAL: float = 1.0    # Değişmeyen durumda en az saniyede 1 gönder
 const RECONNECT_DELAY: float = 5.0       # Kopunca 5 saniye sonra yeniden bağlanmayı dene
 const MAX_RECONNECT_ATTEMPTS: int = 5    # En çok 5 deneme, sonra dur
-const DEFAULT_ZONE: String = "ortabahce"
+const DEFAULT_ZONE: String = "kampus"
 
 
 ## Oyuncunun bulunduğu bölge (harita ekranı Services.current_zone'u değiştirir).

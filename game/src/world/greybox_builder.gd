@@ -40,6 +40,8 @@ const GATE_TOUCH_DIST: float = 0.6
 var building_count: int = 0
 var gate_count: int = 0
 var _path_lines: Array[PackedVector2Array] = []
+## Her yolun kutusu (geçit aramasında sadece binaya yakın yollara bakmak için).
+var _path_boxes: Array[Rect2] = []
 
 
 ## true ise data_path yerine Services.current_zone'un greybox verisi yüklenir (ana sahne bunu kullanır).
@@ -56,13 +58,15 @@ func _ready() -> void:
 	var data: Dictionary = load_data(data_path)
 	if data.is_empty():
 		return
-	var c: Array = data.get("center", [0, 0])
-	_build_ground(float(data.get("radius", 200.0)) + GROUND_MARGIN, Vector2(float(c[0]), float(c[1])))
+	var extent: Rect2 = data_extent(data)
+	_build_ground_rect(extent.grow(GROUND_MARGIN))
 	for a: Dictionary in data.get("areas", []):
 		_build_area(a)
 	for p: Dictionary in data.get("paths", []):
 		_build_path(p)
-		_path_lines.append(to_polygon(p.get("points", [])))
+		var line: PackedVector2Array = to_polygon(p.get("points", []))
+		_path_lines.append(line)
+		_path_boxes.append(_poly_box(line))
 	for b: Dictionary in data.get("buildings", []):
 		_build_building(b)
 
@@ -210,6 +214,45 @@ func _material(color: Color) -> StandardMaterial3D:
 	return m
 
 
+## Verideki bina/alan/yol köşelerinin kapsadığı dikdörtgen (XZ). Boşsa merkez/yarıçaptan.
+static func data_extent(data: Dictionary) -> Rect2:
+	var r: Rect2 = Rect2()
+	var first: bool = true
+	for key: String in ["buildings", "areas", "paths"]:
+		for item: Dictionary in data.get(key, []):
+			for p: Array in item.get("points", []):
+				var v: Vector2 = Vector2(float(p[0]), float(p[1]))
+				if first:
+					r = Rect2(v, Vector2.ZERO)
+					first = false
+				else:
+					r = r.expand(v)
+	if first:
+		var c: Array = data.get("center", [0, 0])
+		var rad: float = float(data.get("radius", 200.0))
+		r = Rect2(Vector2(float(c[0]) - rad, float(c[1]) - rad), Vector2(rad * 2.0, rad * 2.0))
+	return r
+
+
+func _build_ground_rect(rect: Rect2) -> void:
+	var c: Vector2 = rect.get_center()
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "Ground"
+	body.position = Vector3(c.x, -0.1, c.y)
+	var shape: CollisionShape3D = CollisionShape3D.new()
+	var box: BoxShape3D = BoxShape3D.new()
+	box.size = Vector3(rect.size.x, 0.2, rect.size.y)
+	shape.shape = box
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var bm: BoxMesh = BoxMesh.new()
+	bm.size = box.size
+	bm.material = _material(GROUND_COLOR)
+	mesh.mesh = bm
+	body.add_child(shape)
+	body.add_child(mesh)
+	add_child(body)
+
+
 ## Zemin bölge merkezinde (bölge dosyaları kampüs koordinatı kullanır; Ortabahçe'de merkez orijin).
 func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
@@ -232,8 +275,10 @@ func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 func _build_building(b: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(b.get("points", []))
 	var height: float = float(b.get("height", 10.0))
-	var mesh: ArrayMesh = extrude_polygon(poly, height, _path_lines)
-	gate_count += _count_gates(poly)
+	# Sadece kutusu binanın kutusuyla kesişen yollar (kampüsün tamamında 300+ yol × 140 bina çok yavaştı).
+	var near_paths: Array[PackedVector2Array] = _paths_near(_poly_box(poly).grow(GATE_TOUCH_DIST + 1.0))
+	var mesh: ArrayMesh = extrude_polygon(poly, height, near_paths)
+	gate_count += _count_gates(poly, near_paths)
 	if mesh == null:
 		push_warning("Bina üçgenlenemedi, atlandı: %s" % b.get("name", "?"))
 		return
@@ -436,12 +481,29 @@ static func build_hip_roof(poly: PackedVector2Array, base_height: float, roof_he
 
 
 
-func _count_gates(poly: PackedVector2Array) -> int:
+func _paths_near(box: Rect2) -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
+	for i: int in _path_lines.size():
+		if _path_boxes[i].intersects(box, true):
+			out.append(_path_lines[i])
+	return out
+
+
+static func _poly_box(poly: PackedVector2Array) -> Rect2:
+	if poly.is_empty():
+		return Rect2()
+	var r: Rect2 = Rect2(poly[0], Vector2.ZERO)
+	for v: Vector2 in poly:
+		r = r.expand(v)
+	return r
+
+
+func _count_gates(poly: PackedVector2Array, paths: Array[PackedVector2Array]) -> int:
 	var p: PackedVector2Array = poly.duplicate()
 	if Geometry2D.is_polygon_clockwise(p):
 		p.reverse()
 	var total: int = 0
-	for list: Array in find_gates(p, _path_lines).values():
+	for list: Array in find_gates(p, paths).values():
 		total += list.size()
 	return total
 

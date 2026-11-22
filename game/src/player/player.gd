@@ -17,6 +17,21 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var _collision: CollisionShape3D = $Collision
 
 
+var _snap_to_navmesh: bool = false
+
+
+## Navigasyon haritası hazırsa en yakın yürünebilir noktaya taşınır (hazır değilse sonraki kare dener).
+func _try_snap_to_navmesh() -> void:
+	var map: RID = get_world_3d().navigation_map
+	var probe: Vector3 = Vector3(global_position.x, 0.0, global_position.z)
+	var closest: Vector3 = NavigationServer3D.map_get_closest_point(map, probe)
+	if closest == Vector3.ZERO and probe.length() > 1.0:
+		return  # harita henüz hazır değil
+	global_position = closest + Vector3.UP * 0.2
+	velocity = Vector3.ZERO
+	_snap_to_navmesh = false
+
+
 ## Aynı anda girenler üst üste doğmasın: doğuş noktası etrafında bu yarıçapta rastgele kayma (metre).
 const SPAWN_SCATTER: float = 3.0
 
@@ -24,7 +39,11 @@ const SPAWN_SCATTER: float = 3.0
 func _ready() -> void:
 	floor_snap_length = Config.PLAYER_FLOOR_SNAP
 	# Bölgenin doğuş noktası (harita ekranından gelindiyse farklı bölge).
-	if Services.zones != null and Services.zones.has(Services.current_zone):
+	if Services.pending_teleport != Vector2.INF:
+		position = Vector3(Services.pending_teleport.x, position.y, Services.pending_teleport.y)
+		Services.pending_teleport = Vector2.INF
+		_snap_to_navmesh = true  # yer bina ortası olabilir: harita hazır olunca yürünebilir en yakın noktaya
+	elif Services.zones != null and Services.zones.has(Services.current_zone):
 		var sp: Vector2 = Services.zones.get_zone(Services.current_zone)["spawn"]
 		position = Vector3(sp.x, position.y, sp.y)
 	var a: float = randf() * TAU
@@ -69,6 +88,8 @@ func _fit_collision(size: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _snap_to_navmesh:
+		_try_snap_to_navmesh()
 	velocity = compute_velocity(velocity, move_input, is_on_floor(), _gravity, delta)
 	move_and_slide()
 

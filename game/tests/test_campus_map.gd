@@ -22,26 +22,30 @@ func test_map_fits_and_roundtrips() -> String:
 	var err: String = ""
 	if not back.is_equal_approx(w):
 		err = "dönüşüm geri dönmüyor: %s" % back
-	var cat: RefCounted = m.get("catalog")
-	for id: String in cat.ids():
-		var p: Vector2 = m.call("world_to_map", cat.get_zone(id)["center"])
-		if not Rect2(Vector2.ZERO, m.size).has_point(p):
-			err = "%s işareti ekran dışında: %s" % [id, p]
+	var places: Array = m.get("_places")
+	for p: Dictionary in places:
+		var pos: Array = p["pos"]
+		if not Rect2(Vector2.ZERO, m.size).has_point(m.call("world_to_map", Vector2(float(pos[0]), float(pos[1])))):
+			err = "%s ekran dışında" % p["id"]
 	m.free()
 	return err
 
 
-func test_tap_selects_zone() -> String:
+func test_tap_selects_place_and_sets_teleport() -> String:
 	var m: Control = _make()
-	var cat: RefCounted = m.get("catalog")
-	var p: Vector2 = m.call("world_to_map", cat.get_zone("insaat")["center"])
-	var hit: String = m.call("zone_at", p + Vector2(10, 5))
-	var miss: String = m.call("zone_at", Vector2(5, 5))
-	m.call("select_zone", "insaat")
-	var sel: String = m.get("selected_zone")
+	var places: Array = m.get("_places")
+	var target: Dictionary = {}
+	for p: Dictionary in places:
+		if p["id"] == "yemekhane":
+			target = p
+	var pos: Array = target["pos"]
+	var hit: Dictionary = m.call("place_at", m.call("world_to_map", Vector2(float(pos[0]), float(pos[1]))) + Vector2(3, 2))
+	var miss: Dictionary = m.call("place_at", Vector2(2, 2))
+	m.call("select_place", hit)
+	var sel: Dictionary = m.get("selected_place")
 	m.free()
-	if hit != "insaat" or miss != "" or sel != "insaat":
-		return "dokunma yanlış: %s %s %s" % [hit, miss, sel]
+	if hit.get("id") != "yemekhane" or not miss.is_empty() or sel.get("id") != "yemekhane":
+		return "dokunma yanlış: %s %s %s" % [hit.get("id"), miss, sel.get("id")]
 	return ""
 
 

@@ -59,7 +59,7 @@ func simulate_disconnected(reason: String = "") -> void:
 	disconnected.emit(reason)
 
 
-func simulate_room_joined(room_id: String = "ortabahce-1") -> void:
+func simulate_room_joined(room_id: String = "kampus-1") -> void:
 	current_room = room_id
 	room_joined.emit(room_id)
 

@@ -22,6 +22,8 @@ var zones: ZoneCatalog
 var profile_sync: ProfileSync
 ## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
 var current_zone: String = ""
+## Haritadan ışınlanma hedefi (kampüs XZ). Oyuncu sahnesi bir kez kullanır ve sıfırlar.
+var pending_teleport: Vector2 = Vector2.INF
 
 
 func _ready() -> void:
