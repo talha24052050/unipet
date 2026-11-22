@@ -60,6 +60,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 5.4b **Tek bölge: tüm kampüs** (Talha kararı 2026-11-22) — tek greybox + tek navmesh + mobil performans (görünürlük mesafeleri), tek oda ailesi, harita ekranı "buradasın" + yere dokun → ışınlan (Talha)
 - [x] 5.5 Pet bakımı: açlık/mutluluk/enerji, sunucuda saklama
 - [x] 5.7 Kampüs keşfi: 47 yere yürüyerek yaklaşınca (22 m) keşif bildirimi, harita "Keşif: n/47" + altın halkalar; ışınlanma sayılmaz (önce 30 m yürümek gerekir). Şimdilik cihazda saklanıyor
+- [x] 5.8 Pet etkileşimi: kendi petine dokun → kalpler + sevinç hareketi; başka pete dokun → dönüp el sallar, "Selam!" der
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test

@@ -18,6 +18,7 @@
 [ext_resource type="Script" path="res://src/ui/connection_label.gd" id="16"]
 [ext_resource type="Script" path="res://src/ui/settings_button.gd" id="17"]
 [ext_resource type="Script" path="res://src/world/discovery.gd" id="18"]
+[ext_resource type="Script" path="res://src/player/pet_interaction.gd" id="19"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -230,13 +231,14 @@ script = ExtResource("17")
 
 [node name="CareHud" parent="UI" instance=ExtResource("11")]
 
-[node name="PlayerController" type="Node" parent="." node_paths=PackedStringArray("player", "joystick", "camera", "agent", "marker")]
+[node name="PlayerController" type="Node" parent="." node_paths=PackedStringArray("player", "joystick", "camera", "agent", "marker", "interaction")]
 script = ExtResource("3")
 player = NodePath("../Player")
 joystick = NodePath("../UI/Joystick")
 camera = NodePath("../FollowCamera/SpringArm3D/Camera3D")
 agent = NodePath("../Player/NavAgent")
 marker = NodePath("../TapMarker")
+interaction = NodePath("../PetInteraction")
 
 [node name="NetworkSync" type="Node" parent="." node_paths=PackedStringArray("player")]
 script = ExtResource("9")
@@ -245,3 +247,8 @@ player = NodePath("../Player")
 [node name="Discovery" type="Node" parent="." node_paths=PackedStringArray("player")]
 script = ExtResource("18")
 player = NodePath("../Player")
+
+[node name="PetInteraction" type="Node" parent="." node_paths=PackedStringArray("player", "remotes")]
+script = ExtResource("19")
+player = NodePath("../Player")
+remotes = NodePath("../NetworkSync")

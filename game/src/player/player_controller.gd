@@ -13,6 +13,8 @@ signal destination_cleared
 @export var agent: NavigationAgent3D
 ## Hedef işareti (isteğe bağlı).
 @export var marker: Node3D
+## Pete dokunma (isteğe bağlı): dokunuş bir pete denk gelirse yürüme yerine etkileşim.
+@export var interaction: Node
 
 var _navigating: bool = false
 var _touch_index: int = -1
@@ -62,6 +64,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif t.index == _touch_index:
 		_touch_index = -1
 		if not _tap_cancelled and is_tap(_touch_start_pos, t.position, now - _touch_start_time):
+			if interaction != null and bool(interaction.call("try_tap", t.position, camera)):
+				return
 			_try_walk_to_screen_point(t.position)
 
 
