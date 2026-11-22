@@ -305,20 +305,21 @@ func test_disconnect_clears_players_and_reconnects() -> String:
 		fake_net.free()
 		return "Disconnected sonrası uzak oyuncular temizlenmedi"
 
-	# 5 saniye dolmadan yeniden bağlanma çağrısı OLMAMALI
+	# İlk bekleme (RECONNECT_DELAY) dolmadan yeniden bağlanma çağrısı OLMAMALI
+	var first_delay: float = float(sync.get_script().get("RECONNECT_DELAY"))
 	var initial_calls: int = int(fake_net.get("connect_calls"))
-	sync.call("_process", 4.0)
+	sync.call("_process", first_delay - 1.0)
 	if int(fake_net.get("connect_calls")) != initial_calls:
 		sync.free()
 		fake_net.free()
-		return "5 saniye dolmadan yeniden bağlanma denenmemeli"
+		return "ilk bekleme dolmadan yeniden bağlanma denenmemeli"
 
-	# 5 saniye dolunca yeniden bağlanma çağrılmalı
+	# Bekleme dolunca yeniden bağlanma çağrılmalı
 	sync.call("_process", 1.2)
 	if int(fake_net.get("connect_calls")) <= initial_calls:
 		sync.free()
 		fake_net.free()
-		return "5 saniye sonra yeniden bağlanma denenmedi"
+		return "bekleme dolunca yeniden bağlanma denenmedi"
 
 	sync.free()
 	fake_net.free()

@@ -8,8 +8,11 @@ const LocalProfile := preload("res://src/core/local_profile.gd")
 const POS_EPSILON: float = 0.02          # 2 cm (durum değişim eşiği)
 const YAW_EPSILON: float = 0.02          # 0.02 radyan (~1.15 derece)
 const HEARTBEAT_INTERVAL: float = 1.0    # Değişmeyen durumda en az saniyede 1 gönder
-const RECONNECT_DELAY: float = 5.0       # Kopunca 5 saniye sonra yeniden bağlanmayı dene
-const MAX_RECONNECT_ATTEMPTS: int = 5    # En çok 5 deneme, sonra dur
+## Kopunca artan aralıklarla yeniden bağlan: 3, 6, 12, 24, sonra 30 sn'de bir (~20 dk). Ev interneti/tünel
+## 30-60 sn kopabiliyor (2026-11-22 arkadaşlarla testte 40 sn kesinti 5×5 sn'lik eski denemeleri tüketti).
+const RECONNECT_DELAY: float = 3.0
+const RECONNECT_DELAY_MAX: float = 30.0
+const MAX_RECONNECT_ATTEMPTS: int = 45
 const DEFAULT_ZONE: String = "kampus"
 
 
@@ -126,7 +129,7 @@ func _on_disconnected(_reason: String) -> void:
 	_clear_remote_players()
 	if _reconnect_attempts < MAX_RECONNECT_ATTEMPTS:
 		_waiting_reconnect = true
-		_reconnect_timer = RECONNECT_DELAY
+		_reconnect_timer = reconnect_delay(_reconnect_attempts)
 		_reconnect_attempts += 1
 	else:
 		_waiting_reconnect = false
@@ -266,3 +269,7 @@ func _check_and_send_state() -> void:
 		_last_sent_yaw = yaw
 		_last_sent_anim = anim
 		_heartbeat_accum = 0.0
+
+
+static func reconnect_delay(attempt: int) -> float:
+	return minf(RECONNECT_DELAY * pow(2.0, float(attempt)), RECONNECT_DELAY_MAX)
