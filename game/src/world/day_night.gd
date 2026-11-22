@@ -27,6 +27,8 @@ const SKY_HORIZON_GOLDEN: Color = Color(0.98, 0.62, 0.42)
 const AMBIENT_DAY: Color = Color(0.86, 0.85, 0.82)
 const AMBIENT_NIGHT: Color = Color(0.32, 0.36, 0.5)
 const AMBIENT_SKY_CONTRIBUTION: float = 0.3
+const GROUND_FAR_DAY: Color = Color(0.33, 0.42, 0.27)
+const GROUND_FAR_NIGHT: Color = Color(0.05, 0.06, 0.08)
 
 var _timer: float = 0.0
 
@@ -86,3 +88,5 @@ func apply(hour: float) -> void:
 			sky.sky_top_color = s["sky_top"]
 			sky.sky_horizon_color = s["sky_horizon"]
 			sky.ground_horizon_color = s["sky_horizon"]
+			# Zemin bitiminde ufuk altı siyah şerit görünmesin: çim tonuna yakın, gece kararır
+			sky.ground_bottom_color = GROUND_FAR_NIGHT.lerp(GROUND_FAR_DAY, float(s["ambient"] - 0.6) / 0.4)

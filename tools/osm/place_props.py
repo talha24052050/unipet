@@ -261,6 +261,7 @@ def _run_ortabahce(data: dict[str, Any], out_path: str, seed: int) -> None:
             bushes.append(obj)
             props.append(obj)
 
+    props = drop_on_fields(props, data)
     out_data = {"props": props}
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out_data, f, ensure_ascii=False, indent=2)
@@ -487,6 +488,7 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
             props.append(obj)
             add_to_grid(obj)
 
+    props = drop_on_fields(props, data)
     out_data = {"props": props}
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out_data, f, ensure_ascii=False, indent=2)
@@ -495,6 +497,28 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
         f"Üretildi: {len(props)} prop "
         f"({len(trees)} ağaç, {len(bushes)} çalı, {len(benches)} bank, {len(lamps)} lamba, {len(trashcans)} çöp kutusu) -> {out_path}"
     )
+
+
+STADIUM_MIN_AREA = 5000.0
+STADIUM_MARGIN = 10.0  # koşu pisti (7.5 m) + pay; tools/assets/make_greenery.py ile uyumlu
+FIELD_MARGIN = 1.0
+
+
+def drop_on_fields(props: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Saha/oyun alanı (ve stadyum pisti) üstüne düşen propları atar (ağaç sahanın ortasında olmasın)."""
+    fields: list[tuple[list[list[float]], float]] = []
+    for a in data.get("areas", []):
+        if a.get("kind") not in ("pitch", "playground"):
+            continue
+        poly = a["points"]
+        area = abs(sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1]
+                       for i in range(len(poly)))) / 2
+        fields.append((poly, STADIUM_MARGIN if a.get("kind") == "pitch" and area > STADIUM_MIN_AREA else FIELD_MARGIN))
+
+    def on_field(x: float, z: float) -> bool:
+        return any(point_in_polygon(x, z, poly) or dist_pt_poly_boundary(x, z, poly) < m for poly, m in fields)
+
+    return [pr for pr in props if not on_field(float(pr["pos"][0]), float(pr["pos"][1]))]
 
 
 def main() -> None:

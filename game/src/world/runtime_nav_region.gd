@@ -49,8 +49,10 @@ func _zone_def() -> Dictionary:
 ## Bölgenin yürünebilirliğini belirleyen verilerin özeti (greybox + prop yerleşimi).
 static func source_hash(zone: Dictionary) -> String:
 	var text: String = ""
-	for key: String in ["greybox", "props"]:
-		var p: String = str(zone.get(key, ""))
+	var files: Array[String] = [str(zone.get("greybox", "")), str(zone.get("props", ""))]
+	# Yeşil doku (ağaç çarpışmaları navmesh'e girer): greybox ile aynı klasörde <ad>_greenery.json
+	files.append(files[0].replace("_greybox.json", "_greenery.json"))
+	for p: String in files:
 		if not p.is_empty() and FileAccess.file_exists(p):
 			text += FileAccess.get_file_as_string(p)
 	# Satır sonu farkı (Windows CRLF / CI LF) özeti değiştirmesin.

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import make_landmarks as L  # noqa: E402
 
 L.COLORS.update({
-    "plane_bark": (0.66, 0.62, 0.52),    # çınar: açık gri-bej, alacalı kabuk
+    "plane_bark": (0.52, 0.47, 0.39),    # çınar: gri-bej kabuk (açık ton sütun gibi duruyordu)
     "plane_leaf": (0.36, 0.56, 0.22),
     "plane_leaf2": (0.44, 0.62, 0.26),
     "cypress_leaf": (0.17, 0.33, 0.20),  # servi: koyu yeşil
@@ -46,16 +46,15 @@ def ico_blob(b, cx, cy, cz, r, color, rng, seg=7, rings=5, squash=0.8):
 def plane_tree(seed):
     rng = random.Random(seed)
     b = L.Builder()
-    # Kalın gövde + 3 ana dal
-    b.cylinder(0, 0, 0.45, 0, 3.2, "plane_bark", seg=7)
-    b.cylinder(0, 0, 0.36, 3.2, 5.0, "plane_bark", seg=7)
-    blobs = [(0.0, 9.2, 0.0, 3.6)]
+    # Gövde tacın içine kadar uzanır (ayrı dikey dal parçaları havada direk gibi duruyordu)
+    b.cylinder(0, 0, 0.34, 0, 3.4, "plane_bark", seg=7)
+    b.cylinder(0, 0, 0.26, 3.4, 6.2, "plane_bark", seg=7)
+    b.cylinder(0, 0, 0.18, 6.2, 8.0, "plane_bark", seg=6)
+    blobs = [(0.0, 9.0, 0.0, 3.5)]
     for k in range(3):
         ang = 2 * math.pi * k / 3 + rng.uniform(-0.3, 0.3)
         dx, dz = math.cos(ang), math.sin(ang)
-        bx, bz = dx * 1.6, dz * 1.6
-        b.cylinder(bx * 0.5, bz * 0.5, 0.2, 4.6, 6.6, "plane_bark", seg=5)
-        blobs.append((dx * 2.8, rng.uniform(7.2, 8.2), dz * 2.8, rng.uniform(2.8, 3.3)))
+        blobs.append((dx * 2.1, rng.uniform(7.3, 8.0), dz * 2.1, rng.uniform(2.8, 3.2)))
     for i, (x, y, z, r) in enumerate(blobs):
         ico_blob(b, x, y, z, r, "plane_leaf" if i % 2 == 0 else "plane_leaf2", rng)
     return b
@@ -92,7 +91,7 @@ def main():
     for name, b in (("tree_plane", plane_tree("cinar")), ("tree_cypress", cypress_tree("servi")), ("tree_stonepine", stone_pine("fistik"))):
         tris = b.tri_count()
         assert tris <= MAX_TRIS, "%s: %d üçgen" % (name, tris)
-        L.write_glb(os.path.join(out, name + ".glb"), name, b)
+        L.write_glb(os.path.join(out, name + ".glb"), name, b, single_surface=True)
         print("OK %s: %d üçgen" % (name, tris))
 
 

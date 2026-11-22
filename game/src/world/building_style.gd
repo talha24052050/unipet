@@ -25,7 +25,7 @@ const HISTORIC_KEYWORDS: PackedStringArray = [
 
 ## Renk paleti (YTÜ Davutpaşa harita stili)
 const HISTORIC_WALL: Color = Color(0.937, 0.890, 0.784)  # krem #EFE3C8
-const HISTORIC_ROOF: Color = Color(0.725, 0.278, 0.227)  # kiremit #B9473A
+const HISTORIC_ROOF: Color = Color(0.63, 0.34, 0.27)   # yıpranmış kiremit (drone referansı; eski #B9473A fazla canlıydı)
 const HISTORIC_WINDOW: Color = Color(0.18, 0.22, 0.28)
 const HISTORIC_FRAME: Color = Color(1.0, 1.0, 1.0)       # beyaz pencere çerçevesi
 

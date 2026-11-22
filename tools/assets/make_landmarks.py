@@ -225,7 +225,8 @@ class Builder:
 
 
 # ---------- GLB yazıcı ----------
-def write_glb(path, name, builder):
+def write_glb(path, name, builder, single_surface=False):
+    """single_surface: tüm renkler tek primitive + köşe rengi (COLOR_0) → tek çizim çağrısı (çok kopyalanan ağaçlar için)."""
     blob = bytearray()
     accessors, views, prims, mats = [], [], [], []
 
@@ -236,24 +237,35 @@ def write_glb(path, name, builder):
         blob.extend(data)
         return len(views) - 1
 
-    for color, tris in builder.tris.items():
-        if not tris:
-            continue
-        pos, nrm = [], []
-        for a, b, c, n in tris:
+    groups = [(c, [(t, c) for t in tris]) for c, tris in builder.tris.items() if tris]
+    if single_surface:
+        groups = [("vc", [x for _, g in groups for x in g])]
+    for color, items in groups:
+        pos, nrm, col = [], [], []
+        for (a, b, c, n), cname in items:
+            r, g, bl = COLORS[cname]
             for p in (a, b, c):
                 pos.append(p)
                 nrm.append(n)
+                col.append((r ** 2.2, g ** 2.2, bl ** 2.2))  # glTF köşe rengi lineer
         pv = add_view(b"".join(struct.pack("<3f", *p) for p in pos), 34962)
         nv = add_view(b"".join(struct.pack("<3f", *n) for n in nrm), 34962)
         mn = [min(p[i] for p in pos) for i in range(3)]
         mx = [max(p[i] for p in pos) for i in range(3)]
         accessors.append({"bufferView": pv, "componentType": 5126, "count": len(pos), "type": "VEC3", "min": mn, "max": mx})
         accessors.append({"bufferView": nv, "componentType": 5126, "count": len(nrm), "type": "VEC3"})
-        r, g, b = COLORS[color]
-        mats.append({"name": "lm_" + color, "pbrMetallicRoughness": {
-            "baseColorFactor": [r ** 2.2, g ** 2.2, b ** 2.2, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.9}})
-        prims.append({"attributes": {"POSITION": len(accessors) - 2, "NORMAL": len(accessors) - 1}, "material": len(mats) - 1})
+        attrs = {"POSITION": len(accessors) - 2, "NORMAL": len(accessors) - 1}
+        if single_surface:
+            cv = add_view(b"".join(struct.pack("<3f", *c) for c in col), 34962)
+            accessors.append({"bufferView": cv, "componentType": 5126, "count": len(col), "type": "VEC3"})
+            attrs["COLOR_0"] = len(accessors) - 1
+            mats.append({"name": "lm_vertex_color", "pbrMetallicRoughness": {
+                "baseColorFactor": [1.0, 1.0, 1.0, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.9}})
+        else:
+            r, g, b = COLORS[color]
+            mats.append({"name": "lm_" + color, "pbrMetallicRoughness": {
+                "baseColorFactor": [r ** 2.2, g ** 2.2, b ** 2.2, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.9}})
+        prims.append({"attributes": attrs, "material": len(mats) - 1})
     while len(blob) % 4:
         blob.append(0)
     gltf = {

@@ -145,6 +145,8 @@ func build_props(data: Dictionary) -> void:
 		var temp_node: Node = scene.instantiate()
 		var mesh_entries: Array[Dictionary] = _extract_mesh_data(temp_node, Transform3D.IDENTITY)
 		temp_node.free()
+		for e: Dictionary in mesh_entries:
+			use_vertex_colors(e["mesh"])
 		mesh_cache[type] = mesh_entries
 
 	# Her (hücre, tür) için MultiMeshInstance3D kur
@@ -232,3 +234,20 @@ static func local_species(t: String, x: float, z: float) -> String:
 	if t == "tree_pine" and h < CYPRESS_SHARE:
 		return "tree_cypress"
 	return t
+
+
+## Script ile üretilen ağaç GLB'leri tek yüzey + köşe rengi kullanır (tek çizim çağrısı); Godot içe aktarırken
+## köşe rengini albedo'ya bağlamıyor. Köşe rengi olan yüzeylerde malzemeye bu bayrağı açar.
+const VERTEX_COLOR_MATERIAL: String = "lm_vertex_color"
+
+
+static func use_vertex_colors(mesh: Mesh) -> void:
+	if mesh == null:
+		return
+	for i: int in mesh.get_surface_count():
+		if (mesh.surface_get_format(i) & Mesh.ARRAY_FORMAT_COLOR) == 0:
+			continue
+		var mat: BaseMaterial3D = mesh.surface_get_material(i) as BaseMaterial3D
+		# Sadece bizim ürettiğimiz malzeme (tools/assets/make_landmarks.py: "lm_vertex_color"); dış paketlere dokunma.
+		if mat != null and mat.resource_name == VERTEX_COLOR_MATERIAL and not mat.vertex_color_use_as_albedo:
+			mat.vertex_color_use_as_albedo = true

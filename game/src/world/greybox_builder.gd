@@ -6,7 +6,9 @@ extends Node3D
 const BuildingStyle := preload("res://src/world/building_style.gd")
 const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
 const PATH_COBBLE_SHADER: Shader = preload("res://assets/shaders/path_cobble.gdshader")
-const CourtyardDecor := preload("res://src/world/courtyard_decor.gd")
+const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
+## Ortabahçe'yi çevreleyen bina (avlu tespiti için).
+const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
 ## Ortabahçe (Kışla avlusu) yolları gerçekte pembe-kırmızı beton; dışarıdaki yaya yolları parke.
 const PATTERN_COBBLE: int = 0
 const PATTERN_PINK_CONCRETE: int = 1
@@ -98,10 +100,11 @@ func _ready() -> void:
 	# Binaya bağlı olmayan simge yapılar (kampüs kapıları)
 	for n: Node3D in free_landmarks():
 		add_child(n)
-	var decor: Node3D = CourtyardDecor.new()
-	decor.name = "CourtyardDecor"
+	# Yeşil doku (ağaçlar, tarhlar, pist): greybox ile aynı klasörde <ad>_greenery.json
+	var decor: Node3D = GreeneryDecor.new()
+	decor.name = "GreeneryDecor"
 	add_child(decor)
-	decor.build(data, _path_lines)
+	decor.build_from_file(data_path.replace("_greybox.json", "_greenery.json"))
 
 
 static func load_data(path: String) -> Dictionary:
@@ -434,7 +437,7 @@ static func _get_cobble_material(width: float, pattern: int = PATTERN_COBBLE) ->
 
 func _find_courtyard(data: Dictionary) -> void:
 	for b: Dictionary in data.get("buildings", []):
-		if str(b.get("name", "")) == CourtyardDecor.KISLA_NAME:
+		if str(b.get("name", "")) == KISLA_NAME:
 			_courtyard_poly = to_polygon(b.get("points", []))
 			_courtyard_hull = Geometry2D.convex_hull(_courtyard_poly)
 			return
