@@ -27,6 +27,10 @@ var feedback: Feedback
 var current_zone: String = ""
 ## Haritadan ışınlanma hedefi (kampüs XZ). Oyuncu sahnesi bir kez kullanır ve sıfırlar.
 var pending_teleport: Vector2 = Vector2.INF
+## Oyun sahnesinden geçici çıkışta (harita, pet seçimi, ayarlardan yeniden bağlanma) oyuncunun yeri: dönünce aynı
+## yerde başlasın (Talha 2026-11-22: "haritaya girip çıkınca yerimiz değişiyor"). INF = yok.
+var return_position: Vector3 = Vector3.INF
+var return_yaw: float = 0.0
 
 
 func _ready() -> void:

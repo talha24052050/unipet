@@ -39,6 +39,14 @@ func _ready() -> void:
 
 ## session_token: Supabase erişim anahtarı (mock'ta "mock-token"). Kullanıcı kimliği Services.auth'tan.
 func connect_to_server(session_token: String) -> void:
+	# Oyun sahnesi yeniden yüklendiğinde (harita / pet seçimi dönüşü) bağlantı zaten açık: yeniden bağlanmak eski
+	# soketi kapatıyor ve yeni açılışta odaya tekrar katılınmıyordu (Talha: "pet seçimine girince bağlantı kopuyor").
+	# Açık soketi koru; odadan çıkıp yeniden katıl (sunucunun konum/hız kaydı da yeni yerle başlar).
+	if _socket_open and _socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		if not _match_id.is_empty():
+			leave_zone()
+		connected.emit.call_deferred()
+		return
 	var custom_id: String = custom_id_override if not custom_id_override.is_empty() else Services.auth.get_user_id()
 	if custom_id.is_empty():
 		disconnected.emit("Önce giriş yapılmalı.")

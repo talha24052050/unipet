@@ -42,19 +42,38 @@ func _try_snap_to_navmesh() -> void:
 const SPAWN_SCATTER: float = 3.0
 
 
+func _scatter() -> void:
+	var a: float = randf() * TAU
+	var r: float = sqrt(randf()) * SPAWN_SCATTER
+	position += Vector3(cos(a) * r, 0.0, sin(a) * r)
+
+
+## Sahne değişirken yeri sakla (ışınlanma hedefi verilmişse o öncelikli).
+func _exit_tree() -> void:
+	if is_inside_tree() and Services.pending_teleport == Vector2.INF:
+		Services.return_position = global_position
+		Services.return_yaw = rotation.y
+
+
 func _ready() -> void:
 	floor_snap_length = Config.PLAYER_FLOOR_SNAP
 	# Bölgenin doğuş noktası (harita ekranından gelindiyse farklı bölge).
 	if Services.pending_teleport != Vector2.INF:
 		position = Vector3(Services.pending_teleport.x, position.y, Services.pending_teleport.y)
 		Services.pending_teleport = Vector2.INF
+		Services.return_position = Vector3.INF
 		_snap_to_navmesh = true  # yer bina ortası olabilir: harita hazır olunca yürünebilir en yakın noktaya
-	elif Services.zones != null and Services.zones.has(Services.current_zone):
-		var sp: Vector2 = Services.zones.get_zone(Services.current_zone)["spawn"]
-		position = Vector3(sp.x, position.y, sp.y)
-	var a: float = randf() * TAU
-	var r: float = sqrt(randf()) * SPAWN_SCATTER
-	position += Vector3(cos(a) * r, 0.0, sin(a) * r)
+		_scatter()
+	elif Services.return_position != Vector3.INF:
+		# Haritadan / pet seçiminden dönüş: tam bıraktığı yer ve yön
+		position = Services.return_position
+		rotation.y = Services.return_yaw
+		Services.return_position = Vector3.INF
+	else:
+		if Services.zones != null and Services.zones.has(Services.current_zone):
+			var sp: Vector2 = Services.zones.get_zone(Services.current_zone)["spawn"]
+			position = Vector3(sp.x, position.y, sp.y)
+		_scatter()
 	if character_id != &"":
 		set_character(character_id)
 	else:
