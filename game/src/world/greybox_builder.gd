@@ -5,6 +5,9 @@ extends Node3D
 
 const BuildingStyle := preload("res://src/world/building_style.gd")
 const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
+const PATH_COBBLE_SHADER: Shader = preload("res://assets/shaders/path_cobble.gdshader")
+
+static var _cobble_materials: Dictionary = {}
 
 @export_file("*.json") var data_path: String = ""
 ## Bina adlarını üstlerinde göster (greybox'ta yön bulmak için).
@@ -382,16 +385,34 @@ func _build_path(p: Dictionary) -> void:
 			Vector3(a.x + side.x, PATH_Y, a.y + side.y), Vector3(a.x - side.x, PATH_Y, a.y - side.y),
 			Vector3(b.x - side.x, PATH_Y, b.y - side.y), Vector3(b.x + side.x, PATH_Y, b.y + side.y),
 		]
-		for v: Vector3 in [q[0], q[2], q[1], q[0], q[3], q[2]]:
-			st.add_vertex(v)
+		# UV.x = yol genişliği boyunca 0..1 (0: sol kenar, 1: sağ kenar)
+		var uvs: Array[Vector2] = [
+			Vector2(0.0, 0.0), Vector2(1.0, 0.0),
+			Vector2(1.0, 1.0), Vector2(0.0, 1.0),
+		]
+		var indices: Array[int] = [0, 2, 1, 0, 3, 2]
+		for idx: int in indices:
+			st.set_uv(uvs[idx])
+			st.add_vertex(q[idx])
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
-	var path_color: Color = SERVICE_PATH_COLOR if kind == "service" else PATH_COLOR
-	mesh.surface_set_material(0, _material(path_color))
+	if kind == "service":
+		mesh.surface_set_material(0, _material(SERVICE_PATH_COLOR))
+	else:
+		mesh.surface_set_material(0, _get_cobble_material(width))
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	add_child(mi)
+
+
+static func _get_cobble_material(width: float) -> ShaderMaterial:
+	if not _cobble_materials.has(width):
+		var mat: ShaderMaterial = ShaderMaterial.new()
+		mat.shader = PATH_COBBLE_SHADER
+		mat.set_shader_parameter("road_width", width)
+		_cobble_materials[width] = mat
+	return _cobble_materials[width]
 
 
 ## Tarihi binalara kırma (hip) çatı mesh'i üretir.

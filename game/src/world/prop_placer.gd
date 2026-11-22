@@ -11,6 +11,8 @@ const TREE_VISIBILITY_END: float = 220.0
 const PROP_VISIBILITY_END: float = 120.0
 const VISIBILITY_RANGE_MARGIN: float = 20.0
 
+const LampMeshScript := preload("res://src/world/lamp_mesh.gd")
+
 const PROP_PATHS: Dictionary = {
 	"tree_birch": "res://assets/props/tree_birch.glb",
 	"tree_pine": "res://assets/props/tree_pine.glb",
@@ -31,7 +33,7 @@ const TYPE_SCALES: Dictionary = {
 	"bush_common": 1.0,
 	"bush_berries": 1.0,
 	"bench": 2.4,
-	"lamp": 0.65,
+	"lamp": 1.0,
 	"trashcan": 1.0,
 }
 
@@ -123,8 +125,13 @@ func build_props(data: Dictionary) -> void:
 				pass
 
 	# GLB modellerinden mesh verilerini bir kez çıkarıp önbelleğe al
+	# "lamp" tipi için kodla üretilen fener mesh'i (LampMesh) kullanılır
 	var mesh_cache: Dictionary = {}
 	for type: String in PROP_PATHS.keys():
+		if type == "lamp":
+			var lamp_entries: Array[Dictionary] = [{"mesh": LampMeshScript.create_mesh(), "transform": Transform3D.IDENTITY}]
+			mesh_cache["lamp"] = lamp_entries
+			continue
 		var glb_path: String = PROP_PATHS[type]
 		var scene: PackedScene = load(glb_path)
 		if scene == null:
