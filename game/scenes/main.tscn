@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://src/ui/map_button.gd" id="12"]
 [ext_resource type="Script" path="res://src/world/day_night.gd" id="13"]
 [ext_resource type="Script" path="res://src/world/street_lights.gd" id="14"]
+[ext_resource type="Script" path="res://src/ui/perf_label.gd" id="15"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -179,6 +180,13 @@ mouse_filter = 0
 theme_override_font_sizes/font_size = 28
 text = "Pet"
 script = SubResource("pet_btn_script")
+
+[node name="PerfLabel" type="Label" parent="UI"]
+offset_left = 24.0
+offset_top = 1240.0
+offset_right = 400.0
+offset_bottom = 1270.0
+script = ExtResource("15")
 
 [node name="MapButton" type="Button" parent="UI"]
 anchors_preset = 1
