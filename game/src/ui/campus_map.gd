@@ -6,6 +6,8 @@ extends Control
 const ZoneCatalog := preload("res://src/world/zone_catalog.gd")
 const CAMPUS_DATA: String = "res://data/zones/davutpasa_campus.json"
 const PLACES_DATA: String = "res://data/places.json"
+const CARE_SPOTS_DATA: String = "res://data/care_spots.json"
+
 ## Haritada adıyla gösterilen yer türleri (kalabalık olmasın diye hepsi değil).
 const PLACE_KINDS: Dictionary = {
 	"faculty": Color(0.12, 0.18, 0.42),
@@ -20,6 +22,16 @@ const PLACE_DOT: float = 5.0
 ## Yere dokunma toleransı (px).
 const PLACE_TOUCH_RADIUS: float = 28.0
 const GAME_SCENE: String = "res://scenes/main.tscn"
+
+## Bakım yerleri simgeleri ve alan renkleri.
+const COLOR_SPOT_EAT: Color = Color(0.92, 0.45, 0.1)
+const COLOR_SPOT_REST: Color = Color(0.2, 0.5, 0.9)
+const COLOR_SPOT_PLAY: Color = Color(0.25, 0.68, 0.28)
+const SPOT_AREA_ALPHA: float = 0.22
+const SPOT_AREA_OUTLINE_ALPHA: float = 0.5
+const SPOT_ICON_RADIUS: float = 11.0
+const LEGEND_FONT_SIZE: int = 18
+const COLOR_LEGEND_TEXT: Color = Color(0.22, 0.24, 0.26)
 
 const COLOR_BG: Color = Color(0.93, 0.93, 0.9)
 const COLOR_CAMPUS: Color = Color(0.56, 0.74, 0.38)
@@ -49,12 +61,17 @@ var selected_place: Dictionary = {}
 
 var _data: Dictionary = {}
 var _places: Array = []
+var _care_spots: Dictionary = {}
 var _bounds: Rect2 = Rect2()
 var _scale: float = 1.0
 var _offset: Vector2 = Vector2.ZERO
 var _title: Label
 var _confirm: PanelContainer
 var _confirm_label: Label
+
+var care_spots: Dictionary:
+	get:
+		return _care_spots
 
 
 ## Oyundan haritayı açar.
@@ -70,6 +87,8 @@ func _ready() -> void:
 	_bounds = compute_bounds(_data)
 	var pl: Variant = JSON.parse_string(FileAccess.get_file_as_string(PLACES_DATA))
 	_places = (pl as Dictionary).get("places", []) if pl is Dictionary else []
+	var cs: Variant = JSON.parse_string(FileAccess.get_file_as_string(CARE_SPOTS_DATA))
+	_care_spots = cs if cs is Dictionary else {}
 	_build_ui()
 	resized.connect(_fit)
 	_fit()
@@ -131,6 +150,7 @@ func _draw() -> void:
 		outline.append(poly[0])
 		draw_polyline(outline, COLOR_HISTORIC_ROOF if historic else COLOR_ROAD.lightened(0.3), 2.0 if historic else 1.0, true)
 	var font: Font = get_theme_default_font()
+	_draw_care_spots(font)
 	_draw_places(font)
 	if not selected_place.is_empty():
 		var sp: Array = selected_place.get("pos", [0, 0])
@@ -141,6 +161,106 @@ func _draw() -> void:
 		var h: Vector2 = world_to_map(here)
 		draw_circle(h, 12.0, Color.WHITE)
 		draw_circle(h, 8.0, Color(0.85, 0.15, 0.15))
+	if _confirm != null and not _confirm.visible:
+		_draw_legend(font)
+
+
+## Bakım yerleri: her tür için yarı saydam etki alanı ve merkez simgesi.
+## Yer adlarının altında kalacak şekilde çizilir.
+func _draw_care_spots(font: Font) -> void:
+	var kinds: PackedStringArray = ["eat", "rest", "play"]
+	# 1. Yarı saydam etki alanı daireleri
+	for k: String in kinds:
+		var col: Color = COLOR_SPOT_EAT if k == "eat" else (COLOR_SPOT_REST if k == "rest" else COLOR_SPOT_PLAY)
+		for s: Dictionary in _care_spots.get(k, []):
+			var w: Vector2 = Vector2(float(s.get("x", 0.0)), float(s.get("z", 0.0)))
+			var center: Vector2 = world_to_map(w)
+			var r_px: float = float(s.get("r", 20.0)) * _scale
+			var fill: Color = col
+			fill.a = SPOT_AREA_ALPHA
+			draw_circle(center, r_px, fill)
+			var outline: Color = col
+			outline.a = SPOT_AREA_OUTLINE_ALPHA
+			draw_arc(center, r_px, 0.0, TAU, 36, outline, 1.5, true)
+
+	# 2. Merkez simgeleri (küçük rozetler)
+	for k: String in kinds:
+		var col: Color = COLOR_SPOT_EAT if k == "eat" else (COLOR_SPOT_REST if k == "rest" else COLOR_SPOT_PLAY)
+		for s: Dictionary in _care_spots.get(k, []):
+			var w: Vector2 = Vector2(float(s.get("x", 0.0)), float(s.get("z", 0.0)))
+			var icon_pos: Vector2 = world_to_map(w)
+			# Çakışan koordinatlar için (ör. Kulüpler Vadisi hem rest hem play) simgeleri yan yana kaydır
+			if _has_overlapping_spot(w, k):
+				if k == "rest":
+					icon_pos += Vector2(-SPOT_ICON_RADIUS - 1.0, 0.0)
+				elif k == "play":
+					icon_pos += Vector2(SPOT_ICON_RADIUS + 1.0, 0.0)
+
+			draw_circle(icon_pos, SPOT_ICON_RADIUS + 1.5, Color.WHITE)
+			draw_circle(icon_pos, SPOT_ICON_RADIUS, col)
+
+			if k == "eat":
+				# Çatal-bıçak benzeri iki çizgi
+				draw_line(icon_pos + Vector2(-3.0, -5.0), icon_pos + Vector2(-3.0, 5.0), Color.WHITE, 1.8)
+				draw_line(icon_pos + Vector2(-4.5, -5.0), icon_pos + Vector2(-1.5, -5.0), Color.WHITE, 1.5)
+				draw_line(icon_pos + Vector2(3.0, -5.0), icon_pos + Vector2(3.0, 5.0), Color.WHITE, 1.8)
+			elif k == "rest":
+				# "z" harfi
+				var z_str: String = "z"
+				var sz: Vector2 = font.get_string_size(z_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
+				var ascent: float = font.get_ascent(14)
+				var at: Vector2 = icon_pos + Vector2(-sz.x * 0.5, ascent * 0.35)
+				draw_string(font, at, z_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+			elif k == "play":
+				# Küçük top (daire)
+				draw_circle(icon_pos, 4.0, Color.WHITE)
+
+
+func _has_overlapping_spot(w: Vector2, current_kind: String) -> bool:
+	for other_kind: String in ["eat", "rest", "play"]:
+		if other_kind == current_kind:
+			continue
+		for other_s: Dictionary in _care_spots.get(other_kind, []):
+			var other_w: Vector2 = Vector2(float(other_s.get("x", 0.0)), float(other_s.get("z", 0.0)))
+			if w.distance_squared_to(other_w) < 4.0:
+				return true
+	return false
+
+
+## Harita altı tek satır açıklama: "● Yemek  ● Dinlenme 2×  ● Oyun 2×" (renkli noktalar, draw_string).
+func _draw_legend(font: Font) -> void:
+	var items: Array = [
+		{"color": COLOR_SPOT_EAT, "text": " Yemek"},
+		{"color": COLOR_SPOT_REST, "text": " Dinlenme 2×"},
+		{"color": COLOR_SPOT_PLAY, "text": " Oyun 2×"},
+	]
+	var dot_radius: float = 5.0
+	var dot_spacing: float = 14.0
+	var sep: String = "    "
+	var total_w: float = 0.0
+	var sep_w: float = font.get_string_size(sep, HORIZONTAL_ALIGNMENT_LEFT, -1, LEGEND_FONT_SIZE).x
+	var widths: Array = []
+	for i: int in range(items.size()):
+		var tw: float = font.get_string_size(str(items[i]["text"]), HORIZONTAL_ALIGNMENT_LEFT, -1, LEGEND_FONT_SIZE).x
+		widths.append(tw)
+		total_w += dot_spacing + tw
+		if i < items.size() - 1:
+			total_w += sep_w
+	var cur_x: float = (size.x - total_w) * 0.5
+	var at_y: float = size.y - (BOTTOM_BAR * 0.5)
+	var dot_y: float = at_y - font.get_ascent(LEGEND_FONT_SIZE) * 0.3
+	for i: int in range(items.size()):
+		var col: Color = items[i]["color"]
+		var txt: String = str(items[i]["text"])
+		var dot_center: Vector2 = Vector2(cur_x + dot_radius, dot_y)
+		draw_circle(dot_center, dot_radius + 1.0, Color.WHITE)
+		draw_circle(dot_center, dot_radius, col)
+		cur_x += dot_spacing
+		draw_string_outline(font, Vector2(cur_x, at_y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, LEGEND_FONT_SIZE, 3, Color.WHITE)
+		draw_string(font, Vector2(cur_x, at_y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, LEGEND_FONT_SIZE, COLOR_LEGEND_TEXT)
+		cur_x += float(widths[i])
+		if i < items.size() - 1:
+			cur_x += sep_w
 
 
 ## Yer adları: tür rengiyle küçük nokta + ad (bölge işaretlerinin altında kalır).
