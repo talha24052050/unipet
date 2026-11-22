@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://src/world/prop_placer.gd" id="10"]
 [ext_resource type="PackedScene" path="res://scenes/ui/care_hud.tscn" id="11"]
 [ext_resource type="Script" path="res://src/ui/map_button.gd" id="12"]
+[ext_resource type="Script" path="res://src/world/day_night.gd" id="13"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -111,6 +112,11 @@ script = SubResource("main_script")
 
 [node name="Environment" type="WorldEnvironment" parent="."]
 environment = SubResource("env")
+
+[node name="DayNight" type="Node" parent="." node_paths=PackedStringArray("sun", "environment")]
+script = ExtResource("13")
+sun = NodePath("../Sun")
+environment = NodePath("../Environment")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=322762779]
 transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 10, 0)
