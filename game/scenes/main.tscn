@@ -160,7 +160,7 @@ target = NodePath("../Player")
 [node name="Label" type="Label" parent="UI" unique_id=691788432]
 offset_left = 24.0
 offset_top = 24.0
-text = "UniPet — Ortabahçe (greybox)"
+text = "UniPet — Davutpaşa Kampüsü"
 
 [node name="Joystick" type="Control" parent="UI"]
 mouse_filter = 2
