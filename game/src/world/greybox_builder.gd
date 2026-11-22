@@ -478,12 +478,34 @@ var _style_materials: Dictionary = {}  # bina stili -> ortak duvar ShaderMateria
 var _grass_materials: Dictionary = {}
 
 
+const GRASS_NOISE_SIZE: int = 128
+static var _grass_noise_tex: NoiseTexture2D
+
+
+## Çim alacalığı için küçük, dikişsiz gürültü dokusu (oyun açılırken üretilir; repoda dosya yok).
+static func _grass_noise() -> NoiseTexture2D:
+	if _grass_noise_tex == null:
+		var n: FastNoiseLite = FastNoiseLite.new()
+		n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		n.frequency = 0.03
+		n.fractal_octaves = 3
+		n.seed = 2405
+		_grass_noise_tex = NoiseTexture2D.new()
+		_grass_noise_tex.width = GRASS_NOISE_SIZE
+		_grass_noise_tex.height = GRASS_NOISE_SIZE
+		_grass_noise_tex.seamless = true
+		_grass_noise_tex.generate_mipmaps = true
+		_grass_noise_tex.noise = n
+	return _grass_noise_tex
+
+
 ## Alacalı çim (aynı renk = aynı malzeme, birleştirmeye uygun).
 func _grass_material(color: Color) -> ShaderMaterial:
 	if not _grass_materials.has(color):
 		var m: ShaderMaterial = ShaderMaterial.new()
 		m.shader = GRASS_SHADER
 		m.set_shader_parameter("base_color", color)
+		m.set_shader_parameter("noise_tex", _grass_noise())
 		_grass_materials[color] = m
 	return _grass_materials[color]
 
