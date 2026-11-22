@@ -15,6 +15,11 @@
   <img alt="motor" src="https://img.shields.io/badge/Godot-4.7-478CBF">
 </p>
 
+<p align="center">
+  <a href="docs/media/unipet_reklam.mp4"><img src="docs/media/unipet_reklam.gif" width="260" alt="UniPet tanıtım videosu"></a><br>
+  <sub>Tanıtım videosu (oyun içi çekim) · <a href="docs/media/unipet_reklam.mp4">sesli izlemek için tıkla</a></sub>
+</p>
+
 ---
 
 ## Nedir?
