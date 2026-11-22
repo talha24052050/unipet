@@ -6,6 +6,12 @@ extends Node3D
 const BuildingStyle := preload("res://src/world/building_style.gd")
 const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
 const PATH_COBBLE_SHADER: Shader = preload("res://assets/shaders/path_cobble.gdshader")
+const CourtyardDecor := preload("res://src/world/courtyard_decor.gd")
+## Ortabahçe (Kışla avlusu) yolları gerçekte pembe-kırmızı beton; dışarıdaki yaya yolları parke.
+const PATTERN_COBBLE: int = 0
+const PATTERN_PINK_CONCRETE: int = 1
+var _courtyard_hull: PackedVector2Array = PackedVector2Array()
+var _courtyard_poly: PackedVector2Array = PackedVector2Array()
 
 static var _cobble_materials: Dictionary = {}
 
@@ -15,14 +21,14 @@ static var _cobble_materials: Dictionary = {}
 
 const PATH_WIDTHS: Dictionary = {"footway": 2.0, "path": 1.5, "pedestrian": 4.0, "service": 4.0}
 const AREA_COLORS: Dictionary = {
-	"park": Color(0.490, 0.729, 0.310), # #7DBA4F canlı yeşil
-	"garden": Color(0.45, 0.68, 0.28),
-	"grass": Color(0.490, 0.729, 0.310), # #7DBA4F
+	"park": Color(0.36, 0.53, 0.24),  # doğal koyu çim (referans: Ortabahçe drone/Street View)
+	"garden": Color(0.34, 0.50, 0.22),
+	"grass": Color(0.36, 0.53, 0.24),
 	"playground": Color(0.8, 0.7, 0.45),
 	"pitch": Color(0.3, 0.55, 0.3),
 }
 const BUILDING_COLOR: Color = Color(0.91, 0.93, 0.94)
-const GROUND_COLOR: Color = Color(0.490, 0.729, 0.310) # #7DBA4F canlı yeşil
+const GROUND_COLOR: Color = Color(0.39, 0.55, 0.26)  # doğal çim; alanlardan biraz açık
 const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
 const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
 ## Z-fighting olmasın diye katmanlar arası küçük yükseklik farkı.
@@ -79,6 +85,7 @@ func _ready() -> void:
 		return
 	var extent: Rect2 = data_extent(data)
 	_build_ground_rect(extent.grow(GROUND_MARGIN))
+	_find_courtyard(data)
 	for a: Dictionary in data.get("areas", []):
 		_build_area(a)
 	for p: Dictionary in data.get("paths", []):
@@ -91,6 +98,10 @@ func _ready() -> void:
 	# Binaya bağlı olmayan simge yapılar (kampüs kapıları)
 	for n: Node3D in free_landmarks():
 		add_child(n)
+	var decor: Node3D = CourtyardDecor.new()
+	decor.name = "CourtyardDecor"
+	add_child(decor)
+	decor.build(data, _path_lines)
 
 
 static func load_data(path: String) -> Dictionary:
@@ -296,7 +307,7 @@ func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 
 func _build_building(b: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(b.get("points", []))
-	var height: float = float(b.get("height", 10.0))
+	var height: float = landmark_height(str(b.get("name", "")), float(b.get("height", 10.0)))
 	# Sadece kutusu binanın kutusuyla kesişen yollar (kampüsün tamamında 300+ yol × 140 bina çok yavaştı).
 	var near_paths: Array[PackedVector2Array] = _paths_near(_poly_box(poly).grow(GATE_TOUCH_DIST + 1.0))
 	var mesh: ArrayMesh = extrude_polygon(poly, height, near_paths)
@@ -403,19 +414,36 @@ func _build_path(p: Dictionary) -> void:
 	if kind == "service":
 		mesh.surface_set_material(0, _material(SERVICE_PATH_COLOR))
 	else:
-		mesh.surface_set_material(0, _get_cobble_material(width))
+		var mid: Vector2 = pts[pts.size() / 2]
+		mesh.surface_set_material(0, _get_cobble_material(width, PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE))
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	add_child(mi)
 
 
-static func _get_cobble_material(width: float) -> ShaderMaterial:
-	if not _cobble_materials.has(width):
+static func _get_cobble_material(width: float, pattern: int = PATTERN_COBBLE) -> ShaderMaterial:
+	var key: Vector2 = Vector2(width, pattern)
+	if not _cobble_materials.has(key):
 		var mat: ShaderMaterial = ShaderMaterial.new()
 		mat.shader = PATH_COBBLE_SHADER
 		mat.set_shader_parameter("road_width", width)
-		_cobble_materials[width] = mat
-	return _cobble_materials[width]
+		mat.set_shader_parameter("pattern", pattern)
+		_cobble_materials[key] = mat
+	return _cobble_materials[key]
+
+
+func _find_courtyard(data: Dictionary) -> void:
+	for b: Dictionary in data.get("buildings", []):
+		if str(b.get("name", "")) == CourtyardDecor.KISLA_NAME:
+			_courtyard_poly = to_polygon(b.get("points", []))
+			_courtyard_hull = Geometry2D.convex_hull(_courtyard_poly)
+			return
+
+
+## Kışla'nın çevrelediği avlunun (Ortabahçe) içinde mi?
+func in_courtyard(p: Vector2) -> bool:
+	return _courtyard_hull.size() >= 3 and Geometry2D.is_point_in_polygon(p, _courtyard_hull) \
+		and not Geometry2D.is_point_in_polygon(p, _courtyard_poly)
 
 
 ## Tarihi binalara kırma (hip) çatı mesh'i üretir.
@@ -545,10 +573,14 @@ func _count_gates(poly: PackedVector2Array, paths: Array[PackedVector2Array]) ->
 	return total
 
 
+## OSM'de kat sayısı eksik/yanlış simge binalar için yükseklik (landmarks.json "heights"). Yoksa verilen.
+static func landmark_height(building_name: String, fallback: float) -> float:
+	landmark_decor("")  # manifest yüklensin
+	return float((_landmarks.get("_heights", {}) as Dictionary).get(building_name, fallback))
+
+
 ## Bina adı -> süs modeli (game/data/landmarks.json). Yoksa null.
 static func landmark_decor(building_name: String) -> Node3D:
-	if building_name.is_empty():
-		return null
 	if _landmarks.is_empty():
 		var f: FileAccess = FileAccess.open(LANDMARKS_PATH, FileAccess.READ)
 		_landmarks = {"_loaded": true}
@@ -556,6 +588,9 @@ static func landmark_decor(building_name: String) -> Node3D:
 			var data: Variant = JSON.parse_string(f.get_as_text())
 			if data is Dictionary:
 				_landmarks.merge((data as Dictionary).get("buildings", {}))
+				_landmarks["_heights"] = (data as Dictionary).get("heights", {})
+	if building_name.is_empty():
+		return null
 	var path: String = str(_landmarks.get(building_name, ""))
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return null

@@ -25,7 +25,7 @@ LEDGE_OUT = 0.18
 LEDGE_H = 0.22
 PARAPET_IN = 0.3
 PARAPET_H = 0.9
-MAX_TRIS = 2000
+MAX_TRIS = 2600  # Kışla 400 m çevreli tek bina; diğerleri < 1200
 EPS = 0.02
 
 COLORS = {
@@ -515,7 +515,9 @@ def main():
             print("YOK:", spec["match"])
             continue
         poly = clean([tuple(q) for q in bdata["points"]])
-        h = float(bdata.get("height", 10.0))
+        h = float(spec.get("height", bdata.get("height", 10.0)))
+        if "height" in spec:
+            manifest.setdefault("heights", {})[spec["match"]] = h
         b = Builder()
         spec = dict(spec, _paths=[[tuple(q) for q in p["points"]] for p in grey.get("paths", []) if p.get("kind") != "service"])
         RECIPES[spec["recipe"]](b, poly, h, spec, random.Random(spec["id"]))

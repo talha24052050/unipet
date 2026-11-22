@@ -17,6 +17,9 @@ L.COLORS.update({
     "plane_leaf2": (0.44, 0.62, 0.26),
     "cypress_leaf": (0.17, 0.33, 0.20),  # servi: koyu yeşil
     "cypress_bark": (0.38, 0.29, 0.22),
+    "pine_bark": (0.45, 0.33, 0.25),     # fıstık çamı: kızıl-kahve gövde
+    "pine_leaf": (0.20, 0.38, 0.20),
+    "pine_leaf2": (0.25, 0.44, 0.22),
 })
 MAX_TRIS = 700
 
@@ -68,9 +71,25 @@ def cypress_tree(seed):
     return b
 
 
+def stone_pine(seed):
+    """Fıstık çamı (Ortabahçe'de çok): uzun çıplak, hafif eğik gövde + yassı şemsiye taç."""
+    rng = random.Random(seed)
+    b = L.Builder()
+    lean = (rng.uniform(-0.8, 0.8), rng.uniform(-0.8, 0.8))
+    h = 8.5
+    for k in range(3):
+        t0, t1 = k / 3, (k + 1) / 3
+        b.cylinder(lean[0] * t0, lean[1] * t0, 0.36 - 0.08 * t0, h * t0, h * t1 + 0.05, "pine_bark", seg=6)
+    tx, tz = lean
+    ico_blob(b, tx, h + 1.4, tz, 4.2, "pine_leaf", rng, seg=9, rings=4, squash=0.38)
+    ico_blob(b, tx + 1.6, h + 0.9, tz - 1.0, 2.6, "pine_leaf2", rng, seg=7, rings=4, squash=0.42)
+    ico_blob(b, tx - 1.8, h + 1.1, tz + 1.2, 2.4, "pine_leaf2", rng, seg=7, rings=4, squash=0.42)
+    return b
+
+
 def main():
     out = os.path.join(L.ROOT, "game/assets/props")
-    for name, b in (("tree_plane", plane_tree("cinar")), ("tree_cypress", cypress_tree("servi"))):
+    for name, b in (("tree_plane", plane_tree("cinar")), ("tree_cypress", cypress_tree("servi")), ("tree_stonepine", stone_pine("fistik"))):
         tris = b.tri_count()
         assert tris <= MAX_TRIS, "%s: %d üçgen" % (name, tris)
         L.write_glb(os.path.join(out, name + ".glb"), name, b)

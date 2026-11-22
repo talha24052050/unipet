@@ -11,6 +11,9 @@ uniform vec4 brick_mortar_color : source_color = vec4(0.557, 0.549, 0.533, 1.0);
 uniform float cobble_size = 0.25;
 uniform float road_width = 2.0;
 uniform float edge_margin = 0.35;
+// 0: gri parke + tuğla kenar (dış yollar), 1: pembe-kırmızı beton plaka (Ortabahçe; Street View referansı)
+uniform int pattern = 0;
+uniform vec4 pink_color : source_color = vec4(0.69, 0.50, 0.46, 1.0);
 
 varying vec3 world_pos;
 
@@ -54,7 +57,16 @@ void fragment() {
 
 	// Kenar şeridi geçişi (0.35 m kala kırmızı tuğla şerit)
 	float edge_blend = smoothstep(edge_margin - 0.02, edge_margin + 0.02, dist_to_edge);
-	ALBEDO = mix(final_brick, final_cobble, edge_blend);
+	if (pattern == 1) {
+		vec2 sp = world_pos.xz / 1.6;  // 1.6 m beton plaka
+		vec2 sf = fract(sp);
+		float joint = min(min(sf.x, 1.0 - sf.x), min(sf.y, 1.0 - sf.y));
+		float wear = hash(floor(sp)) * 0.12 + hash(floor(world_pos.xz * 1.7)) * 0.05;
+		vec3 slab = pink_color.rgb * (0.94 + wear);
+		ALBEDO = mix(slab * 0.82, slab, smoothstep(0.0, 0.025, joint));
+	} else {
+		ALBEDO = mix(final_brick, final_cobble, edge_blend);
+	}
 	ROUGHNESS = 0.88;
 	METALLIC = 0.0;
 }
