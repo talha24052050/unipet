@@ -81,3 +81,17 @@ func test_offline_care_flow() -> String:
 	if float(got[1][2]["food"]) <= 80.0:
 		return "yemek tokluğu artırmadı"
 	return ""
+
+
+func test_location_bonus() -> String:
+	var st: Dictionary = {"food": 50.0, "joy": 50.0, "energy": 50.0, "t": 0}
+	var stadium: Vector3 = Vector3(-285, 0, 49)
+	if R.bonus_for("play", stadium) != 2.0 or R.bonus_for("play", Vector3(500, 0, 500)) != 1.0 or R.bonus_for("eat", stadium) != 1.0:
+		return "bonus yerleri yanlış"
+	var r: Dictionary = R.apply(st, "play", 0, {}, R.bonus_for("play", stadium))
+	# sunucu testindeki örnekle aynı: joy 50+30, energy 50-10 (eksi değişmez), food 50-5
+	if r["state"]["joy"] != 80.0 or r["state"]["energy"] != 40.0 or r["state"]["food"] != 45.0 or not r["bonus"]:
+		return "bonuslu oyun yanlış: %s" % r["state"]
+	if R.bonus_for("rest", Vector3(10, 0, 10)) != 2.0:
+		return "Ortabahçe'de dinlenme bonusu yok"
+	return ""

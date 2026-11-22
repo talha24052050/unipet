@@ -1,8 +1,63 @@
 {
-  "_note": "Bakım eylemlerinin yapılabildiği yerler (Ortabahçe koordinatları, metre). server/nakama/modules/index.js CARE_SPOTS ile AYNI olmalı (module.test.js kontrol eder).",
+  "_note": "Bakım eylemlerinin yapılabildiği yerler (Ortabahçe koordinatları, metre). server/nakama/modules/index.js CARE_SPOTS ile AYNI olmalı (module.test.js kontrol eder). eat: zorunlu konum. rest/play: bu yerlerde eylem 2 kat etkili (bonus).",
   "eat": [
-    {"name": "Yemekhane", "x": -103.5, "z": -95.2, "r": 45.0},
-    {"name": "Hokka", "x": -75.2, "z": -106.6, "r": 22.0},
-    {"name": "Kayıntı Kafe", "x": -99.9, "z": -124.7, "r": 22.0}
+    {
+      "name": "Yemekhane",
+      "x": -103.5,
+      "z": -95.2,
+      "r": 45.0
+    },
+    {
+      "name": "Hokka",
+      "x": -75.2,
+      "z": -106.6,
+      "r": 22.0
+    },
+    {
+      "name": "Kayıntı Kafe",
+      "x": -99.9,
+      "z": -124.7,
+      "r": 22.0
+    }
+  ],
+  "rest": [
+    {
+      "name": "Ortabahçe",
+      "x": 0.0,
+      "z": 0.0,
+      "r": 100.0
+    },
+    {
+      "name": "Kulüpler Vadisi",
+      "x": -280.0,
+      "z": -20.0,
+      "r": 50.0
+    }
+  ],
+  "play": [
+    {
+      "name": "YTÜ Stadyumu",
+      "x": -285.5,
+      "z": 49.3,
+      "r": 60.0
+    },
+    {
+      "name": "Açık Oyun Sahaları",
+      "x": -260.0,
+      "z": -115.0,
+      "r": 50.0
+    },
+    {
+      "name": "Kulüpler Vadisi",
+      "x": -280.0,
+      "z": -20.0,
+      "r": 50.0
+    },
+    {
+      "name": "Spor Kompleksi",
+      "x": -298.8,
+      "z": -213.6,
+      "r": 40.0
+    }
   ]
 }

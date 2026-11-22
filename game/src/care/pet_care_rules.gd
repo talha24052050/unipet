@@ -23,6 +23,16 @@ const SPOTS_PATH: String = "res://data/care_spots.json"
 const PLAYER_ACTIONS: PackedStringArray = ["eat", "rest", "play"]
 ## Eylem → konum şartı (care_spots.json anahtarı).
 const ACTION_SPOT: Dictionary = {"eat": "eat"}
+## Eylem → bu yerlerde artışlar BONUS_MULTIPLIER kat (care_spots.json anahtarı).
+const ACTION_BONUS_SPOT: Dictionary = {"rest": "rest", "play": "play"}
+const BONUS_MULTIPLIER: float = 2.0
+
+
+## Bu konumda eylemin çarpanı (bonus yerindeyse 2, değilse 1).
+static func bonus_for(action: String, pos: Vector3) -> float:
+	if ACTION_BONUS_SPOT.has(action) and near_spot(ACTION_BONUS_SPOT[action], pos):
+		return BONUS_MULTIPLIER
+	return 1.0
 
 
 ## `pos` bu eylem türünün yerlerinden birinin yakınında mı?
@@ -58,7 +68,8 @@ static func decay(state: Dictionary, now: int) -> Dictionary:
 
 
 ## Eylemi uygular. last_action: {eylem: unix} (bekleme kontrolü). Dönen: {"ok", "state", "reason"}.
-static func apply(state: Dictionary, action: String, now: int, last_action: Dictionary) -> Dictionary:
+## bonus: olumlu artışların çarpanı (bonus_for); eksiler (ör. oynamanın enerji maliyeti) değişmez.
+static func apply(state: Dictionary, action: String, now: int, last_action: Dictionary, bonus: float = 1.0) -> Dictionary:
 	if not ACTIONS.has(action):
 		return {"ok": false, "state": state, "reason": "bilinmeyen eylem"}
 	var rule: Dictionary = ACTIONS[action]
@@ -67,8 +78,11 @@ static func apply(state: Dictionary, action: String, now: int, last_action: Dict
 	var s: Dictionary = decay(state, now)
 	for stat: String in STATS:
 		if rule.has(stat):
-			s[stat] = snappedf(clampf(float(s[stat]) + float(rule[stat]), 0.0, MAX), 0.01)
-	return {"ok": true, "state": s, "reason": ""}
+			var delta: float = float(rule[stat])
+			if delta > 0.0:
+				delta *= bonus
+			s[stat] = snappedf(clampf(float(s[stat]) + delta, 0.0, MAX), 0.01)
+	return {"ok": true, "state": s, "reason": "", "bonus": bonus > 1.0}
 
 
 ## Petin genel ruh hali → animasyon/yüz ifadesi için (en düşük değere göre).

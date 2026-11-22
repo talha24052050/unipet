@@ -96,7 +96,14 @@ var pl2 = M.careApply({ food: 3, joy: 95, energy: 5, t: 0 }, "play", 0, {});
 assert.deepEqual([pl2.state.joy, pl2.state.energy, pl2.state.food], [100, 0, 0], "oyun kırpma");
 // care_spots.json ile aynı mı
 var spots = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "..", "game", "data", "care_spots.json"), "utf8"));
-assert.deepEqual(JSON.parse(JSON.stringify(M.CARE_SPOTS.eat)), spots.eat, "CARE_SPOTS ≠ care_spots.json");
+["eat", "rest", "play"].forEach(function (k) {
+  assert.deepEqual(JSON.parse(JSON.stringify(M.CARE_SPOTS[k])), spots[k], "CARE_SPOTS." + k + " ≠ care_spots.json");
+});
+var pb = M.careApply({ food: 50, joy: 50, energy: 50, t: 0 }, "play", 0, {}, 2);
+assert.deepEqual([pb.state.joy, pb.state.energy, pb.state.food, pb.bonus], [80, 40, 45, true], "bonus sadece artışlara");
+assert.strictEqual(M.careBonus("play", [-285, 0, 49]), 2, "stadyumda oyun bonusu");
+assert.strictEqual(M.careBonus("play", [500, 0, 500]), 1);
+assert.strictEqual(M.careBonus("eat", [-285, 0, 49]), 1, "yemekte bonus yok");
 // odada: uzakta yemek reddedilir, yakında kabul, sosyal chat ile gelir
 sent = [];
 var st2 = M.matchInit(ctx({}), logger, nk, { zone: "kampus" }).state;

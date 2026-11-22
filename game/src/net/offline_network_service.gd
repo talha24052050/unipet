@@ -43,7 +43,7 @@ func send_care_action(action: String) -> void:
 	if not loc.is_empty():
 		care_updated.emit(CareRules.decay(_care, now), false, loc)
 		return
-	var r: Dictionary = CareRules.apply(_care, action, now, _care_last)
+	var r: Dictionary = CareRules.apply(_care, action, now, _care_last, CareRules.bonus_for(action, _last_pos))
 	_care = r["state"]
 	if r["ok"]:
 		_care_last[action] = now

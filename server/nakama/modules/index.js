@@ -37,10 +37,65 @@ var CARE_ACTIONS = {
 var CARE_STATS = ["food", "joy", "energy"];
 // game/data/care_spots.json ile AYNI (module.test.js kontrol eder)
 var CARE_SPOTS = {
-  eat: [
-    { name: "Yemekhane", x: -103.5, z: -95.2, r: 45.0 },
-    { name: "Hokka", x: -75.2, z: -106.6, r: 22.0 },
-    { name: "Kayıntı Kafe", x: -99.9, z: -124.7, r: 22.0 }
+  "eat": [
+    {
+      "name": "Yemekhane",
+      "x": -103.5,
+      "z": -95.2,
+      "r": 45.0
+    },
+    {
+      "name": "Hokka",
+      "x": -75.2,
+      "z": -106.6,
+      "r": 22.0
+    },
+    {
+      "name": "Kayıntı Kafe",
+      "x": -99.9,
+      "z": -124.7,
+      "r": 22.0
+    }
+  ],
+  "rest": [
+    {
+      "name": "Ortabahçe",
+      "x": 0.0,
+      "z": 0.0,
+      "r": 100.0
+    },
+    {
+      "name": "Kulüpler Vadisi",
+      "x": -280.0,
+      "z": -20.0,
+      "r": 50.0
+    }
+  ],
+  "play": [
+    {
+      "name": "YTÜ Stadyumu",
+      "x": -285.5,
+      "z": 49.3,
+      "r": 60.0
+    },
+    {
+      "name": "Açık Oyun Sahaları",
+      "x": -260.0,
+      "z": -115.0,
+      "r": 50.0
+    },
+    {
+      "name": "Kulüpler Vadisi",
+      "x": -280.0,
+      "z": -20.0,
+      "r": 50.0
+    },
+    {
+      "name": "Spor Kompleksi",
+      "x": -298.8,
+      "z": -213.6,
+      "r": 40.0
+    }
   ]
 };
 var CARE_COLLECTION = "pet";
@@ -63,7 +118,11 @@ function careDecay(state, now) {
   return out;
 }
 
-function careApply(state, action, now, lastAction) {
+var CARE_BONUS_MULTIPLIER = 2;
+
+// bonus: olumlu artışların çarpanı; eksiler değişmez (pet_care_rules.gd ile aynı).
+function careApply(state, action, now, lastAction, bonus) {
+  bonus = typeof bonus === "number" ? bonus : 1;
   var rule = CARE_ACTIONS[action];
   if (!rule) return { ok: false, state: state, reason: "bilinmeyen eylem" };
   var last = lastAction && typeof lastAction[action] === "number" ? lastAction[action] : -1000000;
@@ -71,9 +130,9 @@ function careApply(state, action, now, lastAction) {
   var s = careDecay(state, now);
   for (var i = 0; i < CARE_STATS.length; i++) {
     var k = CARE_STATS[i];
-    if (typeof rule[k] === "number") s[k] = snap2(clampCare(s[k] + rule[k]));
+    if (typeof rule[k] === "number") s[k] = snap2(clampCare(s[k] + (rule[k] > 0 ? rule[k] * bonus : rule[k])));
   }
-  return { ok: true, state: s, reason: "" };
+  return { ok: true, state: s, reason: "", bonus: bonus > 1 };
 }
 
 function nearSpot(kind, p) {
@@ -97,13 +156,18 @@ function careSave(nk, userId, record) {
 }
 
 // Bir eylemi oyuncu adına uygular ve kaydeder. Dönen: {ok, reason, state}
-function careAct(nk, userId, action, now) {
+function careBonus(action, p) {
+  if ((action === "rest" || action === "play") && p && nearSpot(action, p)) return CARE_BONUS_MULTIPLIER;
+  return 1;
+}
+
+function careAct(nk, userId, action, now, pos) {
   var rec = careLoad(nk, userId) || { state: careNew(now), last: {} };
-  var r = careApply(rec.state, action, now, rec.last);
+  var r = careApply(rec.state, action, now, rec.last, careBonus(action, pos));
   rec.state = r.state;
   if (r.ok) rec.last[action] = now;
   careSave(nk, userId, rec);
-  return { ok: r.ok, reason: r.reason, state: r.state };
+  return { ok: r.ok, reason: r.reason, state: r.state, bonus: !!r.bonus };
 }
 
 var CHAT_PRESET = 0, CHAT_EMOTE = 1, CHAT_FREE = 2;
@@ -355,7 +419,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       } else if (act === "eat" && !nearSpot("eat", pl.p)) {
         res = { ok: false, reason: "Yemek için Yemekhane, Hokka ya da Kayıntı'ya git", state: null };
       } else {
-        res = careAct(nk, uid, act, Math.floor(Date.now() / 1000));
+        res = careAct(nk, uid, act, Math.floor(Date.now() / 1000), pl.p);
       }
       if (res.state === null) {
         var cur = careLoad(nk, uid);
