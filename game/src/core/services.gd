@@ -58,7 +58,7 @@ func use_server(address: Dictionary) -> void:
 	if want_nakama == is_nakama and not want_nakama:
 		return
 	if net != null:
-		net.leave_zone()
+		net.disconnect_from_server()  # sadece odadan çıkmak yetmez: eski soket açık kalıyordu
 		remove_child(net)
 		net.queue_free()
 	net = NakamaNetworkService.new() if want_nakama else OfflineNetworkService.new()

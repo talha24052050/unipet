@@ -50,7 +50,9 @@ func _add_logout_button() -> void:
 	b.add_theme_font_size_override("font_size", LOGOUT_FONT_SIZE)
 	b.position = Vector2(16, 16)
 	b.custom_minimum_size = Vector2(140, 96)
-	b.pressed.connect(_logout)
+	b.pressed.connect(func() -> void:
+		b.disabled = true  # çift basış iki kez çıkış/sahne değişimi yapmasın
+		_logout())
 	add_child(b)
 
 

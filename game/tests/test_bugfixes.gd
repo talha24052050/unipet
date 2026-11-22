@@ -55,3 +55,27 @@ func test_db_username_matches_schema() -> String:
 		if re.search(u) == null:
 			return "şemaya uymayan kullanıcı adı: '%s' → '%s'" % [raw, u]
 	return ""
+
+
+func test_sign_out_clears_state_without_waiting() -> String:
+	var a: Node = Supa.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(a)
+	a.set("_access_token", "eski")
+	a.set("_expires_at", int(Time.get_unix_time_from_system()) + 3600)
+	a.call("sign_out")
+	var still: bool = a.call("is_signed_in")
+	var tok: String = a.get("_access_token")
+	a.queue_free()
+	if still or not tok.is_empty():
+		return "çıkıştan hemen sonra hâlâ girişli görünüyor"
+	return ""
+
+
+func test_disconnect_cancels_pending_connect() -> String:
+	var n: Node = Nk.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(n)
+	var g0: int = n.get("_conn_gen")
+	n.call("disconnect_from_server")
+	var g1: int = n.get("_conn_gen")
+	n.queue_free()
+	return "" if g1 > g0 else "disconnect_from_server süren bağlanmayı iptal etmiyor"

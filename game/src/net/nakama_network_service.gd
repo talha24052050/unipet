@@ -28,6 +28,9 @@ var _pending: Dictionary = {}
 var _pending_zone: String = ""
 ## connect_to_url çağrıldı, henüz açılmadı: bu sırada kapanırsa da "koptu" yayınlanmalı (yoksa sonsuz "Bağlanıyor…").
 var _connecting: bool = false
+## Her bağlantı denemesi/kapatma bir artırır: await sürerken disconnect_from_server çağrıldıysa geç gelen HTTP
+## yanıtı eski hesapla soket açmasın.
+var _conn_gen: int = 0
 
 
 func _ready() -> void:
@@ -54,7 +57,11 @@ func connect_to_server(session_token: String) -> void:
 		disconnected.emit("Önce giriş yapılmalı.")
 		return
 	var body: Dictionary = {"id": custom_id, "vars": {"supabase_token": session_token}}
+	_conn_gen += 1
+	var gen: int = _conn_gen
 	var res: Dictionary = await _http_post("/v2/account/authenticate/custom?create=true", body)
+	if gen != _conn_gen:
+		return  # bu sırada çıkış yapıldı / yeni deneme başladı
 	if not res["ok"] or not (res["body"] is Dictionary) or not (res["body"] as Dictionary).has("token"):
 		disconnected.emit("Sunucuya giriş yapılamadı (%d)." % res["code"])
 		return
@@ -69,6 +76,7 @@ func connect_to_server(session_token: String) -> void:
 
 
 func disconnect_from_server() -> void:
+	_conn_gen += 1  # süren connect_to_server'ı iptal et
 	leave_zone()
 	_pending_zone = ""
 	_pending.clear()

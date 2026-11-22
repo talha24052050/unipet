@@ -79,10 +79,11 @@ func sign_out() -> void:
 	_access_token = ""
 	_refresh_token = ""
 	_user_id = ""
+	_expires_at = 0
+	# Sunucu tarafı çıkış (token iptali) en iyi çaba: beklenmez. İnternet yoksa çıkış 15 sn takılıyordu; yerel oturum
+	# zaten silindi. Token parametreyle gider, _access_token'a geri konmaz (istek sürerken is_signed_in true dönüyordu).
 	if not token.is_empty():
-		_access_token = token  # sunucu tarafı çıkış isteği için bir kez
-		await _post("/auth/v1/logout", {}, true)
-		_access_token = ""
+		_post("/auth/v1/logout", {}, true, token)
 
 
 func is_signed_in() -> bool:
@@ -158,7 +159,8 @@ static func error_message(code: int, body: Variant) -> String:
 	return "Giriş başarısız (%d)." % code
 
 
-func _post(path: String, body: Dictionary, with_auth: bool = false) -> Dictionary:
+## token_override: with_auth'ta _access_token yerine kullanılacak anahtar (çıkışta yerel oturum silindikten sonra).
+func _post(path: String, body: Dictionary, with_auth: bool = false, token_override: String = "") -> Dictionary:
 	if not is_configured():
 		return {"ok": false, "code": 0, "body": null}
 	var req: HTTPRequest = HTTPRequest.new()
@@ -166,7 +168,7 @@ func _post(path: String, body: Dictionary, with_auth: bool = false) -> Dictionar
 	add_child(req)
 	var headers: PackedStringArray = ["apikey: " + _anon_key, "Content-Type: application/json"]
 	if with_auth:
-		headers.append("Authorization: Bearer " + _access_token)
+		headers.append("Authorization: Bearer " + (token_override if not token_override.is_empty() else _access_token))
 	var err: Error = req.request(_url + path, headers, HTTPClient.METHOD_POST, JSON.stringify(body))
 	if err != OK:
 		req.queue_free()
