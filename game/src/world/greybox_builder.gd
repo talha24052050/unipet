@@ -26,6 +26,20 @@ const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu g
 const AREA_Y: float = 0.02
 const PATH_Y: float = 0.04
 const GROUND_MARGIN: float = 30.0
+const CampusMap := preload("res://src/ui/campus_map.gd")
+## Cephe tabelası.
+const SIGN_HEIGHT_M: float = 3.6
+const SIGN_PANEL_H: float = 0.9
+const SIGN_CHAR_W: float = 0.38
+const SIGN_PAD: float = 0.8
+const SIGN_OFFSET: float = 0.12
+const SIGN_COLOR: Color = Color(0.12, 0.18, 0.42)
+const SIGN_HISTORIC_COLOR: Color = Color(0.45, 0.2, 0.15)
+const SIGN_VISIBLE_DISTANCE: float = 90.0
+## Geçit kemeri (tarihi binalar).
+const PORTAL_PILLAR: Vector3 = Vector3(0.7, 0.0, 0.7)
+const PORTAL_BEAM_H: float = 0.6
+const PORTAL_COLOR: Color = Color(0.82, 0.74, 0.6)
 ## Bina adı etiketi: küçük ve sadece yakındayken.
 const LABEL_FONT_SIZE: int = 64
 const LABEL_PIXEL_SIZE: float = 0.012
@@ -320,21 +334,14 @@ func _build_building(b: Dictionary) -> void:
 			body.add_child(roof_mi)
 
 	if show_labels and not name_text.is_empty():
-		var label: Label3D = Label3D.new()
-		label.text = name_text
-		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.font_size = LABEL_FONT_SIZE
-		label.pixel_size = LABEL_PIXEL_SIZE
-		label.outline_size = LABEL_OUTLINE
-		# Uzaktan görünmesin, yakındayken de ekranı kaplamasın (telefonda HUD'un üstüne taşıyordu).
-		label.visibility_range_end = LABEL_VISIBLE_DISTANCE
-		label.visibility_range_end_margin = 10.0
-		label.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-		var c: Vector2 = _polygon_center(poly)
-		if not Geometry2D.is_point_in_polygon(c, poly):
-			c = poly[0]  # halka/U şekilli binada merkez dışarıda kalır (ör. Kışla avlusu)
-		label.position = Vector3(c.x, height + 2.0, c.y)
-		body.add_child(label)
+		# Havada asılı yazı yerine cepheye tabela: yola en yakın duvara, kapı hizasının üstüne.
+		var sign: Node3D = build_sign(poly, height, near_paths, CampusMap.short_name(name_text), style == BuildingStyle.STYLE_HISTORIC)
+		if sign != null:
+			body.add_child(sign)
+	# Tarihi binalarda (Kışla vb.) geçitlere taş kemer çerçevesi.
+	if style == BuildingStyle.STYLE_HISTORIC:
+		for portal: Node3D in build_portals(poly, near_paths, height):
+			body.add_child(portal)
 	add_child(body)
 	building_count += 1
 
@@ -506,6 +513,109 @@ func _count_gates(poly: PackedVector2Array, paths: Array[PackedVector2Array]) ->
 	for list: Array in find_gates(p, paths).values():
 		total += list.size()
 	return total
+
+
+## Kenarın dışa bakan birim normali (XZ). Çokgen yönünden bağımsız: kenar ortasının hemen dışı çokgen dışında olmalı.
+static func edge_outward(poly: PackedVector2Array, i: int) -> Vector2:
+	var a: Vector2 = poly[i]
+	var b: Vector2 = poly[(i + 1) % poly.size()]
+	var n: Vector2 = (b - a).normalized().orthogonal()
+	var mid: Vector2 = (a + b) * 0.5
+	return n if not Geometry2D.is_point_in_polygon(mid + n * 0.3, poly) else -n
+
+
+## Tabela için duvar seçimi: orta noktası yollara en yakın, yeterince uzun kenar. Kenar indeksi (-1 = yok).
+static func sign_edge(poly: PackedVector2Array, paths: Array[PackedVector2Array], min_len: float) -> int:
+	var best: int = -1
+	var best_d: float = INF
+	for i: int in poly.size():
+		var a: Vector2 = poly[i]
+		var b: Vector2 = poly[(i + 1) % poly.size()]
+		if a.distance_to(b) < min_len:
+			continue
+		var mid: Vector2 = (a + b) * 0.5
+		var d: float = 1e6 - a.distance_to(b)  # yol yoksa en uzun kenar
+		for line: PackedVector2Array in paths:
+			for j: int in line.size() - 1:
+				d = minf(d, mid.distance_to(Geometry2D.get_closest_point_to_segment(mid, line[j], line[j + 1])))
+		if d < best_d:
+			best_d = d
+			best = i
+	return best
+
+
+func build_sign(poly: PackedVector2Array, height: float, paths: Array[PackedVector2Array], text: String, historic: bool) -> Node3D:
+	var width: float = SIGN_PAD + text.length() * SIGN_CHAR_W
+	var i: int = sign_edge(poly, paths, width + 1.0)
+	if i == -1:
+		return null
+	var a: Vector2 = poly[i]
+	var b: Vector2 = poly[(i + 1) % poly.size()]
+	var n: Vector2 = edge_outward(poly, i)
+	var mid: Vector2 = (a + b) * 0.5 + n * SIGN_OFFSET
+	var y: float = minf(SIGN_HEIGHT_M, height - SIGN_PANEL_H)
+	var root: Node3D = Node3D.new()
+	root.name = "Sign"
+	root.position = Vector3(mid.x, y, mid.y)
+	# Tabelanın önü (+Z) duvarın dışına baksın.
+	root.rotation.y = atan2(n.x, n.y)
+	var panel: MeshInstance3D = MeshInstance3D.new()
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(width, SIGN_PANEL_H, 0.08)
+	box.material = _material(SIGN_HISTORIC_COLOR if historic else SIGN_COLOR)
+	panel.mesh = box
+	panel.visibility_range_end = SIGN_VISIBLE_DISTANCE
+	root.add_child(panel)
+	var label: Label3D = Label3D.new()
+	label.text = text
+	label.font_size = 64
+	label.pixel_size = 0.0085
+	label.outline_size = 0
+	label.modulate = Color(1, 0.97, 0.88)
+	label.position = Vector3(0, 0, 0.05)
+	label.double_sided = false
+	label.visibility_range_end = SIGN_VISIBLE_DISTANCE
+	root.add_child(label)
+	return root
+
+
+## Tarihi binanın geçitlerine iki sütun + üst kiriş (geçit açıklığının dış yüzünde).
+func build_portals(poly: PackedVector2Array, paths: Array[PackedVector2Array], height: float) -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	var p: PackedVector2Array = poly.duplicate()
+	if Geometry2D.is_polygon_clockwise(p):
+		p.reverse()
+	var gates: Dictionary = find_gates(p, paths)
+	var mat: StandardMaterial3D = _material(PORTAL_COLOR)
+	var pillar_h: float = minf(GATE_HEIGHT + PORTAL_BEAM_H, height)
+	for i: int in gates:
+		var a: Vector2 = p[i]
+		var b: Vector2 = p[(i + 1) % p.size()]
+		var dir: Vector2 = (b - a).normalized()
+		var n: Vector2 = edge_outward(p, i)
+		for t: float in gates[i]:
+			var c: Vector2 = a.lerp(b, t) + n * (PORTAL_PILLAR.z * 0.5)
+			var root: Node3D = Node3D.new()
+			root.name = "Portal"
+			root.position = Vector3(c.x, 0.0, c.y)
+			root.rotation.y = atan2(n.x, n.y)
+			for side: float in [-1.0, 1.0]:
+				var pillar: MeshInstance3D = MeshInstance3D.new()
+				var pm: BoxMesh = BoxMesh.new()
+				pm.size = Vector3(PORTAL_PILLAR.x, pillar_h, PORTAL_PILLAR.z)
+				pm.material = mat
+				pillar.mesh = pm
+				pillar.position = Vector3(side * (GATE_WIDTH * 0.5 + PORTAL_PILLAR.x * 0.5), pillar_h * 0.5, 0.0)
+				root.add_child(pillar)
+			var beam: MeshInstance3D = MeshInstance3D.new()
+			var bm: BoxMesh = BoxMesh.new()
+			bm.size = Vector3(GATE_WIDTH + PORTAL_PILLAR.x * 2.0, PORTAL_BEAM_H, PORTAL_PILLAR.z)
+			bm.material = mat
+			beam.mesh = bm
+			beam.position = Vector3(0.0, GATE_HEIGHT + PORTAL_BEAM_H * 0.5, 0.0)
+			root.add_child(beam)
+			out.append(root)
+	return out
 
 
 static func _polygon_center(poly: PackedVector2Array) -> Vector2:

@@ -89,3 +89,17 @@ func test_gate_cuts_wall() -> String:
 		if p.y < Greybox.GATE_HEIGHT - 0.01 and absf(p.x - 10.0) < Greybox.GATE_WIDTH * 0.5 - 0.01 and (p.z < 0.01 or p.z > 19.99):
 			return "geçit aralığında yerde duvar köşesi var: %s" % p
 	return ""
+
+
+
+func test_edge_outward_and_sign_edge() -> String:
+	var sq: PackedVector2Array = PackedVector2Array([Vector2(0, 0), Vector2(20, 0), Vector2(20, 10), Vector2(0, 10)])
+	for i: int in 4:
+		var n: Vector2 = Greybox.edge_outward(sq, i)
+		var mid: Vector2 = (sq[i] + sq[(i + 1) % 4]) * 0.5
+		if Geometry2D.is_point_in_polygon(mid + n, sq):
+			return "kenar %d normali içe bakıyor" % i
+	var path: Array[PackedVector2Array] = [PackedVector2Array([Vector2(-5, 15), Vector2(25, 15)])]
+	if Greybox.sign_edge(sq, path, 3.0) != 2:
+		return "tabela yola bakan kenarda olmalı (2): %d" % Greybox.sign_edge(sq, path, 3.0)
+	return ""
