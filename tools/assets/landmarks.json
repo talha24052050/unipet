@@ -48,6 +48,16 @@
       "recipe": "domed",
       "domes": 3,
       "chimneys": 0
+    },
+    {
+      "match": "BÜYÜK EV",
+      "id": "buyukev",
+      "recipe": "gable_hall",
+      "height": 4.2,
+      "front": [
+        -35.3,
+        -57.8
+      ]
     }
   ],
   "gates": [

@@ -5,7 +5,7 @@ uniform vec4 wall_color : source_color = vec4(0.91, 0.93, 0.94, 1.0);
 uniform vec4 window_color : source_color = vec4(0.18, 0.24, 0.32, 1.0);
 uniform vec4 frame_color : source_color = vec4(0.78, 0.82, 0.85, 1.0);
 uniform vec4 roof_color : source_color = vec4(0.68, 0.71, 0.74, 1.0);
-uniform int style : hint_range(0, 3) = 0;
+uniform int style : hint_range(0, 4) = 0;
 // Kışla dış cephesi (Street View 2025): sıvasız kaba taş örgü + pencere kemerleri tuğla. Avlu tarafı krem sıva kalır.
 // outer_stone açıkken, normali avlu merkezinden DIŞARI bakan duvarlar taş çizilir.
 uniform bool outer_stone = false;
@@ -126,6 +126,18 @@ void fragment() {
 			}
 		}
 
+		if (style == 4 && world_pos.y >= 0.3) {
+			// 4: Dükkân cephesi: 0.4–3.1 m tavana kadar cam, 1.6 m'de bir siyah kayıt, üstte siyah bant
+			float u4 = mod(wall_u, 1.6);
+			if (world_pos.y < 3.1) {
+				bool mull = u4 < 0.1 || world_pos.y < 0.45 || world_pos.y > 3.0;
+				col = mull ? frame_color.rgb : window_color.rgb;
+				roughness = mull ? 0.6 : 0.15;
+				metallic = mull ? 0.3 : 0.2;
+			} else if (world_pos.y < 3.5) {
+				col = frame_color.rgb;  // tabela/saçak bandı
+			}
+		}
 		if (style == 3 && world_pos.y >= 0.3) {
 			// 3: Kırmızı tuğla + kat döşemesi hizasında beyaz beton bant + beyaz çerçeveli pencereler (Yemekhane)
 			float brow = floor(world_pos.y / 0.075);

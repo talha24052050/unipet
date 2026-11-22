@@ -411,6 +411,12 @@ func _build_building(b: Dictionary) -> void:
 		# Havada asılı yazı yerine cepheye tabela: yola en yakın duvara, kapı hizasının üstüne.
 		var sign: Node3D = build_sign(poly, height, near_paths, CampusMap.short_name(name_text), style == BuildingStyle.STYLE_HISTORIC)
 		if sign != null:
+			# Süs modeli tabela yeri verdiyse (ör. Büyük Ev: çatı alnı) oraya taşı: [x, y, z, yaw]
+			landmark_decor("")
+			var sp: Variant = (_landmarks.get("_signs", {}) as Dictionary).get(name_text)
+			if sp is Array and (sp as Array).size() == 4:
+				sign.position = Vector3(float(sp[0]), float(sp[1]), float(sp[2]))
+				sign.rotation = Vector3(0.0, float(sp[3]), 0.0)
 			body.add_child(sign)
 	# Simge binalar: Blender'da üretilmiş süs modeli (korniş, baca, kubbe…; art/blender/landmarks.py).
 	var decor: Node3D = landmark_decor(name_text)
@@ -813,6 +819,7 @@ static func landmark_decor(building_name: String) -> Node3D:
 			if data is Dictionary:
 				_landmarks.merge((data as Dictionary).get("buildings", {}))
 				_landmarks["_heights"] = (data as Dictionary).get("heights", {})
+				_landmarks["_signs"] = (data as Dictionary).get("signs", {})
 	if building_name.is_empty():
 		return null
 	var path: String = str(_landmarks.get(building_name, ""))

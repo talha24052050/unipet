@@ -8,6 +8,13 @@ const STYLE_MODERN: StringName = &"modern"
 const STYLE_SMALL: StringName = &"small"
 const STYLE_BRICK: StringName = &"brick"
 const STYLE_GLASS: StringName = &"glass"   # sera (OSM building=greenhouse)
+const STYLE_STOREFRONT: StringName = &"storefront"
+## Kafe/restoran cepheleri (Google Haritalar fotoğrafları: Büyük Ev 2019 cam cephe + siyah çerçeve; Hokka/Kayıntı
+## Yemekhane'nin zemin kat ekleri)
+const STOREFRONT_KEYWORDS: PackedStringArray = ["hokka", "kayinti", "buyuk ev"]
+const STOREFRONT_WALL: Color = Color(0.9, 0.9, 0.88)
+const STOREFRONT_FRAME: Color = Color(0.12, 0.12, 0.13)
+const STOREFRONT_GLASS: Color = Color(0.2, 0.26, 0.3)
 ## OSM 'building' türü → stil (adından çıkarılamayanlar için)
 const KIND_STYLES: Dictionary = {
 	"dormitory": &"dorm", "apartments": &"dorm", "residential": &"dorm",
@@ -70,6 +77,7 @@ const SHADER_STYLE_STRIP: int = 0
 const SHADER_STYLE_GRID: int = 1
 const SHADER_STYLE_HISTORIC: int = 2
 const SHADER_STYLE_BRICK: int = 3
+const SHADER_STYLE_STOREFRONT: int = 4
 
 const STYLES: Dictionary = {
 	STYLE_HISTORIC: {
@@ -99,6 +107,13 @@ const STYLES: Dictionary = {
 		"window_color": BRICK_WINDOW,
 		"frame_color": BRICK_BAND,
 		"shader_style": SHADER_STYLE_BRICK,
+	},
+	STYLE_STOREFRONT: {
+		"wall_color": STOREFRONT_WALL,
+		"roof_color": Color(0.78, 0.79, 0.8),
+		"window_color": STOREFRONT_GLASS,
+		"frame_color": STOREFRONT_FRAME,
+		"shader_style": SHADER_STYLE_STOREFRONT,
 	},
 	STYLE_GLASS: {
 		"wall_color": GLASS_WALL,
@@ -149,7 +164,12 @@ static func polygon_area(poly: PackedVector2Array) -> float:
 static func style_for(name: String, height: float, footprint_area: float, kind: String = "") -> StringName:
 	var norm: String = normalize_name(name)
 
-	# 0. Tuğla cepheli bilinen binalar
+	# 0. Kafe/restoran cepheleri
+	for kw: String in STOREFRONT_KEYWORDS:
+		if norm.contains(kw):
+			return STYLE_STOREFRONT
+
+	# 0a. Tuğla cepheli bilinen binalar
 	for kw: String in BRICK_KEYWORDS:
 		if norm.contains(kw):
 			return STYLE_BRICK

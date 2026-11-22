@@ -44,6 +44,9 @@ COLORS = {
     "concrete": (0.72, 0.71, 0.68),
     "kisla_wall": (0.937, 0.890, 0.784),  # building_style.gd HISTORIC_WALL ile aynı
     "kisla_roof": (0.63, 0.34, 0.27),     # HISTORIC_ROOF ile aynı
+    "hall_roof": (0.76, 0.77, 0.78),
+    "post_white": (0.9, 0.9, 0.88),
+    "terrace": (0.58, 0.56, 0.52),
     "sign_navy": (0.16, 0.20, 0.42),
 }
 
@@ -626,7 +629,70 @@ def gate_simple(b, c, u, half_open):
 
 GATES = {"portal": gate_portal, "simple": gate_simple}
 
-RECIPES = {"library": recipe_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
+def recipe_gable_hall(b, poly, h, spec, rng):
+    """Büyük Ev (Google Haritalar 2019 fotoğrafı): uzun salon, alçak beşik çatı (mahya uzun eksende), ön uçta derin
+    saçak — beyaz direkler + X çaprazlar —, önünde taş döşeli teras ve iki basamak. Ön uç: spec['front'] noktasına
+    en yakın kısa kenar (Google konum iğnesi)."""
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import make_greenery as G
+    c, u, hu, hv = G.min_area_rect(poly)
+    v = (-u[1], u[0])
+    fx, fz = spec["front"]
+    front_sign = 1 if (fx - c[0]) * u[0] + (fz - c[1]) * u[1] > 0 else -1
+    rise, side_over, porch = 2.6, 0.8, 4.0
+    y0 = h
+
+    def P(a, s, y):
+        return (c[0] + u[0] * a + v[0] * s, y, c[1] + u[1] * a + v[1] * s)
+    back = -front_sign * (hu + 0.6)
+    front = front_sign * (hu + porch)
+    w = hv + side_over
+    # çatı: iki eğik yüz (alt yüzleriyle birlikte ince tabla), mahya ortada
+    T = 0.25
+    for side in (-1, 1):
+        e0, e1 = P(back, side * w, y0 - 0.3), P(front, side * w, y0 - 0.3)
+        r0, r1 = P(back, 0, y0 + rise), P(front, 0, y0 + rise)
+        up = lambda q: (q[0], q[1] + T, q[2])
+        faces = [[e0, e1, r1, r0], [up(e0), up(r0), up(r1), up(e1)], [e0, up(e0), up(e1), e1],
+                 [e0, r0, up(r0), up(e0)], [e1, up(e1), up(r1), r1]]
+        cen = P((back + front) / 2, side * w * 0.5, y0 + rise * 0.45 + T * 0.5)
+        b._add_faces("hall_roof", faces, None, center=cen)
+    # ön üçgen alın (saçağın ucunda, açık beyaz)
+    ft = [P(front_sign * (hu + porch - 0.1), -hv, y0), P(front_sign * (hu + porch - 0.1), hv, y0),
+          P(front_sign * (hu + porch - 0.1), 0, y0 + rise - 0.2)]
+    b._add_faces("post_white", [ft], None, center=P(front_sign * hu, 0, y0 + 0.6))
+    # saçak direkleri + X çaprazlar (yan yüzlerde)
+    for s in (-1, 1):
+        for a in (front_sign * (hu + porch - 0.3),):
+            x, _, z = P(a, s * (hv - 0.2), 0)
+            b.box(x, z, 0.35, 0.35, 0.0, y0, "post_white")
+        mid_a = front_sign * (hu + porch / 2)
+        x, _, z = P(mid_a, s * (hv - 0.2), 0)
+        ang = math.atan2(u[1], u[0])
+        for tilt in (-1, 1):  # X: iki ince eğik çubuk (ince prizma, yaklaşık)
+            pts = []
+            for k in range(6):
+                t = k / 5
+                aa = mid_a + front_sign * tilt * (t - 0.5) * porch * 0.8
+                yy = 0.3 + t * (y0 - 0.6)
+                pts.append(P(aa, s * (hv - 0.2), yy))
+            for k in range(5):
+                p0, p1 = pts[k], pts[k + 1]
+                b.tube(p0[0], p0[2], p0[1], 0.07, p1[0], p1[2], p1[1], 0.07, "post_white", seg=4)
+    # taş teras (saçak altı + önü) ve iki basamak
+    terrace = [(q[0], q[2]) for q in (P(front_sign * hu, -hv - 1.5, 0), P(front_sign * (hu + porch + 3.0), -hv - 1.5, 0),
+                                      P(front_sign * (hu + porch + 3.0), hv + 1.5, 0), P(front_sign * hu, hv + 1.5, 0))]
+    b.prism(terrace, 0.0, 0.32, "terrace")
+    step = [(q[0], q[2]) for q in (P(front_sign * (hu + porch + 3.0), -hv - 1.5, 0), P(front_sign * (hu + porch + 3.6), -hv - 1.5, 0),
+                                   P(front_sign * (hu + porch + 3.6), hv + 1.5, 0), P(front_sign * (hu + porch + 3.0), hv + 1.5, 0))]
+    b.prism(step, 0.0, 0.16, "terrace")
+    # tabela: ön alının ortası (fotoğraftaki gibi), dışa bakar
+    sx, sy, sz = P(front_sign * (hu + porch + 0.05), 0, y0 + rise * 0.42)
+    spec["_sign"] = [round(sx, 2), round(sy, 2), round(sz, 2), round(math.atan2(u[0] * front_sign, u[1] * front_sign), 4)]
+
+
+RECIPES = {"gable_hall": recipe_gable_hall, "library": recipe_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
 
 
 def main():
@@ -651,6 +717,8 @@ def main():
         assert tris <= MAX_TRIS, "%s: %d üçgen > %d" % (spec["id"], tris, MAX_TRIS)
         write_glb(os.path.join(out_dir, spec["id"] + ".glb"), spec["id"], b)
         manifest["buildings"][spec["match"]] = "res://assets/buildings/%s.glb" % spec["id"]
+        if "_sign" in spec:
+            manifest.setdefault("signs", {})[spec["match"]] = spec["_sign"]
         print("OK %s: %d üçgen" % (spec["id"], tris))
     paths_all = [(p.get("kind", ""), [tuple(q) for q in p["points"]]) for p in grey.get("paths", [])]
     manifest["free"] = []
