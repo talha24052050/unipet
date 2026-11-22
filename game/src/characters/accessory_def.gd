@@ -11,6 +11,8 @@ extends Resource
 ## CharacterDef.ACCESSORY_SLOTS'tan biri.
 @export var slot: StringName
 @export_file("*.tscn", "*.glb") var scene_path: String
+## Dükkan fiyatı (yıldız tozu). 0 = herkese açık. Sunucudaki SHOP ile aynı olmalı.
+@export var price: int = 0
 
 
 func validate() -> PackedStringArray:

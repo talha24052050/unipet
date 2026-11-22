@@ -1,0 +1,91 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="gold"]
+albedo_color = Color(0.96, 0.76, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="gem"]
+albedo_color = Color(0.55, 0.8, 1, 1)
+emission_enabled = true
+emission = Color(0.55, 0.8, 1, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="StandardMaterial3D" id="navy"]
+albedo_color = Color(0.12, 0.18, 0.42, 1)
+
+[sub_resource type="CylinderMesh" id="band"]
+material = SubResource("gold")
+top_radius = 0.2
+bottom_radius = 0.21
+height = 0.09
+radial_segments = 20
+rings = 1
+cap_top = false
+cap_bottom = false
+
+[sub_resource type="PrismMesh" id="spike"]
+material = SubResource("gold")
+size = Vector3(0.09, 0.11, 0.03)
+
+[sub_resource type="SphereMesh" id="g"]
+material = SubResource("gem")
+radius = 0.022
+height = 0.044
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="star"]
+material = SubResource("gem")
+radius = 0.035
+height = 0.07
+radial_segments = 8
+rings = 4
+
+[node name="CrownStar" type="Node3D"]
+
+[node name="Band" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.045, 0)
+mesh = SubResource("band")
+
+[node name="Spike0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.145, 0.205)
+mesh = SubResource("spike")
+
+[node name="Gem0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.21525)
+mesh = SubResource("g")
+
+[node name="Spike1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.30902, 0, -0.95106, 0, 1, 0, 0.95106, 0, 0.30902, 0.19497, 0.145, 0.063348)
+mesh = SubResource("spike")
+
+[node name="Gem1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.20471, 0.2, 0.066516)
+mesh = SubResource("g")
+
+[node name="Spike2" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.80902, 0, -0.58779, 0, 1, 0, 0.58779, 0, -0.80902, 0.1205, 0.145, -0.16585)
+mesh = SubResource("spike")
+
+[node name="Gem2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12652, 0.2, -0.17414)
+mesh = SubResource("g")
+
+[node name="Spike3" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.80902, 0, 0.58779, 0, 1, 0, -0.58779, 0, -0.80902, -0.1205, 0.145, -0.16585)
+mesh = SubResource("spike")
+
+[node name="Gem3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12652, 0.2, -0.17414)
+mesh = SubResource("g")
+
+[node name="Spike4" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.30902, 0, 0.95106, 0, 1, 0, -0.95106, 0, 0.30902, -0.19497, 0.145, 0.063348)
+mesh = SubResource("spike")
+
+[node name="Gem4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.20471, 0.2, 0.066516)
+mesh = SubResource("g")
+
+[node name="FrontStar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0.215)
+mesh = SubResource("star")

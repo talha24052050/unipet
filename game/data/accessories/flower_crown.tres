@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AccessoryDef" format=3]
+
+[ext_resource type="Script" path="res://src/characters/accessory_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"flower_crown"
+display_name = "Çiçek tacı"
+slot = &"head"
+scene_path = "res://assets/accessories/flower_crown.tscn"
+price = 15

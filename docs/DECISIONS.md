@@ -50,3 +50,6 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
   Elde etme: **kapalı test hediyesi** — sunucuda `UNIPET_CLOSED_TEST=true` iken odaya giren her hesaba kalıcı açılır
   (Nakama storage `unlocks/pets`, sadece sunucu yazar); kilitli hesabın Kutbi profili sunucuda reddedilir.
   Geliştirici modunda herkese görünür.
+- Zenginleştirme (Talha 2026-11-23): pet etkileşimi + toplanabilirler seçildi.
+  Yıldız tozu: sunucu otoriter (Nakama storage `wallet`), günde 40 nokta (TR günü, `dailyIndices` JS/GD birebir),
+  nokta havuzu `tools/collect/make_stardust_points.py` (index.js'e de gömülür). Fiyatlar `.tres price` = index.js `SHOP`.

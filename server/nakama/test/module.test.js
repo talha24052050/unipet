@@ -158,4 +158,45 @@ st3 = M.matchLoop(ctx(), logger, nk, dispatcher, 3, st3, [msg(P, 1, { p: [1.5, 0
 var states = sent.filter(function (s) { return s.op === 1; }).map(function (s) { return s.data.p[0]; });
 assert.deepEqual(states, [0, 1.5], "ışınlanma reddedilmeli, normal adım geçmeli: " + states);
 
+// --- yıldız tozu + dükkan
+var day = M.dayNumber(Date.now());
+var di = JSON.parse(JSON.stringify(M.dailyIndices(day, M.STARDUST_POINTS.length, M.STARDUST_DAILY)));
+assert.strictEqual(di.length, 40, "günde 40 nokta");
+assert.deepEqual(di, JSON.parse(JSON.stringify(M.dailyIndices(day, M.STARDUST_POINTS.length, 40))), "aynı gün aynı noktalar");
+assert.notDeepEqual(di, JSON.parse(JSON.stringify(M.dailyIndices(day + 1, M.STARDUST_POINTS.length, 40))), "ertesi gün farklı");
+var w = M.walletLoad(nk, "W", Date.now());
+var pt = M.STARDUST_POINTS[di[0]];
+assert.ok(!M.stardustCollect(w, di[0], [pt[0] + 30, 0, pt[1]]), "uzaktan toplanamaz");
+assert.ok(M.stardustCollect(w, di[0], [pt[0] + 1, 0, pt[1]]), "yakından toplanır");
+assert.ok(!M.stardustCollect(w, di[0], [pt[0], 0, pt[1]]), "iki kez toplanamaz");
+var notToday = 0; while (di.indexOf(notToday) >= 0) notToday++;
+var p2 = M.STARDUST_POINTS[notToday];
+assert.ok(!M.stardustCollect(w, notToday, [p2[0], 0, p2[1]]), "bugünün noktası değilse toplanamaz");
+assert.strictEqual(w.dust, 1);
+assert.strictEqual(M.shopBuy(w, "cape"), "yıldız tozu yetmiyor");
+w.dust = 50;
+assert.strictEqual(M.shopBuy(w, "cape"), "");
+assert.strictEqual(w.dust, 10);
+assert.strictEqual(M.shopBuy(w, "cape"), "zaten sende");
+assert.strictEqual(M.shopBuy(w, "yok"), "böyle bir ürün yok");
+// maçta: giriş cüzdanı, toplama mesajı, satın alınmamış aksesuar profilden düşer
+sent = [];
+var st4 = M.matchInit(ctx({}), logger, nk, { zone: "kampus" }).state;
+var G = { userId: "G" }, H = { userId: "H" };
+st4 = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st4, [G, H]).state;
+assert.ok(sent.some(function (m) { return m.op === 7 && m.to[0] === "G" && m.data.points.length === 40; }), "girişte cüzdan");
+var tp = M.STARDUST_POINTS[di[1]];
+st4 = M.matchLoop(ctx(), logger, nk, dispatcher, 1, st4, [msg(G, 1, { p: [tp[0], 0, tp[1]], y: 0, a: "idle" })]).state;
+st4.players.G.p = [tp[0], 0, tp[1]];
+sent = [];
+st4 = M.matchLoop(ctx(), logger, nk, dispatcher, 2, st4, [msg(G, 8, { i: di[1] })]).state;
+var wm = sent.filter(function (m) { return m.op === 7; })[0];
+assert.ok(wm && wm.data.got && wm.data.dust === 1 && wm.data.points.indexOf(di[1]) < 0, "toplama → cüzdan");
+var rb = JSON.parse(M.rpcBuyItem(ctx({}, "G"), logger, nk, JSON.stringify({ item: "flower_crown" })));
+assert.ok(!rb.ok, "parası yetmez");
+sent = [];
+st4 = M.matchLoop(ctx(), logger, nk, dispatcher, 3, st4, [msg(G, 4, { pet: "shark", acc: { head: "crown_star", face: "glasses" }, name: "G" })]).state;
+var pm = sent.filter(function (m) { return m.op === 4; })[0];
+assert.deepEqual(JSON.parse(JSON.stringify(pm.data.acc)), { face: "glasses" }, "alınmamış dükkan ürünü takılamaz");
+
 console.log("nakama modül testleri: OK");

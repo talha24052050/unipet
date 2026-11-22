@@ -22,8 +22,10 @@ var OP_STATE = 1;    // c→s {p:[x,y,z], y:yaw, a:anim}            s→c {id, p
 var OP_CHAT = 2;     // c→s {k:0|1|2, p:payload}                 s→c {s:senderId, k, p}
 var OP_SNAPSHOT = 3; // s→c {players:[{id, p, y, a, pet, acc}]}  (sadece yeni katılana)
 var OP_PROFILE = 4;  // c→s {pet, acc:{slot:id}, name}           s→c {id, pet, acc, name}
-var OP_CARE = 5;
-var OP_UNLOCKS = 6;  // s→c {pets:[...], fresh:[...]}  (sadece o oyuncuya; fresh = bu girişte yeni açılanlar)     // c→s {act}                                s→c {ok, reason, state:{food,joy,energy,t}} (sadece o oyuncuya)
+var OP_CARE = 5;     // c→s {act}                                s→c {ok, reason, state:{food,joy,energy,t}} (sadece o oyuncuya)
+var OP_UNLOCKS = 6;  // s→c {pets:[...], fresh:[...]}  (sadece o oyuncuya; fresh = bu girişte yeni açılanlar)
+var OP_WALLET = 7;   // s→c {dust, owned:[...], points:[i...], got}  (sadece o oyuncuya; points = bugün kalan yıldız tozları)
+var OP_COLLECT = 8;  // c→s {i}  yıldız tozu topla → OP_WALLET
 
 // ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
 var CARE_MAX = 100;
@@ -128,6 +130,96 @@ function unlocksGrant(nk, userId, pets) {
 // Profilde seçilebilir mi: efsanevi değilse evet, efsaneviyse kilidi açıksa.
 function petAllowed(pet, unlocked) {
   return LEGENDARY_PETS.indexOf(pet) < 0 || unlocked.indexOf(pet) >= 0;
+}
+
+// ---- Yıldız tozu (kampüse dağılmış toplanabilir) + dükkan (aksesuar satın alma)
+// Her gün (TR saatiyle) havuzdan STARDUST_DAILY nokta seçilir; herkes aynı noktaları görür ama her oyuncu kendi
+// kopyasını bir kez toplar. Toplama, oyuncunun sunucudaki son konumuna göre doğrulanır.
+// <stardust-points> (tools/collect/make_stardust_points.py üretir, elle düzenleme)
+var STARDUST_POINTS = [[87.9,-347.1],[98.8,-363.9],[159.3,-270.7],[175.7,-282.2],[191.9,-293.9],[139.9,-322.1],[153.6,-336.8],[39.7,-360.7],[-18.8,-253.4],[148.5,-358.0],[169.1,-316.5],[114.4,-346.0],[57.6,-363.1],[18.1,-358.7],[-0.5,-351.5],[-14.9,-338.2],[-27.4,-322.5],[-57.3,-313.7],[-64.1,-295.3],[-59.8,-276.0],[-45.8,-262.1],[-1.2,-228.1],[15.5,-217.1],[32.3,-206.2],[50.7,-199.8],[67.4,-189.5],[83.1,-177.1],[98.8,-164.7],[114.5,-152.3],[50.5,-230.0],[26.3,-255.0],[197.4,-214.4],[231.2,-224.7],[145.5,-171.7],[133.0,-156.1],[254.9,-287.7],[169.7,-236.2],[206.0,-279.8],[149.5,-145.4],[165.1,-133.6],[179.4,-119.9],[240.0,-253.0],[197.1,-187.2],[173.9,-154.9],[92.4,-395.4],[111.3,-388.8],[130.7,-384.2],[150.1,-379.1],[168.6,-371.7],[186.1,-362.1],[203.5,-352.2],[220.9,-342.3],[238.3,-332.4],[254.8,-321.2],[271.0,-309.4],[286.4,-296.7],[301.8,-283.9],[317.2,-271.2],[332.6,-258.4],[348.0,-245.7],[362.9,-232.3],[375.8,-217.1],[386.2,-200.0],[392.6,-181.1],[397.5,-161.7],[402.4,-142.3],[406.6,-122.8],[411.8,-103.5],[418.6,-84.7],[422.6,-65.2],[422.6,-45.2],[421.0,-25.3],[419.4,-5.4],[417.7,14.6],[416.1,34.5],[416.1,54.5],[-136.7,-506.7],[-126.2,-489.7],[-115.7,-472.7],[-169.2,-487.0],[-178.1,-454.1],[-161.1,-464.7],[-111.4,-398.0],[-78.6,-336.3],[-154.7,-415.7],[-116.6,-362.1],[-137.9,-397.6],[-182.5,-393.3],[-197.3,-379.8],[-212.1,-366.4],[-195.3,-444.0],[-212.7,-434.3],[-211.9,-402.2],[-231.8,-407.5],[-243.3,-391.2],[-131.4,-428.4],[-259.1,-433.2],[-87.0,-372.1],[-65.7,-391.6],[-48.2,-400.9],[-141.1,-335.8],[-158.4,-345.8],[-143.2,-358.9],[-192.3,-346.0],[-130.4,-314.0],[-116.4,-539.6],[-106.4,-522.2],[-96.4,-504.9],[-86.4,-487.6],[-76.4,-470.3],[-66.4,-453.0],[-56.4,-435.6],[-121.0,-448.4],[-88.4,-432.9],[-102.7,-418.9],[-18.6,-403.5],[-39.5,-381.3],[-54.0,-367.5],[-68.5,-353.8],[-290.0,-425.0],[-238.8,-456.3],[-221.7,-466.7],[-204.6,-477.1],[-187.5,-487.5],[72.8,-397.4],[52.9,-395.2],[33.0,-394.7],[13.0,-395.1],[-48.3,-349.8],[-83.7,-301.7],[-93.2,-284.1],[-110.6,-292.8],[-161.7,-324.1],[-276.4,-404.3],[-309.2,-427.3],[-169.7,-182.8],[-154.5,-169.8],[-146.9,-192.8],[-133.1,-207.2],[-185.6,-162.9],[-202.2,-172.6],[-233.0,-131.4],[-219.9,-146.5],[-93.6,-256.1],[-114.4,-222.8],[-168.0,-138.9],[-175.1,-120.2],[-184.4,-102.6],[-202.8,-101.4],[-220.3,-111.1],[-255.3,-130.4],[-271.2,-142.4],[-285.7,-156.1],[-281.2,-174.3],[-269.3,-190.4],[-256.9,-206.1],[-242.6,-220.1],[-228.1,-233.8],[-213.6,-247.6],[-199.1,-261.4],[-184.6,-275.2],[-170.1,-288.9],[-153.7,-299.3],[-136.0,-291.1],[-128.3,-188.2],[-91.7,-235.7],[-60.4,-248.4],[-43.8,-237.3],[-27.1,-226.1],[16.6,-190.5],[5.1,-174.1],[-6.3,-157.6],[-17.7,-141.2],[-28.3,-124.3],[-38.1,-106.8],[-48.1,-89.5],[-58.7,-72.6],[-70.1,-56.1],[-83.3,-41.1],[-113.1,-43.5],[-128.9,-55.8],[-144.6,-68.2],[-155.9,-83.7],[-160.6,-103.1],[-85.5,-118.3],[64.2,58.4],[48.7,45.8],[32.8,33.7],[17.0,21.3],[2.1,8.0],[-14.1,-3.6],[-30.0,-15.7],[-45.8,-28.1],[-40.8,-156.7],[-131.0,-157.9],[-114.9,-146.1],[-62.6,-143.0],[-16.0,-206.6],[243.0,-57.3],[230.5,-41.7],[201.0,-90.4],[207.8,-73.0],[218.5,-56.1],[246.3,-27.8],[8.2,-19.6],[28.1,-17.9],[53.1,-15.3],[73.0,-13.9],[93.0,-13.2],[112.9,-11.2],[-31.6,3.5],[-25.0,22.4],[-18.4,41.3],[-20.2,62.6],[-33.3,77.7],[-44.7,94.0],[-57.2,109.6],[-69.7,125.3],[-82.2,140.9],[153.5,10.7],[35.1,-44.9],[29.8,-64.2],[-5.0,-53.9],[10.7,-41.5],[73.5,8.0],[89.3,20.3],[-54.1,38.1],[-66.6,53.8],[24.8,-90.6],[56.2,-65.9],[71.9,-53.5],[87.7,-41.2],[103.4,-28.8],[53.6,15.8],[109.0,-98.6],[96.5,-82.9],[84.0,-67.3],[59.1,-36.0],[37.7,155.7],[24.5,74.6],[12.0,90.2],[-0.4,105.8],[-94.2,51.8],[-62.8,76.6],[0.1,126.1],[-62.3,16.7],[0.6,66.2],[-35.4,133.0],[-82.6,104.2],[-83.7,84.5],[46.7,-86.0],[64.3,-94.9],[112.9,-68.6],[114.9,-49.0],[-13.5,85.4],[-154.5,130.8],[94.6,82.4],[-146.8,181.0],[-159.4,196.5],[-187.9,196.5],[-215.2,208.0],[-227.9,223.5],[-142.4,223.2],[-111.2,248.2],[-95.6,260.7],[-64.3,285.7],[-48.7,298.2],[-33.1,310.7],[-17.5,323.2],[-1.9,335.7],[-109.3,339.9],[-96.7,324.4],[-84.1,308.9],[-151.1,313.2],[-138.5,297.7],[-113.3,266.6],[-107.5,212.6],[-64.9,246.1],[-22.1,279.8],[-189.4,124.3],[-200.3,140.0],[-207.8,158.6],[-214.5,177.4],[-235.2,254.6],[-238.9,274.3],[-242.7,293.9],[-246.8,313.5],[-251.3,333.0],[-255.5,352.5],[-257.2,372.4],[-253.9,392.0],[-245.5,410.1],[-233.9,426.3],[-220.7,441.4],[-207.6,456.5],[-194.5,471.6],[-181.1,486.5],[-163.7,495.7],[-144.3,500.2],[-125.4,506.7],[-162.8,216.6],[-191.4,287.1],[-128.9,337.1],[-97.7,362.1],[-82.1,374.6],[-18.6,367.2],[159.2,138.5],[174.6,151.2],[190.1,163.8],[205.6,176.5],[221.1,189.2],[236.5,201.8],[252.0,214.5],[267.2,227.5],[281.2,241.8],[293.1,257.8],[303.4,274.9],[313.1,292.4],[322.8,309.9],[332.5,327.4],[347.7,338.3],[92.3,101.3],[117.2,70.0],[149.4,118.8],[135.5,104.4],[120.9,90.8],[-10.8,-369.1],[6.6,-377.9],[26.6,-376.7],[233.1,-315.1],[281.0,-279.0],[296.4,-266.3],[311.8,-253.5],[327.2,-240.8],[342.6,-228.0],[356.7,-213.9],[368.1,-197.5],[399.8,-82.1],[403.6,-62.5],[404.3,-42.5],[403.2,-22.6],[395.2,33.8],[376.6,26.3],[358.1,18.7],[339.6,11.2],[321.0,3.7],[302.5,-3.9],[284.0,-11.4],[265.3,-18.4],[123.8,-127.3],[139.6,-115.0],[155.3,-102.6],[171.0,-90.2],[186.7,-77.9],[192.4,-33.0],[179.9,-17.3],[167.4,-1.7],[142.5,29.5],[130.0,45.2],[67.6,123.3],[55.1,139.0],[17.7,185.9],[5.2,201.5],[-7.3,217.1],[-19.7,232.7],[-50.4,225.5],[-66.1,213.1],[-81.8,200.7],[-97.5,188.4],[-113.2,176.0],[-128.9,163.6],[-144.7,151.3],[-173.8,95.1],[-161.2,79.6],[-148.6,64.1],[-136.0,48.6],[-123.4,33.0],[-110.8,17.5],[-98.2,2.0],[-85.6,-13.6],[202.4,448.9],[205.6,429.2],[-20.3,253.9],[-4.6,266.3],[8.6,280.0],[24.3,292.4],[40.1,304.8],[55.8,317.1],[71.5,329.5],[87.2,341.9],[102.9,354.3],[118.6,366.6],[134.3,379.0],[150.0,391.4],[165.7,403.8],[183.7,410.7],[222.8,408.8],[239.8,398.3],[256.9,387.9],[273.9,377.4],[291.0,367.0],[308.0,356.5],[323.7,344.1],[230.2,435.4],[243.0,450.7],[257.3,464.5],[274.4,474.8],[292.6,483.0],[323.8,467.6],[338.5,454.1],[353.3,440.5],[368.0,427.0],[382.7,413.5],[400.0,403.5],[388.7,386.6],[370.9,377.5],[355.2,365.3],[321.8,370.9],[304.5,380.9],[287.2,390.9],[269.9,401.0],[23.3,322.8],[-26.7,385.1],[-38.6,401.2],[-50.6,417.2],[-62.5,433.3],[-74.4,449.3],[-86.4,465.4],[-98.3,481.4],[-104.1,524.9],[-87.8,536.4],[-71.3,547.7],[-54.2,558.1],[-36.5,567.3],[-17.3,572.8],[2.6,574.1],[22.6,574.6],[42.6,575.2],[62.6,575.7],[82.6,576.3],[102.6,576.8],[122.6,576.3],[142.6,575.8],[162.5,574.9],[182.1,570.7],[201.0,564.4],[219.4,556.5],[237.1,547.2],[254.2,536.9],[270.8,525.7],[281.4,509.6],[-260.6,-362.6],[-244.2,-355.1],[-227.8,-343.6],[-211.4,-332.1],[-195.0,-320.7],[-178.7,-309.2],[-241.1,-316.2],[-255.8,-340.6],[-232.6,-285.2],[-209.7,-292.9],[-283.8,-313.6],[-272.4,-298.2],[-264.6,-279.8],[-256.9,-261.3],[-249.2,-242.9],[-290.4,-293.7],[-218.5,-266.2],[-236.9,-258.5],[-273.6,-247.0],[806.6,573.3],[788.0,570.5],[768.1,570.0],[806.4,602.4],[776.7,610.0],[758.5,618.1],[751.0,636.3],[11.8,241.0],[24.1,225.2],[36.3,209.4],[208.7,347.1],[192.8,335.0],[176.8,322.9],[160.9,310.7],[145.0,298.6],[129.1,286.5],[113.2,274.4],[97.3,262.3],[81.4,250.2],[65.5,238.0],[49.5,225.9],[139.4,256.6],[106.2,231.3],[118.4,215.5],[130.6,199.7],[57.2,195.6],[77.2,196.3],[97.2,197.0],[157.1,199.0],[177.1,199.7],[201.1,207.9],[214.1,223.1],[227.1,238.3],[240.0,253.6],[253.0,268.8],[266.0,284.0],[279.0,299.2],[292.0,314.4],[305.0,329.6],[236.7,288.7],[230.7,307.8],[224.8,326.9],[212.9,365.1],[207.0,384.2],[201.0,403.3],[40.5,187.9],[330.6,265.0],[327.7,245.3],[320.3,226.8],[309.3,210.1],[293.1,198.6],[274.8,190.6],[255.8,184.3],[237.2,177.0],[205.3,153.3],[193.4,137.3],[184.0,119.7],[178.5,100.5],[177.4,80.6],[183.1,61.6],[196.1,46.7],[214.8,40.6],[234.3,44.3],[250.6,55.6],[261.8,72.1],[274.3,87.7],[291.4,97.6],[311.1,100.8],[330.7,104.8],[346.4,116.6],[350.0,135.6],[339.4,152.1],[324.6,165.4],[315.9,183.1],[267.0,330.2],[247.0,330.7],[191.3,310.3],[175.6,298.1],[162.0,283.5],[136.2,229.8],[138.3,171.1],[147.6,153.4],[350.9,81.1],[300.4,69.5],[259.8,111.8],[240.5,116.5],[221.0,113.3],[204.3,102.6],[47.0,-113.3],[181.9,21.8],[169.7,37.6],[245.8,26.5],[275.0,31.3],[245.4,3.8],[-340.4,-282.3],[-357.6,-292.5],[-94.6,-151.2],[149.6,-211.1]];
+// </stardust-points>
+var STARDUST_DAILY = 40;
+var STARDUST_RADIUS = 6.0;
+// Fiyatlar game/data/accessories/*.tres "price" ile aynı olmalı (test kontrol eder).
+var SHOP = { flower_crown: 15, crown_star: 30, cape: 40 };
+var WALLET_COLLECTION = "wallet";
+var WALLET_KEY = "wallet";
+
+function dayNumber(nowMs) {
+  return Math.floor((nowMs / 1000 + 3 * 3600) / 86400);  // Türkiye saati (UTC+3)
+}
+
+// Günün noktaları: gün numarasıyla tohumlanan karıştırma (mulberry32), sıralı indeksler.
+function dailyIndices(day, n, count) {
+  var s = (day * 2654435761) >>> 0;
+  function rnd() {
+    s = (s + 0x6D2B79F5) >>> 0;
+    var t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  var idx = [];
+  for (var i = 0; i < n; i++) idx.push(i);
+  count = Math.min(count, n);
+  for (var k = 0; k < count; k++) {
+    var j = k + Math.floor(rnd() * (n - k));
+    var tmp = idx[k]; idx[k] = idx[j]; idx[j] = tmp;
+  }
+  return idx.slice(0, count).sort(function (a, b) { return a - b; });
+}
+
+function walletLoad(nk, userId, nowMs) {
+  var objs = nk.storageRead([{ collection: WALLET_COLLECTION, key: WALLET_KEY, userId: userId }]);
+  var w = (objs && objs.length > 0 && objs[0].value) ? objs[0].value : {};
+  var today = dayNumber(nowMs);
+  return { dust: w.dust | 0, owned: (w.owned || []).slice(), day: today, taken: w.day === today ? (w.taken || []).slice() : [] };
+}
+
+function walletSave(nk, userId, w) {
+  nk.storageWrite([{ collection: WALLET_COLLECTION, key: WALLET_KEY, userId: userId, value: w,
+    permissionRead: 1, permissionWrite: 0 }]);
+}
+
+function walletView(w, got) {
+  var pts = dailyIndices(w.day, STARDUST_POINTS.length, STARDUST_DAILY).filter(function (i) { return w.taken.indexOf(i) < 0; });
+  return { dust: w.dust, owned: w.owned, points: pts, got: !!got };
+}
+
+// Toplama: bugünün noktası mı, alınmamış mı, oyuncu yakın mı? Başarılıysa cüzdan güncellenir.
+function stardustCollect(w, i, pos) {
+  if (typeof i !== "number" || i !== Math.floor(i) || i < 0 || i >= STARDUST_POINTS.length) return false;
+  if (w.taken.indexOf(i) >= 0) return false;
+  if (dailyIndices(w.day, STARDUST_POINTS.length, STARDUST_DAILY).indexOf(i) < 0) return false;
+  var pt = STARDUST_POINTS[i];
+  if (!pos || Math.sqrt(Math.pow(pos[0] - pt[0], 2) + Math.pow(pos[2] - pt[1], 2)) > STARDUST_RADIUS) return false;
+  w.taken.push(i);
+  w.dust += 1;
+  return true;
+}
+
+function shopBuy(w, item) {
+  if (!SHOP.hasOwnProperty(item)) return "böyle bir ürün yok";
+  if (w.owned.indexOf(item) >= 0) return "zaten sende";
+  if (w.dust < SHOP[item]) return "yıldız tozu yetmiyor";
+  w.dust -= SHOP[item];
+  w.owned.push(item);
+  return "";
+}
+
+function rpcWallet(ctx, logger, nk, payload) {
+  if (!ctx.userId) throw Error("giriş gerekli");
+  return JSON.stringify(walletView(walletLoad(nk, ctx.userId, Date.now())));
+}
+
+function rpcBuyItem(ctx, logger, nk, payload) {
+  if (!ctx.userId) throw Error("giriş gerekli");
+  var item = "";
+  try { item = String(JSON.parse(payload || "{}").item || ""); } catch (e) { throw Error("geçersiz istek"); }
+  var w = walletLoad(nk, ctx.userId, Date.now());
+  var reason = shopBuy(w, item);
+  if (!reason) walletSave(nk, ctx.userId, w);
+  return JSON.stringify({ ok: !reason, reason: reason, wallet: walletView(w) });
 }
 
 var CARE_COLLECTION = "pet";
@@ -391,6 +483,7 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     var fresh = env(ctx, "UNIPET_CLOSED_TEST", "false") === "true" ? unlocksGrant(nk, p.userId, ["kutbi"]) : [];
     state.players[p.userId].unlocked = unlocksLoad(nk, p.userId);
     dispatcher.broadcastMessage(OP_UNLOCKS, JSON.stringify({ pets: state.players[p.userId].unlocked, fresh: fresh }), [p], null, true);
+    dispatcher.broadcastMessage(OP_WALLET, JSON.stringify(walletView(walletLoad(nk, p.userId, Date.now()))), [p], null, true);
     // Yeni gelene odadaki herkesin son durumu.
     var list = [];
     for (var id in state.players) {
@@ -495,14 +588,25 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         res.state = cur ? careDecay(cur.state, Math.floor(Date.now() / 1000)) : careNew(Math.floor(Date.now() / 1000));
       }
       dispatcher.broadcastMessage(OP_CARE, JSON.stringify(res), [pl.presence], null, true);
+    } else if (m.opCode === OP_COLLECT) {
+      var wl = walletLoad(nk, uid, Date.now());
+      var got = stardustCollect(wl, data.i, pl.p);
+      if (got) walletSave(nk, uid, wl);
+      dispatcher.broadcastMessage(OP_WALLET, JSON.stringify(walletView(wl, got)), [pl.presence], null, true);
     } else if (m.opCode === OP_PROFILE) {
       if (!ID_PATTERN.test(String(data.pet))) continue;
       if (!petAllowed(String(data.pet), pl.unlocked || [])) continue;  // kilitli efsanevi pet: profil kabul edilmez
       var acc = {};
+      var ownedNow = null;  // satın alınmamış dükkan ürünü takılamaz
       var slots = ["head", "face", "neck", "back"];
       for (var s = 0; s < slots.length; s++) {
         var a = data.acc && data.acc[slots[s]];
-        if (a && ID_PATTERN.test(String(a))) acc[slots[s]] = String(a);
+        if (!a || !ID_PATTERN.test(String(a))) continue;
+        if (SHOP.hasOwnProperty(String(a))) {
+          if (ownedNow === null) ownedNow = walletLoad(nk, uid, Date.now()).owned;
+          if (ownedNow.indexOf(String(a)) < 0) continue;
+        }
+        acc[slots[s]] = String(a);
       }
       pl.pet = String(data.pet); pl.acc = acc; pl.name = cleanName(data.name);
       var rest = othersOf(state, uid);
@@ -535,6 +639,8 @@ function matchSignal(ctx, logger, nk, dispatcher, tick, state, data) {
 function InitModule(ctx, logger, nk, initializer) {
   initializer.registerBeforeAuthenticateCustom(beforeAuthenticateCustom);
   initializer.registerRpc("find_room", rpcFindRoom);
+  initializer.registerRpc("wallet", rpcWallet);
+  initializer.registerRpc("buy_item", rpcBuyItem);
   initializer.registerMatch("zone_room", {
     matchInit: matchInit,
     matchJoinAttempt: matchJoinAttempt,

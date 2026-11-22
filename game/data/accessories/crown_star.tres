@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="AccessoryDef" format=3]
+
+[ext_resource type="Script" path="res://src/characters/accessory_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"crown_star"
+display_name = "Yıldız taç"
+slot = &"head"
+scene_path = "res://assets/accessories/crown_star.tscn"
+price = 30

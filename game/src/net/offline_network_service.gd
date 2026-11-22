@@ -4,6 +4,8 @@ extends "res://src/net/network_service.gd"
 
 const CareRules := preload("res://src/care/pet_care_rules.gd")
 const CARE_PATH: String = "user://care.cfg"
+const Stardust := preload("res://src/collect/stardust_rules.gd")
+const WALLET_PATH: String = "user://wallet.cfg"
 
 var _zone: String = ""
 var _player_id: String = "local"
@@ -22,6 +24,7 @@ func join_zone(zone_id: String) -> void:
 	room_joined.emit.call_deferred(_zone)
 	_care_load()
 	care_updated.emit.call_deferred(CareRules.decay(_care, _now()), true, "")
+	request_wallet()
 
 
 func leave_zone() -> void:
@@ -49,6 +52,51 @@ func send_care_action(action: String) -> void:
 		_care_last[action] = now
 	_care_save()
 	care_updated.emit(_care, r["ok"], r["reason"])
+
+
+# ---- yıldız tozu (cihazda, sunucuyla aynı kurallar)
+var _points: Array = []
+
+
+func _wallet_load() -> Dictionary:
+	var cfg: ConfigFile = ConfigFile.new()
+	var raw: Dictionary = {}
+	if cfg.load(WALLET_PATH) == OK:
+		raw = {"dust": cfg.get_value("w", "dust", 0), "owned": cfg.get_value("w", "owned", PackedStringArray()),
+			"day": cfg.get_value("w", "day", -1), "taken": cfg.get_value("w", "taken", PackedInt32Array())}
+	if _points.is_empty():
+		_points = Stardust.load_points()
+	return Stardust.normalize(raw, Stardust.day_number(_now()))
+
+
+func _wallet_save(w: Dictionary) -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	for k: String in ["dust", "owned", "day", "taken"]:
+		cfg.set_value("w", k, w[k])
+	cfg.save(WALLET_PATH)
+
+
+func request_wallet() -> void:
+	var w: Dictionary = _wallet_load()
+	_set_wallet.call_deferred(Stardust.view(w, _points.size()))
+
+
+func send_collect(index: int) -> void:
+	var w: Dictionary = _wallet_load()
+	var got: bool = Stardust.collect(w, index, _last_pos, _points)
+	if got:
+		_wallet_save(w)
+	_set_wallet(Stardust.view(w, _points.size(), got))
+
+
+func buy_item(item: String) -> void:
+	var w: Dictionary = _wallet_load()
+	var def: AccessoryDef = Services.accessories.get_def(StringName(item)) if Services.accessories != null else null
+	var reason: String = Stardust.buy(w, item, def.price if def != null else 0)
+	if reason.is_empty():
+		_wallet_save(w)
+	_set_wallet(Stardust.view(w, _points.size()))
+	purchase_finished.emit(item, reason.is_empty(), reason)
 
 
 func _now() -> int:

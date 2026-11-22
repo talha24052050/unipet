@@ -32,8 +32,8 @@ func _count_node_triangles(node: Node) -> int:
 func test_total_eight_accessories_loaded() -> String:
 	var reg: AccessoryRegistry = AccessoryRegistry.new()
 	reg.load_from_dir("res://data/accessories")
-	if reg.count() != 8:
-		return "Toplam 8 aksesuar bekleniyordu, %d yüklendi" % reg.count()
+	if reg.count() != 11:
+		return "Toplam 11 aksesuar (8 + 3 dükkan) bekleniyordu, %d yüklendi" % reg.count()
 	for id: StringName in NEW_ACCESSORY_IDS:
 		var def: AccessoryDef = reg.get_def(id)
 		if def == null:
@@ -51,9 +51,10 @@ func test_two_accessories_per_slot() -> String:
 	var reg: AccessoryRegistry = AccessoryRegistry.new()
 	reg.load_from_dir("res://data/accessories")
 	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
-		var accs: Array[AccessoryDef] = reg.for_slot(slot)
+		# ücretsizler: her slotta 2 (dükkan ürünleri ayrıca)
+		var accs: Array[AccessoryDef] = reg.for_slot(slot).filter(func(d: AccessoryDef) -> bool: return d.price == 0)
 		if accs.size() != 2:
-			return "Slot '%s' için 2 seçenek bekleniyordu, %d bulundu" % [slot, accs.size()]
+			return "Slot '%s' için 2 ücretsiz seçenek bekleniyordu, %d bulundu" % [slot, accs.size()]
 	return ""
 
 

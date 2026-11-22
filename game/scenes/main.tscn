@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://src/ui/settings_button.gd" id="17"]
 [ext_resource type="Script" path="res://src/world/discovery.gd" id="18"]
 [ext_resource type="Script" path="res://src/player/pet_interaction.gd" id="19"]
+[ext_resource type="Script" path="res://src/collect/stardust_field.gd" id="20"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -194,6 +195,17 @@ offset_right = 400.0
 offset_bottom = 1238.0
 script = ExtResource("16")
 
+[node name="StardustLabel" type="Label" parent="UI"]
+offset_left = 24.0
+offset_top = 262.0
+offset_right = 400.0
+offset_bottom = 300.0
+theme_override_colors/font_color = Color(1, 0.84, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.12, 0.3, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 28
+text = "Yıldız tozu: 0"
+
 [node name="PerfLabel" type="Label" parent="UI"]
 offset_left = 24.0
 offset_top = 1240.0
@@ -252,3 +264,8 @@ player = NodePath("../Player")
 script = ExtResource("19")
 player = NodePath("../Player")
 remotes = NodePath("../NetworkSync")
+
+[node name="StardustField" type="Node3D" parent="." node_paths=PackedStringArray("player", "counter")]
+script = ExtResource("20")
+player = NodePath("../Player")
+counter = NodePath("../UI/StardustLabel")

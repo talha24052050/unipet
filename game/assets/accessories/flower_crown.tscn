@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="leaf"]
+albedo_color = Color(0.3, 0.6, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="pink"]
+albedo_color = Color(0.98, 0.55, 0.7, 1)
+
+[sub_resource type="StandardMaterial3D" id="yellow"]
+albedo_color = Color(1, 0.85, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="white"]
+albedo_color = Color(0.97, 0.97, 0.95, 1)
+
+[sub_resource type="TorusMesh" id="ring"]
+material = SubResource("leaf")
+inner_radius = 0.19
+outer_radius = 0.23
+rings = 20
+ring_segments = 6
+
+[sub_resource type="SphereMesh" id="fp"]
+material = SubResource("pink")
+radius = 0.045
+height = 0.09
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="fy"]
+material = SubResource("yellow")
+radius = 0.04
+height = 0.08
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="fw"]
+material = SubResource("white")
+radius = 0.042
+height = 0.084
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="c"]
+material = SubResource("yellow")
+radius = 0.018
+height = 0.036
+radial_segments = 8
+rings = 4
+
+[node name="FlowerCrown" type="Node3D"]
+
+[node name="Ring" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("ring")
+
+[node name="Flower0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.041721, 0.045, 0.20581)
+mesh = SubResource("fp")
+
+[node name="Flower1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.17503, 0.045, 0.11603)
+mesh = SubResource("fy")
+
+[node name="Flower2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.20581, 0.045, -0.041721)
+mesh = SubResource("fw")
+
+[node name="Flower3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11603, 0.045, -0.17503)
+mesh = SubResource("fp")
+
+[node name="Flower4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.041721, 0.045, -0.20581)
+mesh = SubResource("fy")
+
+[node name="Flower5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.17503, 0.045, -0.11603)
+mesh = SubResource("fw")
+
+[node name="Flower6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.20581, 0.045, 0.041721)
+mesh = SubResource("fp")
+
+[node name="Flower7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11603, 0.045, 0.17503)
+mesh = SubResource("fy")

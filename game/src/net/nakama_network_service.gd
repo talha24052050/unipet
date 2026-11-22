@@ -10,6 +10,8 @@ const OP_SNAPSHOT: int = 3
 const OP_PROFILE: int = 4
 const OP_CARE: int = 5
 const OP_UNLOCKS: int = 6
+const OP_WALLET: int = 7
+const OP_COLLECT: int = 8
 
 var host: String = "127.0.0.1"
 var port: int = 7350
@@ -131,6 +133,33 @@ func send_care_action(action: String) -> void:
 	_send_match_data(OP_CARE, {"act": action})
 
 
+func send_collect(index: int) -> void:
+	_send_match_data(OP_COLLECT, {"i": index})
+
+
+func request_wallet() -> void:
+	if not _socket_open:
+		return
+	_send_request({"rpc": {"id": "wallet", "payload": "{}"}}, func(r: Dictionary) -> void:
+		var w: Variant = JSON.parse_string(str(r.get("rpc", {}).get("payload", "{}")))
+		if w is Dictionary:
+			_set_wallet(w))
+
+
+func buy_item(item: String) -> void:
+	if not _socket_open:
+		purchase_finished.emit.call_deferred(item, false, "sunucuya bağlı değil")
+		return
+	_send_request({"rpc": {"id": "buy_item", "payload": JSON.stringify({"item": item})}}, func(r: Dictionary) -> void:
+		var res: Variant = JSON.parse_string(str(r.get("rpc", {}).get("payload", "{}")))
+		if not res is Dictionary:
+			purchase_finished.emit(item, false, "sunucu hatası")
+			return
+		if res.get("wallet") is Dictionary:
+			_set_wallet(res["wallet"])
+		purchase_finished.emit(item, bool(res.get("ok", false)), str(res.get("reason", ""))))
+
+
 func local_player_id() -> String:
 	return _user_id
 
@@ -198,6 +227,8 @@ func _handle_match_data(md: Dictionary) -> void:
 			chat_received.emit(ChatMessage.from_dict({"kind": k, "payload": str(d.get("p", "")), "sender_id": str(d.get("s", ""))}))
 		OP_PROFILE:
 			player_profile.emit(str(d.get("id", "")), decode_profile(d))
+		OP_WALLET:
+			_set_wallet(d)
 		OP_UNLOCKS:
 			unlocks_received.emit(PackedStringArray(d.get("pets", [])), PackedStringArray(d.get("fresh", [])))
 		OP_CARE:

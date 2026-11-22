@@ -170,3 +170,28 @@ func test_button_heights_and_font_sizes() -> String:
 
 	scene.queue_free()
 	return ""
+
+
+func test_shop_try_on_not_saved_unless_owned() -> String:
+	var scene: PetSelect = _make_scene()
+	var crown: AccessoryDef = Services.accessories.get_def(&"crown_star")
+	if crown == null or crown.price <= 0:
+		scene.queue_free()
+		return "crown_star dükkan ürünü olmalı"
+	var saved_wallet: Dictionary = Services.net.wallet
+	Services.net.wallet = {"dust": 0, "owned": []}
+	scene.profile.accessories[&"head"] = &"crown_star"
+	var err: String = ""
+	if scene.tried_unowned() != crown:
+		err = "alınmamış ürün denenince fark edilmeli"
+	scene.strip_unowned()
+	if err.is_empty() and scene.profile.accessories.has(&"head"):
+		err = "alınmamış ürün kaydedilmemeli"
+	Services.net.wallet = {"dust": 0, "owned": ["crown_star"]}
+	scene.profile.accessories[&"head"] = &"crown_star"
+	scene.strip_unowned()
+	if err.is_empty() and scene.profile.accessories.get(&"head") != &"crown_star":
+		err = "alınmış ürün kalmalı"
+	Services.net.wallet = saved_wallet
+	scene.queue_free()
+	return err

@@ -24,6 +24,8 @@ var _current_pet_index: int = 0
 var _is_dragging: bool = false
 var _drag_pause_timer: float = 0.0
 var _accessory_labels: Dictionary = {}
+var _wallet_label: Label
+var _buy_btn: Button
 
 @onready var _pet_pivot: Node3D = %PetPivot
 @onready var _pet_visual: PetVisual = %PetVisual
@@ -40,6 +42,104 @@ func _ready() -> void:
 	load_selection(profile_path)
 	_connect_signals()
 	_add_logout_button()
+	_add_shop_ui()
+
+
+# ---- dükkan: fiyatlı aksesuarlar denenebilir, takmak için yıldız tozuyla satın alınır
+func _add_shop_ui() -> void:
+	_wallet_label = Label.new()
+	_wallet_label.name = "WalletLabel"
+	_wallet_label.add_theme_font_size_override("font_size", 28)
+	_wallet_label.add_theme_color_override("font_color", Color(1, 0.84, 0.35))
+	_wallet_label.add_theme_color_override("font_outline_color", Color(0.1, 0.12, 0.3))
+	_wallet_label.add_theme_constant_override("outline_size", 8)
+	_wallet_label.anchor_left = 1.0
+	_wallet_label.anchor_right = 1.0
+	_wallet_label.offset_left = -360.0
+	_wallet_label.offset_right = -16.0
+	_wallet_label.offset_top = 40.0
+	_wallet_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(_wallet_label)
+	_buy_btn = Button.new()
+	_buy_btn.name = "BuyButton"
+	_buy_btn.custom_minimum_size = Vector2(0, 96)
+	_buy_btn.add_theme_font_size_override("font_size", 28)
+	_buy_btn.visible = false
+	_buy_btn.pressed.connect(buy_tried)
+	if _start_btn != null:
+		_start_btn.add_sibling(_buy_btn)
+		_start_btn.get_parent().move_child(_buy_btn, _start_btn.get_index())
+	else:
+		add_child(_buy_btn)
+	if Services.net != null:
+		Services.net.wallet_updated.connect(func(_w: Dictionary) -> void: _refresh_shop())
+		Services.net.purchase_finished.connect(_on_purchase)
+		Services.net.request_wallet()
+	_refresh_shop()
+
+
+func owned_items() -> PackedStringArray:
+	return PackedStringArray(Services.net.wallet.get("owned", [])) if Services.net != null else PackedStringArray()
+
+
+func is_owned(acc: AccessoryDef) -> bool:
+	return acc.price <= 0 or owned_items().has(str(acc.id))
+
+
+## Denenen ama alınmamış ilk ürün (yoksa null).
+func tried_unowned() -> AccessoryDef:
+	if profile == null:
+		return null
+	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
+		var acc: AccessoryDef = Services.accessories.get_def(profile.accessories.get(slot, &""))
+		if acc != null and not is_owned(acc):
+			return acc
+	return null
+
+
+func _refresh_shop() -> void:
+	var dust: int = int(Services.net.wallet.get("dust", 0)) if Services.net != null else 0
+	if _wallet_label != null:
+		_wallet_label.text = "Yıldız tozu: %d" % dust
+	var acc: AccessoryDef = tried_unowned()
+	if _buy_btn != null:
+		_buy_btn.visible = acc != null
+		if acc != null:
+			_buy_btn.text = "Satın al: %s (%d yıldız tozu)" % [acc.display_name, acc.price]
+			_buy_btn.disabled = dust < acc.price
+	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
+		_update_slot_label(slot)
+
+
+func buy_tried() -> void:
+	var acc: AccessoryDef = tried_unowned()
+	if acc == null or Services.net == null:
+		return
+	Sfx.play(&"ui_click")
+	_buy_btn.disabled = true
+	Services.net.buy_item(str(acc.id))
+
+
+func _on_purchase(item: String, ok: bool, reason: String) -> void:
+	if ok:
+		Sfx.play(&"care_ok")
+		if _pet_visual != null:
+			_pet_visual.play_emote(&"emote_dance")
+	else:
+		Sfx.play(&"care_fail")
+		if _buy_btn != null:
+			_buy_btn.text = "Alınamadı: %s" % reason
+	_refresh_shop()
+
+
+## Kaydetmeden önce: alınmamış (sadece denenen) ürünler çıkarılır.
+func strip_unowned() -> void:
+	if profile == null:
+		return
+	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
+		var acc: AccessoryDef = Services.accessories.get_def(profile.accessories.get(slot, &""))
+		if acc != null and not is_owned(acc):
+			profile.accessories.erase(slot)
 
 
 ## Sol üstte "Çıkış": oturumu kapatır, giriş ekranına döner (sunucu adresi/takma ad orada değişir).
@@ -216,6 +316,7 @@ func cycle_accessory(slot: StringName) -> void:
 			_pet_visual.equip(acc)
 
 	_update_slot_label(slot)
+	_refresh_shop()
 
 
 func _apply_profile_accessories_to_visual() -> void:
@@ -241,13 +342,19 @@ func _update_slot_label(slot: StringName) -> void:
 		label.text = "Yok"
 	else:
 		var acc: AccessoryDef = Services.accessories.get_def(acc_id)
-		label.text = acc.display_name if acc != null else "Yok"
+		if acc == null:
+			label.text = "Yok"
+		elif not is_owned(acc):
+			label.text = "%s · %d toz" % [acc.display_name, acc.price]
+		else:
+			label.text = acc.display_name
 
 
 func save_selection(path: String = "") -> Error:
 	var target_path: String = path if not path.is_empty() else profile_path
 	if profile == null:
 		profile = LocalProfile.load_or_default()
+	strip_unowned()
 	if Services.profile_sync != null:
 		Services.profile_sync.push(profile)
 	return profile.save(target_path)

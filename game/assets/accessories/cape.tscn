@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="cloth"]
+albedo_color = Color(0.14, 0.2, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="lining"]
+albedo_color = Color(0.08, 0.11, 0.3, 1)
+
+[sub_resource type="StandardMaterial3D" id="gold"]
+albedo_color = Color(0.96, 0.76, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="cape"]
+material = SubResource("cloth")
+size = Vector3(0.52, 0.62, 0.02)
+
+[sub_resource type="BoxMesh" id="lin"]
+material = SubResource("lining")
+size = Vector3(0.48, 0.58, 0.012)
+
+[sub_resource type="SphereMesh" id="clasp"]
+material = SubResource("gold")
+radius = 0.04
+height = 0.08
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderMesh" id="star"]
+material = SubResource("gold")
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.012
+radial_segments = 5
+rings = 1
+
+[node name="Cape" type="Node3D"]
+
+[node name="Cape" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.98384, -0.17903, 0, 0.17903, 0.98384, 0, -0.22, -0.06)
+mesh = SubResource("cape")
+
+[node name="Lining" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.98384, -0.17903, 0, 0.17903, 0.98384, 0, -0.22, -0.045)
+mesh = SubResource("lin")
+
+[node name="Clasp" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0.0)
+mesh = SubResource("clasp")
+
+[node name="Star" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, -0.12, -0.09)
+mesh = SubResource("star")
