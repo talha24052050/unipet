@@ -46,7 +46,17 @@ if (-not (Test-Path $pgData)) {
 }
 & $PgCtl status -D $pgData *> $null
 if ($LASTEXITCODE -ne 0) {
-    & $PgCtl start -D $pgData -o "-p 5433" -l (Join-Path $Root "pg.log") -w | Out-Null
+    # postgres.exe kendi (gizli) konsoluyla bağımsız başlatılır. pg_ctl ile bu scriptin konsoluna bağlı başlatınca,
+    # script penceresi kapandıktan sonra Postgres'in açtığı alt işlemler 0xC0000142 (DLL başlatma) ile çöküyor ve
+    # veritabanı kapanıyordu (2026-11-22 arkadaşlarla testte 2 kez).
+    $pgExe = Join-Path $Root "pgsql\bin\postgres.exe"
+    Start-Process -FilePath $pgExe -ArgumentList @("-D", "`"$pgData`"", "-p", "5433") -WindowStyle Hidden `
+        -RedirectStandardError (Join-Path $Root "pg.log") | Out-Null
+    # pg_isready.exe Smart App Control tarafından engelleniyor: portu doğrudan yokla
+    for ($i = 0; $i -lt 30; $i++) {
+        $c = New-Object System.Net.Sockets.TcpClient
+        try { $c.Connect("127.0.0.1", 5433); $c.Close(); break } catch { Start-Sleep -Seconds 1 }
+    }
 }
 # Yerel programların stderr'ı (ör. "veritabanı zaten var") PowerShell 5.1'de durdurucu hata olmasın.
 $ErrorActionPreference = "Continue"

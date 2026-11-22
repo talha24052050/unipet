@@ -73,7 +73,8 @@ func restore_session() -> bool:
 func sign_out() -> void:
 	# Önce yerel oturumu sil: çağıran beklemese bile giriş ekranı eski oturumu geri yükleyemesin.
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SESSION_PATH))
-	_refresh_timer.stop()
+	if _refresh_timer != null and _refresh_timer.is_inside_tree():
+		_refresh_timer.stop()
 	var token: String = _access_token
 	_access_token = ""
 	_refresh_token = ""
