@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/chat_menu.tscn" id="8"]
 [ext_resource type="Script" path="res://src/net/network_sync.gd" id="9"]
 [ext_resource type="Script" path="res://src/world/prop_placer.gd" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/care_hud.tscn" id="11"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -165,6 +166,8 @@ text = "Pet"
 script = SubResource("pet_btn_script")
 
 [node name="ChatMenu" parent="UI" instance=ExtResource("8")]
+
+[node name="CareHud" parent="UI" instance=ExtResource("11")]
 
 [node name="PlayerController" type="Node" parent="." node_paths=PackedStringArray("player", "joystick", "camera", "agent", "marker")]
 script = ExtResource("3")
