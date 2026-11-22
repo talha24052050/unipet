@@ -29,7 +29,7 @@ services:
       - "-ecx"
       - >
         /nakama/nakama migrate up --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable &&
-        printf 'runtime:\n  env:\n    - "SUPABASE_URL=%s"\n    - "SUPABASE_ANON_KEY=%s"\n    - "UNIPET_DEV_AUTH=%s"\n    - "UNIPET_ROOM_CAPACITY=%s"\n    - "UNIPET_FREE_CHAT=%s"\n    - "UNIPET_REQUIRE_SCHOOL_EMAIL=%s"\n' "$$SUPABASE_URL" "$$SUPABASE_ANON_KEY" "$$UNIPET_DEV_AUTH" "$$UNIPET_ROOM_CAPACITY" "$$UNIPET_FREE_CHAT" "$$UNIPET_REQUIRE_SCHOOL_EMAIL" > /tmp/runtime-env.yml &&
+        printf 'runtime:\n  env:\n    - "SUPABASE_URL=%s"\n    - "SUPABASE_ANON_KEY=%s"\n    - "UNIPET_DEV_AUTH=%s"\n    - "UNIPET_ROOM_CAPACITY=%s"\n    - "UNIPET_FREE_CHAT=%s"\n    - "UNIPET_REQUIRE_SCHOOL_EMAIL=%s"\n    - "UNIPET_CLOSED_TEST=%s"\n' "$$SUPABASE_URL" "$$SUPABASE_ANON_KEY" "$$UNIPET_DEV_AUTH" "$$UNIPET_ROOM_CAPACITY" "$$UNIPET_FREE_CHAT" "$$UNIPET_REQUIRE_SCHOOL_EMAIL" "$$UNIPET_CLOSED_TEST" > /tmp/runtime-env.yml &&
         exec /nakama/nakama --config /nakama/data/local.yml --config /tmp/runtime-env.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS"
     environment:
       - NAKAMA_SERVER_KEY=${NAKAMA_SERVER_KEY:-unipet-dev-server-key}
@@ -41,6 +41,7 @@ services:
       - UNIPET_ROOM_CAPACITY=${UNIPET_ROOM_CAPACITY:-40}
       - UNIPET_FREE_CHAT=${UNIPET_FREE_CHAT:-false}
       - UNIPET_REQUIRE_SCHOOL_EMAIL=${UNIPET_REQUIRE_SCHOOL_EMAIL:-false}
+      - UNIPET_CLOSED_TEST=${UNIPET_CLOSED_TEST:-false}
     volumes:
       - ./nakama/local.yml:/nakama/data/local.yml:ro
       - ./nakama/modules:/nakama/data/modules:ro
