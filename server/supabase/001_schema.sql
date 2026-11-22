@@ -6,6 +6,7 @@
 create or replace function public.hook_restrict_signup_domain(event jsonb)
 returns jsonb
 language plpgsql
+set search_path = ''
 as $$
 declare
   email text := lower(coalesce(event->'user'->>'email', ''));
@@ -54,7 +55,7 @@ create policy "kendi profilini günceller" on public.profiles
 
 -- updated_at otomatik
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at := now();
   return new;
@@ -64,3 +65,7 @@ $$;
 drop trigger if exists profiles_touch on public.profiles;
 create trigger profiles_touch before update on public.profiles
   for each row execute function public.touch_updated_at();
+
+-- Yeni Supabase projeleri tablolara varsayılan API izni vermiyor: açıkça ver (RLS yine satır bazında korur).
+revoke all on public.profiles from anon, authenticated;
+grant select, insert, update on public.profiles to authenticated;
