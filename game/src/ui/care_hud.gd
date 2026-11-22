@@ -264,7 +264,9 @@ func _update_action_button(action: String, btn: Button, base_text: String) -> vo
 		btn.text = "%s (%ds)" % [base_text, ceili(cd)]
 	else:
 		btn.disabled = false
-		btn.text = base_text
+		# Bonus yerindeyse (ör. Stadyumda Oyna) butonda "2×" görünsün.
+		var bonus: float = PetCareRules.bonus_for(action, _get_player_position())
+		btn.text = "%s %d×" % [base_text, int(bonus)] if bonus > 1.0 else base_text
 
 
 func _update_eat_button_spot_visual() -> void:
