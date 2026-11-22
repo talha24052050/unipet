@@ -1,0 +1,541 @@
+{
+  "places": [
+    {
+      "id": "tasbina",
+      "name": "Taşbina / Rektörlük / İdari Bilimler / Enstitüler",
+      "kind": "landmark",
+      "pos": [
+        17.6,
+        26.9
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
+    },
+    {
+      "id": "ortabahce",
+      "name": "Ortabahçe",
+      "kind": "landmark",
+      "pos": [
+        -2.1,
+        5.3
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "Ortabahçe"
+    },
+    {
+      "id": "yemekhane",
+      "name": "Yemekhane",
+      "kind": "food",
+      "pos": [
+        -103.5,
+        -95.2
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "Yemekhane"
+    },
+    {
+      "id": "elektrik_elektronik_fakultesi",
+      "name": "Elektrik-Elektronik Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        47.1,
+        -254.7
+      ],
+      "zone": "fef",
+      "source": "osm",
+      "osm_name": "Elektrik Elektronik Fakültesi"
+    },
+    {
+      "id": "fen_edebiyat_fakultesi",
+      "name": "Fen-Edebiyat Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        164.2,
+        -184.8
+      ],
+      "zone": "fef",
+      "source": "osm",
+      "osm_name": "A Blok - Fen Edebiyat Fakültesi Dekanlığı"
+    },
+    {
+      "id": "kimya_metalurji_fakultesi",
+      "name": "Kimya-Metalurji Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        240.0,
+        -230.0
+      ],
+      "zone": "fef",
+      "source": "manual"
+    },
+    {
+      "id": "iktisat_ve_idari_bilimler_fakultesi",
+      "name": "İktisat ve İdari Bilimler Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        353.8,
+        -183.8
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "ring_ve_otobus_peronu",
+      "name": "Ring ve Otobüs Peronu",
+      "kind": "transport",
+      "pos": [
+        210.0,
+        -95.0
+      ],
+      "zone": "fef",
+      "source": "manual"
+    },
+    {
+      "id": "otag_i_humayun",
+      "name": "Otağ-ı Hümayun",
+      "kind": "landmark",
+      "pos": [
+        434.4,
+        255.3
+      ],
+      "zone": "kutuphane",
+      "source": "osm",
+      "osm_name": "Otağ-ı Hümayun"
+    },
+    {
+      "id": "kongre_merkezi",
+      "name": "Kongre Merkezi",
+      "kind": "service",
+      "pos": [
+        549.2,
+        305.7
+      ],
+      "zone": "kutuphane",
+      "source": "manual"
+    },
+    {
+      "id": "kutuphane",
+      "name": "Kütüphane",
+      "kind": "service",
+      "pos": [
+        405.0,
+        463.4
+      ],
+      "zone": "kutuphane",
+      "source": "osm",
+      "osm_name": "Şehit Prof. Dr. İlhan Varank Kütüphanesi"
+    },
+    {
+      "id": "yabanci_diller_yuksekokulu",
+      "name": "Yabancı Diller Yüksekokulu",
+      "kind": "faculty",
+      "pos": [
+        165.1,
+        506.7
+      ],
+      "zone": "guney",
+      "source": "osm",
+      "osm_name": "Yabancı Diller Yüksekokulu"
+    },
+    {
+      "id": "teknopark",
+      "name": "Teknopark",
+      "kind": "service",
+      "pos": [
+        53.5,
+        660.5
+      ],
+      "zone": "guney",
+      "source": "manual"
+    },
+    {
+      "id": "merkez_laboratuvari",
+      "name": "Merkez Laboratuvarı",
+      "kind": "service",
+      "pos": [
+        -55.3,
+        512.3
+      ],
+      "zone": "guney",
+      "source": "osm",
+      "osm_name": "YTÜ Merkez Laboratuvarı"
+    },
+    {
+      "id": "hidrodinamik_laboratuvari",
+      "name": "Hidrodinamik Laboratuvarı",
+      "kind": "service",
+      "pos": [
+        -168.4,
+        429.9
+      ],
+      "zone": "insaat",
+      "source": "osm",
+      "osm_name": "Hidrolik Laboratuarı"
+    },
+    {
+      "id": "insaat_fakultesi",
+      "name": "İnşaat Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        -109.5,
+        300.8
+      ],
+      "zone": "insaat",
+      "source": "osm",
+      "osm_name": "E Blok - İnşaat Mühendisliği"
+    },
+    {
+      "id": "bilgelik_yolu",
+      "name": "Bilgelik Yolu",
+      "kind": "landmark",
+      "pos": [
+        130.4,
+        300.3
+      ],
+      "zone": "insaat",
+      "source": "manual"
+    },
+    {
+      "id": "ytu_stadyumu",
+      "name": "YTÜ Stadyumu",
+      "kind": "sport",
+      "pos": [
+        -285.5,
+        49.3
+      ],
+      "zone": "saha",
+      "source": "manual"
+    },
+    {
+      "id": "kulupler_vadisi",
+      "name": "Kulüpler Vadisi",
+      "kind": "sport",
+      "pos": [
+        -280.0,
+        -20.0
+      ],
+      "zone": "saha",
+      "source": "manual"
+    },
+    {
+      "id": "spor_kompleksi",
+      "name": "Spor Kompleksi / Beden Eğitimi Bölümü",
+      "kind": "sport",
+      "pos": [
+        -298.8,
+        -213.6
+      ],
+      "zone": "egitim",
+      "source": "manual"
+    },
+    {
+      "id": "acik_oyun_sahalari",
+      "name": "Açık Oyun Sahaları",
+      "kind": "sport",
+      "pos": [
+        -260.0,
+        -115.0
+      ],
+      "zone": "saha",
+      "source": "manual"
+    },
+    {
+      "id": "yildiz_store_supermarket",
+      "name": "Yıldız Store / Süpermarket",
+      "kind": "service",
+      "pos": [
+        -127.8,
+        -68.0
+      ],
+      "zone": "saha",
+      "source": "manual"
+    },
+    {
+      "id": "sehide_turkan_turkmen_tekin_kiz_ogrenci_yurdu",
+      "name": "Şehide Türkan Türkmen Tekin Kız Öğrenci Yurdu",
+      "kind": "dorm",
+      "pos": [
+        -179.8,
+        -197.8
+      ],
+      "zone": "egitim",
+      "source": "manual"
+    },
+    {
+      "id": "egitim_fakultesi",
+      "name": "Eğitim Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        -280.0,
+        -304.8
+      ],
+      "zone": "egitim",
+      "source": "osm",
+      "osm_name": "Eğitim Fakültesi"
+    },
+    {
+      "id": "mediko",
+      "name": "Mediko",
+      "kind": "service",
+      "pos": [
+        -373.1,
+        -315.7
+      ],
+      "zone": "egitim",
+      "source": "manual"
+    },
+    {
+      "id": "bilgi_islem_merkezi",
+      "name": "Bilgi İşlem Merkezi",
+      "kind": "service",
+      "pos": [
+        -374.7,
+        -370.5
+      ],
+      "zone": "egitim",
+      "source": "manual"
+    },
+    {
+      "id": "ytu_kyk_yurdu",
+      "name": "YTÜ-KYK Erkek ve Kız Yurdu",
+      "kind": "dorm",
+      "pos": [
+        -354.9,
+        -474.6
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "lojmanlar",
+      "name": "Lojmanlar",
+      "kind": "dorm",
+      "pos": [
+        -170.0,
+        -450.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "sanat_ve_tasarim_fakultesi",
+      "name": "Sanat ve Tasarım Fakültesi",
+      "kind": "faculty",
+      "pos": [
+        -100.0,
+        50.0
+      ],
+      "zone": "ortabahce",
+      "source": "manual"
+    },
+    {
+      "id": "sancak_kosku",
+      "name": "Sancak Köşkü",
+      "kind": "landmark",
+      "pos": [
+        300.0,
+        350.0
+      ],
+      "zone": "kutuphane",
+      "source": "manual"
+    },
+    {
+      "id": "yeni_kutuphane",
+      "name": "Yeni Kütüphane",
+      "kind": "service",
+      "pos": [
+        -77.2,
+        -182.7
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "Merkez Kütüphanesi"
+    },
+    {
+      "id": "guvenlik_mudurlugu",
+      "name": "Güvenlik Müdürlüğü",
+      "kind": "service",
+      "pos": [
+        95.4,
+        426.2
+      ],
+      "zone": "guney",
+      "source": "manual"
+    },
+    {
+      "id": "temiz_enerji_enstitusu",
+      "name": "Temiz Enerji Teknolojileri Enstitüsü",
+      "kind": "service",
+      "pos": [
+        10.0,
+        470.0
+      ],
+      "zone": "guney",
+      "source": "manual"
+    },
+    {
+      "id": "yildiz_teknopark_yonetim_binasi",
+      "name": "Yıldız Teknopark Yönetim Binası",
+      "kind": "service",
+      "pos": [
+        -140.9,
+        551.0
+      ],
+      "zone": "guney",
+      "source": "manual"
+    },
+    {
+      "id": "innovation_hub",
+      "name": "Innovation Hub",
+      "kind": "service",
+      "pos": [
+        -200.0,
+        530.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "academic_lounge",
+      "name": "Academic Lounge",
+      "kind": "food",
+      "pos": [
+        -37.4,
+        350.7
+      ],
+      "zone": "insaat",
+      "source": "osm",
+      "osm_name": "Academic Lounge"
+    },
+    {
+      "id": "misafirhane",
+      "name": "Misafirhane",
+      "kind": "service",
+      "pos": [
+        516.5,
+        368.8
+      ],
+      "zone": "kutuphane",
+      "source": "osm",
+      "osm_name": "Misafirhane"
+    },
+    {
+      "id": "cami",
+      "name": "Cami",
+      "kind": "landmark",
+      "pos": [
+        -70.0,
+        -345.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "a_girisi",
+      "name": "A Girişi",
+      "kind": "gate",
+      "pos": [
+        800.0,
+        575.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "b_girisi",
+      "name": "B Girişi",
+      "kind": "gate",
+      "pos": [
+        -70.0,
+        -470.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "teknopark_girisi",
+      "name": "Teknopark Girişi",
+      "kind": "gate",
+      "pos": [
+        15.0,
+        830.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "m1a_davutpasa_ytu_metro",
+      "name": "M1A Davutpaşa-YTÜ metro durağı",
+      "kind": "transport",
+      "pos": [
+        -40.0,
+        -560.0
+      ],
+      "zone": "",
+      "source": "manual"
+    },
+    {
+      "id": "hokka",
+      "name": "Hokka",
+      "kind": "food",
+      "pos": [
+        -75.2,
+        -106.6
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "Hokka"
+    },
+    {
+      "id": "kayinti_kafe",
+      "name": "Kayıntı Kafe",
+      "kind": "food",
+      "pos": [
+        -99.9,
+        -124.7
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "KAYINTI KAFE"
+    },
+    {
+      "id": "buyuk_ev",
+      "name": "Büyük Ev",
+      "kind": "food",
+      "pos": [
+        -15.5,
+        -74.5
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "BÜYÜK EV"
+    },
+    {
+      "id": "eskafe",
+      "name": "Eskafe",
+      "kind": "food",
+      "pos": [
+        133.6,
+        339.7
+      ],
+      "zone": "insaat",
+      "source": "osm",
+      "osm_name": "Eskafe"
+    },
+    {
+      "id": "yildiz_cafe",
+      "name": "YILDIZ CAFE",
+      "kind": "food",
+      "pos": [
+        216.6,
+        -2.8
+      ],
+      "zone": "ortabahce",
+      "source": "osm",
+      "osm_name": "YILDIZ CAFE"
+    }
+  ]
+}
