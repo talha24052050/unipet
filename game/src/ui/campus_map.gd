@@ -283,7 +283,10 @@ func _draw_places(font: Font) -> void:
 ## Uzun resmi adları haritaya sığacak kısaltmaya çevirir.
 static func short_name(name: String) -> String:
 	var n: String = name.split(" / ")[0]
-	for pair: Array in [["Elektrik-Elektronik Fakültesi", "EEF"], ["Fen-Edebiyat Fakültesi", "FEF"],
+	for pair: Array in [["Davutpaşa Kışlası Mesciti", "Kışla Mescidi"],
+			["Yıldız Teknik Üniversitesi Davutpaşa Kışlası", "Tarihi Kışla"],
+			["Şehit Prof. Dr. İlhan Varank Kütüphanesi", "Kütüphane"],
+			["Elektrik Elektronik Fakültesi", "EEF"], ["Elektrik-Elektronik Fakültesi", "EEF"], ["Fen-Edebiyat Fakültesi", "FEF"],
 			["Kimya-Metalurji Fakültesi", "Kimya-Met."], ["İktisat ve İdari Bilimler Fakültesi", "İİBF"],
 			["Yabancı Diller Yüksekokulu", "YDYO"], ["Sanat ve Tasarım Fakültesi", "Sanat-Tasarım"],
 			[" Fakültesi", ""], [" Laboratuvarı", " Lab"], ["Öğrenci Yurdu", "Yurdu"]]:

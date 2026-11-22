@@ -98,3 +98,13 @@ func test_care_spots_loaded_and_drawn() -> String:
 
 	m.free()
 	return ""
+
+
+func test_short_names_for_landmarks() -> String:
+	var M: GDScript = load("res://src/ui/campus_map.gd")
+	var cases: Dictionary = {"Davutpaşa Kışlası Mesciti": "Kışla Mescidi", "Elektrik Elektronik Fakültesi": "EEF",
+		"Yıldız Teknik Üniversitesi Davutpaşa Kışlası": "Tarihi Kışla", "Yemekhane": "Yemekhane"}
+	for k: String in cases:
+		if M.short_name(k) != cases[k]:
+			return "%s → %s (beklenen %s)" % [k, M.short_name(k), cases[k]]
+	return ""
