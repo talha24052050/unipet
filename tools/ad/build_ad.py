@@ -1,18 +1,15 @@
-"""UniPet reklam filmi (Reels/TikTok, 9:16, ~20 sn) kurgusu: Flow (Veo) klipleri + Godot sinematiği + yazılar.
+"""UniPet reklam filmi (Reels/TikTok, 9:16, ~22 sn) kurgusu: sadece oyun çekimi (Godot sinematiği) + yazılar
++ kendi ürettiğimiz müzik (make_music.py) ve oyunun efekt sesleri. Veo/Flow klibi YOK (Talha, 2026-11-23).
 
-Kullanım:  python tools/ad/build_ad.py <veo_klasörü> <godot.avi> <çıktı.mp4>
-Veo klipleri (Talha, 2026-11-22, Downloads):
-  Student_waiting_in_cafeteria_queue_*.mp4      S1 kanca
-  Student_buried_under_textbooks_*.mp4           S3 kütüphane
-  Star_creature_emerges_in_courtyard_*.mp4       S6 Kutbi'nin gelişi
-  Student_holds_glowing_smartphone*_*.mp4        S2 Kutbi avuçta
-  Golden_star_revealing_silhouette*_*.mp4        S7 kapanış
+Kullanım:  python tools/ad/build_ad.py <godot.avi> <çıktı.mp4>
 Godot: tools/ad/cinematic.gd ile Movie Maker kaydı (ilk GODOT_SKIP kare hazırlık).
 """
-import glob
 import os
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import make_music  # noqa: E402
 
 W, H, FPS = 1080, 1920, 30
 FONT = "C\\:/Windows/Fonts/seguibl.ttf"   # Segoe UI Black (Türkçe karakterli)
@@ -20,26 +17,19 @@ FONT2 = "C\\:/Windows/Fonts/segoeuib.ttf"
 GODOT_SKIP = 51 / 30.0                       # cinematic.gd hazırlık süresi
 SFX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "game", "assets", "sfx")
 
-# (kaynak anahtarı, başlangıç, bitiş, hız, ekrandaki yazı)
-# cinematic.gd SHOTS: queue 0–2.8, drone 2.8–7.4, dance 7.4–9.4, gather 9.4–11.8, star 11.8–15.0
-# (Talha: Veo'nun 1., 2. ve 4. videosu çıkarıldı; yerlerine Godot çekimleri)
+# (kaynak, başlangıç, bitiş, hız, ekrandaki yazı) — hepsi Godot kaydı
+# cinematic.gd SHOTS: queue 0–2.8, drone 2.8–7.4, dance 7.4–9.4, study 9.4–12.6, gather 12.6–15.0,
+#                     star 15.0–18.2, kutbi 18.2–23.0
 SEGMENTS = [
     ("godot", 0.0, 2.8, 1.0, "Yemekhane sırası: 45 dk..."),
     ("godot", 3.0, 7.3, 1.0, "Bu kampüsü petinle gez"),
     ("godot", 7.5, 9.3, 1.0, "Petin sırada beklemez"),
-    ("library", 0.0, 1.4, 1.0, "Vize haftası mı?"),
-    ("library", 6.2, 7.8, 1.0, "Vize haftası mı?"),
-    ("godot", 9.4, 11.7, 1.0, "Tüm Davutpaşa burada"),
-    ("godot", 11.8, 15.0, 1.0, "Ama bir efsane var..."),
-    ("outro", 1.3, 7.8, 2.0, None),          # None = kapanış kartı yazıları (Kutbi siluetten çıkıyor)
+    ("godot", 9.4, 10.95, 1.0, "Vize haftası mı?"),
+    ("godot", 10.95, 12.6, 1.0, "Petin moral verir"),
+    ("godot", 12.7, 15.0, 1.0, "Tüm Davutpaşa burada"),
+    ("godot", 15.0, 18.2, 1.0, "Ama bir efsane var..."),
+    ("godot", 18.2, 23.0, 1.0, None),          # None = kapanış yazıları (Kutbi ışıktan çıkıyor)
 ]
-
-
-def find(folder, pattern):
-    hits = sorted(glob.glob(os.path.join(folder, pattern)))
-    if not hits:
-        sys.exit("bulunamadı: " + pattern)
-    return hits[-1]
 
 
 def esc(text):
@@ -69,12 +59,8 @@ def outro_text(start, dur):
 
 
 def main():
-    folder, godot_avi, out = sys.argv[1], sys.argv[2], sys.argv[3]
-    src = {
-        "library": find(folder, "Student_buried_under_textbooks_*.mp4"),
-        "outro": find(folder, "Golden_star_revealing_silhouette*.mp4"),
-        "godot": godot_avi,
-    }
+    godot_avi, out = sys.argv[1], sys.argv[2]
+    src = {"godot": godot_avi}
     inputs, filters, concat = [], [], []
     t = 0.0
     sfx_inputs = []
@@ -104,14 +90,23 @@ def main():
     # oyun efektleri: dans anında emote, toplanmada sohbet sesleri
     def seg_start(i):
         return sum((b - a) / sp for (_k, a, b, sp, _t) in SEGMENTS[:i])
-    # segment sırası: 0 kuyruk, 1 drone, 2 dans, 3-4 kütüphane, 5 toplanma, 6 kayan yıldız, 7 kapanış
+    # segment sırası: 0 kuyruk, 1 drone, 2 dans, 3-4 kütüphane, 5 toplanma, 6 kayan yıldız, 7 Kutbi
     fx = [("care_fail.ogg", seg_start(0) + 2.0),                       # sondaki mantar üzülüyor
           ("teleport.ogg", seg_start(1) + 0.05),                       # drone'a geçiş
           ("emote.ogg", seg_start(2) + 0.1), ("emote.ogg", seg_start(2) + 1.0),
+          ("care_fail.ogg", seg_start(3) + 0.2),                       # kitaplar arasında üzgün
+          ("teleport.ogg", seg_start(4) + 0.0), ("emote.ogg", seg_start(4) + 0.1),   # kitaplar savrulur, dans
           ("chat_receive.ogg", seg_start(5) + 0.3), ("chat_receive.ogg", seg_start(5) + 0.9), ("chat_send.ogg", seg_start(5) + 1.5),
-          ("teleport.ogg", seg_start(6) + 0.3), ("care_ok.ogg", seg_start(6) + 2.4)]   # yıldız düşer, iniş parıltısı
+          ("teleport.ogg", seg_start(6) + 0.3), ("care_ok.ogg", seg_start(6) + 2.4),  # yıldız düşer, iniş parıltısı
+          ("care_ok.ogg", seg_start(7) + 0.1), ("emote.ogg", seg_start(7) + 0.8), ("emote.ogg", seg_start(7) + 2.4)]  # Kutbi
     base = len(SEGMENTS)
-    mix = ["[abase]"]
+    # müzik (kendi üretimimiz): efsane anında davul susar, Kutbi'yle geri döner
+    music = os.path.splitext(out)[0] + "_muzik.wav"
+    make_music.make(music, seg_start(6), seg_start(7), t)
+    inputs += ["-i", music]
+    filters.append("[%d:a]aresample=48000,aformat=channel_layouts=stereo,volume=0.55[mus]" % base)
+    base += 1
+    mix = ["[abase]", "[mus]"]
     for j, (f, at) in enumerate(fx):
         inputs += ["-i", os.path.join(SFX, f)]
         filters.append("[%d:a]aresample=48000,aformat=channel_layouts=stereo,volume=0.7,adelay=%d|%d[fx%d]"

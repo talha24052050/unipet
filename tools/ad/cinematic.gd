@@ -6,11 +6,17 @@ extends SceneTree
 ##   queue    Yemekhane önünde petlerden uzun kuyruk, kamera kuyruk boyunca kayar, sonda üzgün maskot (gündüz)
 ##   drone    Ortabahçe'nin tamamı geniş açıyla, avlu etrafında dönüp alçalarak
 ##   dance    Yemekhane önünde maskot dans ediyor
+##   study    Kütüphane önü: maskot kitap kulelerinin arasında üzgün, kitaplar savrulur, dans eder (vize haftası)
 ##   gather   Büfede toplanan petler emote atıyor, gece çöküyor
 ##   star     Gece Ortabahçe: kayan yıldız iz bırakarak avluya düşer, ışık patlaması (Kutbi'nin gelişi)
+##   kutbi    Işığın içinden Kutbi belirir, kameraya el sallar ve dans eder (kapanış; yazılar build_ad.py'de)
 
 const FPS: float = 30.0
-const SHOTS: Array = [["queue", 2.8], ["drone", 4.6], ["dance", 2.0], ["gather", 2.4], ["star", 3.2]]
+const SHOTS: Array = [["queue", 2.8], ["drone", 4.6], ["dance", 2.0], ["study", 3.2], ["gather", 2.4], ["star", 3.2], ["kutbi", 4.8]]
+## Şehit Prof. Dr. İlhan Varank Kütüphanesi'nin güney cephesi önü (greybox: x 385–424, z 453–487)
+const STUDY_SPOT: Vector3 = Vector3(404.0, 0.0, 438.0)
+const BOOK_COLORS: Array[Color] = [Color(0.78, 0.2, 0.2), Color(0.2, 0.42, 0.75), Color(0.95, 0.72, 0.2), Color(0.25, 0.6, 0.35),
+	Color(0.55, 0.3, 0.65), Color(0.92, 0.92, 0.88)]
 ## Kuyruk Yemekhane cephesi boyunca uzanan yaya yolunun üstünde (greybox: (-75.4,-76.7)→(-59.5,-101.0))
 const YEMEKHANE_DOOR: Vector3 = Vector3(-72.0, 0.0, -82.0)
 const QUEUE_DIR: Vector3 = Vector3(0.548, 0.0, -0.837)
@@ -39,6 +45,12 @@ var star_hist: Array[Vector3] = []
 var flash: MeshInstance3D
 var flash_light: OmniLight3D
 var frame: int = 0
+var student: Node3D
+var books: Array[MeshInstance3D] = []
+var book_rest: Array[Transform3D] = []
+var book_vel: Array[Vector3] = []
+var kutbi: Node3D
+var kutbi_light: OmniLight3D
 
 
 func _initialize() -> void:
@@ -80,6 +92,34 @@ func _initialize() -> void:
 		var p: Vector3 = GATHER_CENTER + Vector3(cos(a) * r, 0.0, sin(a) * r)
 		crowd.append(_spawn(RP, PETS[i % PETS.size()], NAMES[i], ACC_SETS[i % ACC_SETS.size()], p, atan2(GATHER_CENTER.x - p.x, GATHER_CENTER.z - p.z)))
 	_make_star()
+	# kütüphane: maskot + iki yanında kitap kuleleri (hepsi bakışa göre: kamera güneyden, kütüphaneye doğru)
+	student = _spawn(RP, &"mushnub", "", {"face": "glasses"}, STUDY_SPOT, PI)
+	for side: float in [-1.0, 1.0]:
+		var h: float = 0.0
+		for i: int in 11:
+			var bm: MeshInstance3D = MeshInstance3D.new()
+			var box: BoxMesh = BoxMesh.new()
+			var th: float = rng.randf_range(0.07, 0.12)
+			box.size = Vector3(rng.randf_range(0.38, 0.5), th, rng.randf_range(0.28, 0.34))
+			var mat: StandardMaterial3D = StandardMaterial3D.new()
+			mat.albedo_color = BOOK_COLORS[rng.randi() % BOOK_COLORS.size()]
+			box.material = mat
+			bm.mesh = box
+			current_scene.add_child(bm)
+			var base: Vector3 = student.global_position + Vector3(side * 0.75, h + th * 0.5, 0.05)
+			bm.global_transform = Transform3D(Basis(Vector3.UP, rng.randf_range(-0.25, 0.25)), base)
+			h += th
+			books.append(bm)
+			book_rest.append(bm.global_transform)
+			book_vel.append(Vector3(side * rng.randf_range(1.5, 3.5), rng.randf_range(3.0, 5.5), rng.randf_range(-1.5, 1.5)))
+	# kapanış: Kutbi yıldızın indiği yerde
+	kutbi = _spawn(RP, &"kutbi", "", {}, COURTYARD + Vector3(4.0, 0.0, 10.0), 0.0)
+	kutbi.visible = false
+	kutbi_light = OmniLight3D.new()
+	kutbi_light.light_color = STAR_COLOR
+	kutbi_light.omni_range = 4.5
+	kutbi_light.light_energy = 0.0
+	current_scene.add_child(kutbi_light)
 	for g: Node in s.find_children("*", "GeometryInstance3D", true, false):
 		(g as GeometryInstance3D).visibility_range_end = 0.0
 	for i: int in 20:
@@ -188,6 +228,45 @@ func _shot(shot_name: String, t: float, dur: float) -> void:
 			var r: float = lerpf(4.2, 3.2, k)
 			cam.global_position = c + Vector3(sin(ang) * r, lerpf(1.6, 1.0, k), cos(ang) * r)
 			cam.look_at(c)
+		"study":
+			day_night.call("apply", 14.0)
+			var st: Vector3 = student.global_position
+			if absf(t - 0.15) < 0.5 / FPS:
+				(student.get("visual") as Node).call("play_emote", &"emote_no")
+			var burst: float = 1.55  # kitaplar savrulur, maskot dans
+			if absf(t - burst) < 0.5 / FPS:
+				(student.get("visual") as Node).call("play_emote", &"emote_dance")
+			for i: int in books.size():
+				var dt: float = t - burst - (i % 11) * 0.02
+				if dt <= 0.0:
+					books[i].global_transform = book_rest[i]
+				else:
+					var p0: Vector3 = book_rest[i].origin
+					var p: Vector3 = p0 + book_vel[i] * dt + Vector3.DOWN * 4.9 * dt * dt
+					p.y = maxf(p.y, st.y + 0.05)
+					books[i].global_transform = Transform3D(book_rest[i].basis.rotated(book_vel[i].normalized(), dt * 7.0) if p.y > st.y + 0.06 else book_rest[i].basis, p)
+			var c: Vector3 = st + Vector3.UP * 0.7
+			cam.global_position = c + Vector3(lerpf(0.6, -0.4, k), lerpf(0.9, 1.4, k), lerpf(-3.4, -4.4, _ease(k)))
+			cam.look_at(c + Vector3.UP * lerpf(0.1, 0.6, k))
+		"kutbi":
+			day_night.call("apply", 22.0)
+			flash.visible = false
+			flash_light.light_energy = 0.0
+			kutbi.visible = true
+			var kp: Vector3 = kutbi.global_position
+			var grow: float = _ease(t / 0.7)
+			kutbi.scale = Vector3.ONE * lerpf(0.05, 1.0, grow)
+			kutbi_light.global_position = kp + Vector3(0.0, 1.0, 1.4)
+			kutbi_light.light_energy = lerpf(3.0, 0.9, grow)
+			if absf(t - 0.8) < 0.5 / FPS:
+				(kutbi.get("visual") as Node).call("play_emote", &"emote_wave")
+			if absf(t - 2.4) < 0.5 / FPS:
+				(kutbi.get("visual") as Node).call("play_emote", &"emote_dance")
+			var c: Vector3 = kp + Vector3.UP * 0.65
+			var ang: float = lerpf(-0.35, 0.25, _ease(k))
+			var r: float = lerpf(3.4, 2.3, _ease(k))
+			cam.global_position = c + Vector3(sin(ang) * r, lerpf(0.5, 0.15, k), cos(ang) * r)
+			cam.look_at(c + Vector3.UP * 0.1)
 		"gather":
 			if frame % 18 == 0:
 				for i: int in crowd.size():
