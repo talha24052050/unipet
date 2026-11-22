@@ -76,9 +76,7 @@ def stone_pine(seed):
     b = L.Builder()
     lean = (rng.uniform(-0.8, 0.8), rng.uniform(-0.8, 0.8))
     h = 8.5
-    for k in range(3):
-        t0, t1 = k / 3, (k + 1) / 3
-        b.cylinder(lean[0] * t0, lean[1] * t0, 0.36 - 0.08 * t0, h * t0, h * t1 + 0.05, "pine_bark", seg=6)
+    b.tube(0.0, 0.0, 0.0, 0.36, lean[0], lean[1], h + 0.6, 0.2, "pine_bark", seg=6)
     tx, tz = lean
     ico_blob(b, tx, h + 1.4, tz, 4.2, "pine_leaf", rng, seg=9, rings=4, squash=0.38)
     ico_blob(b, tx + 1.6, h + 0.9, tz - 1.0, 2.6, "pine_leaf2", rng, seg=7, rings=4, squash=0.42)

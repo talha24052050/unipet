@@ -25,7 +25,7 @@ LEDGE_OUT = 0.18
 LEDGE_H = 0.22
 PARAPET_IN = 0.3
 PARAPET_H = 0.9
-MAX_TRIS = 2600  # Kışla 400 m çevreli tek bina; diğerleri < 1200
+MAX_TRIS = 3200  # Kışla ~1.5 km çevreli tek bina (10 giriş bölümüyle ~2.8k); diğerleri < 1200
 EPS = 0.02
 
 COLORS = {
@@ -42,6 +42,8 @@ COLORS = {
     "palm_leaf": (0.30, 0.55, 0.25),
     "cut_stone": (0.82, 0.77, 0.66),
     "concrete": (0.72, 0.71, 0.68),
+    "kisla_wall": (0.937, 0.890, 0.784),  # building_style.gd HISTORIC_WALL ile aynı
+    "kisla_roof": (0.63, 0.34, 0.27),     # HISTORIC_ROOF ile aynı
     "sign_navy": (0.16, 0.20, 0.42),
 }
 
@@ -206,6 +208,13 @@ class Builder:
         pts = [(cx + r * math.cos(2 * math.pi * i / seg), cz + r * math.sin(2 * math.pi * i / seg)) for i in range(seg)]
         self.prism(pts, y0, y1, color, apex=y1 if cone else None)
 
+    def tube(self, x0, z0, y0, r0, x1, z1, y1, r1, color, seg=6):
+        """Eğik, daralan gövde (alt ve üst halka farklı merkezde): tek parça, basamaksız."""
+        lo = [(x0 + r0 * math.cos(2 * math.pi * i / seg), y0, z0 + r0 * math.sin(2 * math.pi * i / seg)) for i in range(seg)]
+        hi = [(x1 + r1 * math.cos(2 * math.pi * i / seg), y1, z1 + r1 * math.sin(2 * math.pi * i / seg)) for i in range(seg)]
+        faces = [list(reversed(lo)), hi] + [[lo[i], lo[(i + 1) % seg], hi[(i + 1) % seg], hi[i]] for i in range(seg)]
+        self._add_faces(color, faces, None, center=((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2))
+
     def dome(self, cx, cz, r, y0, color, seg=10, rings=4):
         rows = []
         for k in range(rings):
@@ -325,6 +334,111 @@ def recipe_historic(b, poly, h, spec, rng):
             x, z = a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t
             b.box(x, z, 1.4, 0.8, h, h + 3.6, "brick", yaw)
             b.box(x, z, 1.7, 1.1, h + 3.6, h + 3.9, "stone", yaw)
+    if spec.get("pavilions"):
+        for i, pt in wall_crossings(poly, spec["_paths"]):
+            pavilion(b, poly, i, pt, h, "kisla_wall", "stone", "kisla_roof")
+
+
+GATE_W = 4.0       # Godot greybox_builder GATE_WIDTH ile aynı
+GATE_H = 3.2       # GATE_HEIGHT
+PAV_W = 15.0       # giriş bölümü (risalit) genişliği
+PAV_OUT = 1.1      # duvardan öne çıkma
+PAV_RISE = 1.8     # ana saçaktan yükseklik farkı
+PEDIMENT_H = 2.4   # üçgen alınlık
+
+
+def seg_intersect(p1, p2, q1, q2):
+    """İki doğru parçasının kesişimi: (t, nokta) ya da None (t: p1→p2 üzerinde 0..1)."""
+    d1 = (p2[0] - p1[0], p2[1] - p1[1])
+    d2 = (q2[0] - q1[0], q2[1] - q1[1])
+    den = d1[0] * d2[1] - d1[1] * d2[0]
+    if abs(den) < 1e-9:
+        return None
+    t = ((q1[0] - p1[0]) * d2[1] - (q1[1] - p1[1]) * d2[0]) / den
+    u = ((q1[0] - p1[0]) * d1[1] - (q1[1] - p1[1]) * d1[0]) / den
+    if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
+        return t, (p1[0] + d1[0] * t, p1[1] + d1[1] * t)
+    return None
+
+
+def _straight_run(poly, i, pt, direction, max_turn_deg=8.0):
+    """pt'den kenar i boyunca (direction=+1 ileri, -1 geri) düz devam eden duvar uzunluğu (hafif kırıklar dahil)."""
+    n = len(poly)
+    a, c = poly[i], poly[(i + 1) % n]
+    u = ((c[0] - a[0]) / math.dist(a, c), (c[1] - a[1]) / math.dist(a, c))
+    run = math.dist(pt, c if direction > 0 else a)
+    k = i
+    for _ in range(n):
+        k = (k + direction) % n
+        p0, p1 = poly[k], poly[(k + 1) % n]
+        L_ = math.dist(p0, p1)
+        if L_ < 1e-6:
+            continue
+        v = ((p1[0] - p0[0]) / L_, (p1[1] - p0[1]) / L_)
+        if math.degrees(math.acos(max(-1.0, min(1.0, u[0] * v[0] + u[1] * v[1])))) > max_turn_deg:
+            break
+        run += L_
+    return run
+
+
+def wall_crossings(poly, paths, min_gap=12.0):
+    """Yolların duvarı kestiği/duvara dayandığı yerler (Godot burada geçit açar): [(kenar indeksi, nokta)].
+    OSM'de yol uçları çoğu zaman tam bina köşe noktasında: düz devam eden duvar boyunca yer var mı diye bakılır."""
+    out = []
+    n = len(poly)
+    for i in range(n):
+        a, c = poly[i], poly[(i + 1) % n]
+        edge_len = math.dist(a, c)
+        if edge_len < 1e-6:
+            continue
+        hits = []
+        for line in paths:
+            for j in range(len(line) - 1):
+                hit = seg_intersect(a, c, line[j], line[j + 1])
+                if hit is not None:
+                    hits.append(hit[1])
+            for e in (line[0], line[-1]):  # yol duvara dayanıp bitiyor (Godot GATE_TOUCH_DIST)
+                q = seg_closest(e, a, c)
+                if math.dist(q, e) < 1.0:
+                    hits.append(q)
+        for pt in hits:
+            if _straight_run(poly, i, pt, 1) < PAV_W / 2 + 1.0 or _straight_run(poly, i, pt, -1) < PAV_W / 2 + 1.0:
+                continue  # köşeye çok yakın: bölüm duvardan taşmasın
+            if all(math.dist(pt, q) > min_gap for _, q in out):
+                out.append((i, pt))
+    return out
+
+
+def pavilion(b, poly, i, pt, h, wall_color, trim_color, roof_color):
+    """Geçidin üstünde öne çıkan giriş bölümü: iki yan ayak + geçit üstü kütle + üçgen alınlık; geçit açık kalır."""
+    a, c = poly[i], poly[(i + 1) % len(poly)]
+    L_ = math.dist(a, c)
+    u = ((c[0] - a[0]) / L_, (c[1] - a[1]) / L_)
+    nx, nz = edge_normal(a, c, signed_area(poly) > 0)
+    top = h + PAV_RISE
+
+    def rect(along0, along1, out0, out1):
+        return [(pt[0] + u[0] * s + nx * o, pt[1] + u[1] * s + nz * o)
+                for s, o in ((along0, out0), (along1, out0), (along1, out1), (along0, out1))]
+
+    half = PAV_W / 2
+    gap = GATE_W / 2 + 0.1
+    b.prism(rect(-half, -gap, -0.2, PAV_OUT), 0.0, top, wall_color)            # sol ayak
+    b.prism(rect(gap, half, -0.2, PAV_OUT), 0.0, top, wall_color)              # sağ ayak
+    b.prism(rect(-gap, gap, -0.2, PAV_OUT), GATE_H + 0.6, top, wall_color)     # geçit üstü (kemer hizası)
+    b.prism(rect(-half - 0.25, half + 0.25, -0.2, PAV_OUT + 0.25), top - 0.45, top, trim_color)  # korniş
+    b.prism(rect(-gap - 0.5, gap + 0.5, PAV_OUT - 0.05, PAV_OUT + 0.15), GATE_H + 0.2, GATE_H + 0.6, trim_color)  # kemer başlığı
+    # Üçgen alınlık (önden görünen), arkası kiremit eğimli çatı
+    front_l = (pt[0] + u[0] * -half + nx * (PAV_OUT + 0.25), top, pt[1] + u[1] * -half + nz * (PAV_OUT + 0.25))
+    front_r = (pt[0] + u[0] * half + nx * (PAV_OUT + 0.25), top, pt[1] + u[1] * half + nz * (PAV_OUT + 0.25))
+    front_t = (pt[0] + nx * (PAV_OUT + 0.25), top + PEDIMENT_H, pt[1] + nz * (PAV_OUT + 0.25))
+    back_l = (pt[0] + u[0] * -half - nx * 4.0, top, pt[1] + u[1] * -half - nz * 4.0)
+    back_r = (pt[0] + u[0] * half - nx * 4.0, top, pt[1] + u[1] * half - nz * 4.0)
+    back_t = (pt[0] - nx * 4.0, top + PEDIMENT_H, pt[1] - nz * 4.0)
+    cen = (pt[0] - nx * 1.8, top + PEDIMENT_H * 0.35, pt[1] - nz * 1.8)
+    b._add_faces(trim_color, [[front_l, front_r, front_t], [back_l, back_t, back_r]], None, center=cen)
+    b._add_faces(roof_color, [[front_l, front_t, back_t, back_l], [front_r, back_r, back_t, front_t],
+                              [front_l, back_l, back_r, front_r]], None, center=cen)
 
 
 def recipe_mosque(b, poly, h, spec, rng):

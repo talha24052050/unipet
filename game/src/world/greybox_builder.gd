@@ -365,6 +365,8 @@ func _build_building(b: Dictionary) -> void:
 	# Simge binalar: Blender'da üretilmiş süs modeli (korniş, baca, kubbe…; art/blender/landmarks.py).
 	var decor: Node3D = landmark_decor(name_text)
 	if decor != null:
+		# Süs modelindeki "duvar" yüzeyleri binanın pencereli duvar malzemesini kullansın (ör. Kışla giriş bölümleri)
+		apply_wall_material(decor, wall_mat)
 		body.add_child(decor)
 	# Tarihi binalarda (Kışla vb.) geçitlere taş kemer çerçevesi.
 	if style == BuildingStyle.STYLE_HISTORIC:
@@ -584,6 +586,19 @@ func _count_gates(poly: PackedVector2Array, paths: Array[PackedVector2Array]) ->
 static func landmark_height(building_name: String, fallback: float) -> float:
 	landmark_decor("")  # manifest yüklensin
 	return float((_landmarks.get("_heights", {}) as Dictionary).get(building_name, fallback))
+
+
+## landmarks GLB'lerinde duvar rengindeki yüzey malzemeleri (make_landmarks.py COLORS anahtarı "lm_<ad>").
+const DECOR_WALL_MATERIALS: PackedStringArray = ["lm_kisla_wall"]
+
+
+static func apply_wall_material(node: Node, wall_mat: Material) -> void:
+	for mi: Node in node.find_children("*", "MeshInstance3D", true, false):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		for i: int in m.get_surface_count():
+			var sm: Material = m.surface_get_material(i)
+			if sm != null and DECOR_WALL_MATERIALS.has(sm.resource_name):
+				(mi as MeshInstance3D).set_surface_override_material(i, wall_mat)
 
 
 ## Bina adı -> süs modeli (game/data/landmarks.json). Yoksa null.

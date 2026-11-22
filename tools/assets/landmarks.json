@@ -5,7 +5,8 @@
       "match": "Yıldız Teknik Üniversitesi Davutpaşa Kışlası",
       "id": "kisla",
       "recipe": "historic",
-      "height": 11.5
+      "height": 11.5,
+      "pavilions": true
     },
     {
       "match": "Davutpaşa Kışlası Mesciti",
