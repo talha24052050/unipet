@@ -6,25 +6,27 @@ const NEEDED: PackedStringArray = ["CharacterArmature|Idle", "CharacterArmature|
 
 
 func test_pet_models_have_core_animations() -> String:
+	# Animasyon adları modele göre değişir (Quaternius: "CharacterArmature|Idle", Kutbi: "Idle"): tanımdaki eşlemeyle bak.
+	var reg: RefCounted = (load("res://src/characters/character_registry.gd") as GDScript).new()
+	reg.call("load_from_dir", "res://data/characters")
 	var found: int = 0
-	for id: String in DirAccess.get_directories_at(BASE):
-		var path: String = "%s/%s/%s.glb" % [BASE, id, id]
-		if not ResourceLoader.exists(path):
-			continue
+	for def: CharacterDef in reg.get("_defs").values():
+		if not ResourceLoader.exists(def.model_path):
+			return "%s: model yok" % def.id
 		found += 1
-		var root: Node = (load(path) as PackedScene).instantiate()
+		var root: Node = (load(def.model_path) as PackedScene).instantiate()
 		var players: Array[Node] = root.find_children("*", "AnimationPlayer", true, false)
 		if players.is_empty():
 			root.free()
-			return "%s: AnimationPlayer yok" % id
+			return "%s: AnimationPlayer yok" % def.id
 		var ap: AnimationPlayer = players[0]
-		for a: String in NEEDED:
-			if not ap.has_animation(a):
+		for logical: String in ["idle", "walk"]:
+			if not ap.has_animation(def.anim_name(logical)):
 				root.free()
-				return "%s: animasyon yok: %s" % [id, a]
+				return "%s: animasyon yok: %s" % [def.id, logical]
 		root.free()
-	if found < 6:
-		return "6 pet bekleniyordu, %d bulundu" % found
+	if found < 7:
+		return "7 pet bekleniyordu (6 + efsanevi Kutbi), %d bulundu" % found
 	return ""
 
 
@@ -34,8 +36,8 @@ const CharacterRegistry := preload("res://src/characters/character_registry.gd")
 func test_registry_loads_all_pets() -> String:
 	var reg: CharacterRegistry = CharacterRegistry.new()
 	reg.load_from_dir("res://data/characters")
-	if reg.count() != 6:
-		return "6 pet tanımı bekleniyordu, %d yüklendi" % reg.count()
+	if reg.count() != 7 or reg.selectable().size() != 6:
+		return "7 tanım (6 seçilebilir + kilitli Kutbi) bekleniyordu: %d / %d" % [reg.count(), reg.selectable().size()]
 	return ""
 
 

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CharacterDef" format=3]
+
+[ext_resource type="Script" path="res://src/characters/character_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"kutbi"
+display_name = "Kutbi"
+model_path = "res://assets/characters/kutbi/kutbi.glb"
+model_scale = 1.0
+animation_map = {
+"idle": "Idle",
+"walk": "Walk",
+"run": "Run",
+"emote_wave": "Wave",
+"emote_jump": "Jump",
+"emote_yes": "Yes",
+"emote_no": "No",
+"emote_dance": "Dance"
+}
+animation_speed = {}
+accessory_bones = {}
+accessory_offsets = {}
+selectable = false
