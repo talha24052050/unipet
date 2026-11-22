@@ -36,6 +36,14 @@ func _ready() -> void:
 	for p: AudioStreamPlayer in _pool:
 		if p.get_parent() == null and is_inside_tree():
 			add_child(p)
+	var settings: RefCounted = preload("res://src/core/local_settings.gd").load_or_default()
+	if settings != null:
+		var raw_enabled: Variant = settings.get("sfx_enabled")
+		if raw_enabled != null:
+			enabled = bool(raw_enabled)
+		var raw_vol: Variant = settings.get("sfx_volume_db")
+		if raw_vol != null:
+			volume_db = float(raw_vol)
 
 
 func _ensure_pool() -> void:

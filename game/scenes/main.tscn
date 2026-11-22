@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://src/world/street_lights.gd" id="14"]
 [ext_resource type="Script" path="res://src/ui/perf_label.gd" id="15"]
 [ext_resource type="Script" path="res://src/ui/connection_label.gd" id="16"]
+[ext_resource type="Script" path="res://src/ui/settings_button.gd" id="17"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -208,6 +209,19 @@ grow_horizontal = 0
 theme_override_font_sizes/font_size = 28
 text = "Harita"
 script = ExtResource("12")
+
+[node name="SettingsButton" type="Button" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -144.0
+offset_top = 224.0
+offset_right = -24.0
+offset_bottom = 320.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 28
+text = "Ayarlar"
+script = ExtResource("17")
 
 [node name="ChatMenu" parent="UI" instance=ExtResource("8")]
 

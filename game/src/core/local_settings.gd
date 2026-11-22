@@ -1,11 +1,13 @@
 extends RefCounted
-## Cihaz ayarları (user://settings.cfg). Şimdilik: arkadaşlarla oynamak için sunucu adresi.
+## Cihaz ayarları (user://settings.cfg). Şimdilik: arkadaşlarla oynamak için sunucu adresi ve ses ayarları.
 
 const PATH: String = "user://settings.cfg"
 ## Sunucu adresi verilmezse kullanılan Nakama portu (server/docker-compose.yml).
 const DEFAULT_PORT: int = 7350
 
 var server_address: String = ""
+var sfx_enabled: bool = true
+var sfx_volume_db: float = 0.0
 
 
 static func load_or_default(path: String = PATH) -> RefCounted:
@@ -13,12 +15,17 @@ static func load_or_default(path: String = PATH) -> RefCounted:
 	var cfg: ConfigFile = ConfigFile.new()
 	if cfg.load(path) == OK:
 		s.server_address = str(cfg.get_value("server", "address", ""))
+		s.sfx_enabled = bool(cfg.get_value("audio", "sfx_enabled", true))
+		s.sfx_volume_db = float(cfg.get_value("audio", "sfx_volume_db", 0.0))
 	return s
 
 
 func save(path: String = PATH) -> Error:
 	var cfg: ConfigFile = ConfigFile.new()
+	var _err: Error = cfg.load(path)
 	cfg.set_value("server", "address", server_address)
+	cfg.set_value("audio", "sfx_enabled", sfx_enabled)
+	cfg.set_value("audio", "sfx_volume_db", sfx_volume_db)
 	return cfg.save(path)
 
 
