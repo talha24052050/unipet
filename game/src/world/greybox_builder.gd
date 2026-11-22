@@ -22,6 +22,11 @@ const PATH_COLOR: Color = Color(0.9, 0.9, 0.88)
 const AREA_Y: float = 0.02
 const PATH_Y: float = 0.04
 const GROUND_MARGIN: float = 30.0
+## Bina adı etiketi: küçük ve sadece yakındayken.
+const LABEL_FONT_SIZE: int = 64
+const LABEL_PIXEL_SIZE: float = 0.012
+const LABEL_OUTLINE: int = 12
+const LABEL_VISIBLE_DISTANCE: float = 60.0
 ## Yürüme yolunun bina duvarını kestiği yerde açılan geçit (ör. Kışla'nın avlu kapıları).
 const GATE_WIDTH: float = 4.0
 const GATE_HEIGHT: float = 3.2
@@ -244,9 +249,13 @@ func _build_building(b: Dictionary) -> void:
 		var label: Label3D = Label3D.new()
 		label.text = label_text
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.font_size = 96
-		label.pixel_size = 0.02
-		label.outline_size = 16
+		label.font_size = LABEL_FONT_SIZE
+		label.pixel_size = LABEL_PIXEL_SIZE
+		label.outline_size = LABEL_OUTLINE
+		# Uzaktan görünmesin, yakındayken de ekranı kaplamasın (telefonda HUD'un üstüne taşıyordu).
+		label.visibility_range_end = LABEL_VISIBLE_DISTANCE
+		label.visibility_range_end_margin = 10.0
+		label.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		var c: Vector2 = _polygon_center(poly)
 		if not Geometry2D.is_point_in_polygon(c, poly):
 			c = poly[0]  # halka/U şekilli binada merkez dışarıda kalır (ör. Kışla avlusu)
