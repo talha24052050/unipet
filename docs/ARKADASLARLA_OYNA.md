@@ -24,6 +24,10 @@ istemez, ilk seferde ~320 MB indirir, `C:\Tools\nakama-local`). Docker sadece ka
 - **Bağlanamıyor (aynı Wi-Fi):** Windows Güvenlik Duvarı. Yönetici PowerShell'de
   `New-NetFirewallRule -DisplayName "UniPet Nakama" -Direction Inbound -Protocol TCP -LocalPort 7350 -Action Allow`
   ya da `-Internet` ile dene. Okul/yurt Wi-Fi'leri cihazların birbirini görmesini engelleyebilir → `-Internet`.
+- **Tünel bekçisi (önerilen):** sunucu açıkken `powershell -ExecutionPolicy Bypass -File server/tunnel-watchdog.ps1`
+  tüneli açar, ev interneti kopup tünel toparlanamazsa ~1,5 dk içinde yeniden açar. Güncel adres
+  `C:\Tools
+akama-local	unnel-url.txt` dosyasında (geçici tünelde adres her yeniden açılışta değişir).
 - **-Internet adresi değişti:** Cloudflare geçici tüneli her açılışta yeni adres verir; yeni adresi tekrar paylaş.
 - **Sunucu durdurma:** Docker'sız: `powershell -ExecutionPolicy Bypass -File server/local-nakama.ps1 -Stop` · Docker: `server/stop.ps1`
 - Sunucu konsolu (oyuncular, odalar): http://127.0.0.1:7351 (kullanıcı/şifre `server/.env`'de)
