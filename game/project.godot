@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 
 Config="*res://src/core/config.gd"
 Services="*res://src/core/services.gd"
+Sfx="*res://src/core/sfx.gd"
 
 [display]
 

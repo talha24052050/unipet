@@ -11,6 +11,9 @@ const LocalProfile := preload("res://src/core/local_profile.gd")
 ## İstenen hareket yönü ve şiddeti. Kontrolcüler her karede yazar.
 var move_input: Vector3 = Vector3.ZERO
 
+const STEP_INTERVAL: float = 0.38
+var _step_accum: float = 0.0
+
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 @onready var visual: PetVisual = $PetVisual
@@ -95,8 +98,20 @@ func _physics_process(delta: float) -> void:
 
 	var flat: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
 	visual.set_locomotion(flat.length())
+	_update_footsteps(flat.length(), delta)
 	if flat.length() > 0.1:
 		rotation.y = lerp_angle(rotation.y, atan2(flat.x, flat.z), Config.PLAYER_TURN_SPEED * delta)
+
+
+func _update_footsteps(speed: float, delta: float) -> void:
+	if speed < 0.1 or not is_on_floor():
+		_step_accum = 0.0
+		return
+	var rate: float = clampf(speed / maxf(Config.PLAYER_WALK_SPEED, 0.1), 0.5, 2.0)
+	_step_accum += delta * rate
+	if _step_accum >= STEP_INTERVAL:
+		_step_accum = fmod(_step_accum, STEP_INTERVAL)
+		Sfx.play(&"step")
 
 
 ## Saf hesap (test edilebilir): yatayda hedef hıza ivmelen, dikeyde yerçekimi uygula.

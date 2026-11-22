@@ -57,16 +57,46 @@ func _ensure_nodes() -> void:
 
 
 func _connect_signals() -> void:
-	if _chat_button != null and not _chat_button.pressed.is_connected(toggle_panel):
-		_chat_button.pressed.connect(toggle_panel)
-	if _close_button != null and not _close_button.pressed.is_connected(close_panel):
-		_close_button.pressed.connect(close_panel)
-	if _presets_tab_button != null and not _presets_tab_button.pressed.is_connected(show_presets_tab):
-		_presets_tab_button.pressed.connect(show_presets_tab)
-	if _emotes_tab_button != null and not _emotes_tab_button.pressed.is_connected(show_emotes_tab):
-		_emotes_tab_button.pressed.connect(show_emotes_tab)
+	if _chat_button != null and not _chat_button.pressed.is_connected(_on_chat_button_pressed):
+		_chat_button.pressed.connect(_on_chat_button_pressed)
+	if _close_button != null and not _close_button.pressed.is_connected(_on_close_button_pressed):
+		_close_button.pressed.connect(_on_close_button_pressed)
+	if _presets_tab_button != null and not _presets_tab_button.pressed.is_connected(_on_presets_tab_pressed):
+		_presets_tab_button.pressed.connect(_on_presets_tab_pressed)
+	if _emotes_tab_button != null and not _emotes_tab_button.pressed.is_connected(_on_emotes_tab_pressed):
+		_emotes_tab_button.pressed.connect(_on_emotes_tab_pressed)
 	if _backdrop != null and not _backdrop.gui_input.is_connected(_on_backdrop_gui_input):
 		_backdrop.gui_input.connect(_on_backdrop_gui_input)
+	if Services.net != null and not Services.net.chat_received.is_connected(_on_chat_received):
+		Services.net.chat_received.connect(_on_chat_received)
+
+
+func _on_chat_button_pressed() -> void:
+	Sfx.play(&"ui_click")
+	toggle_panel()
+
+
+func _on_close_button_pressed() -> void:
+	Sfx.play(&"ui_click")
+	close_panel()
+
+
+func _on_presets_tab_pressed() -> void:
+	Sfx.play(&"ui_click")
+	show_presets_tab()
+
+
+func _on_emotes_tab_pressed() -> void:
+	Sfx.play(&"ui_click")
+	show_emotes_tab()
+
+
+func _on_chat_received(msg: ChatMessage) -> void:
+	if msg == null:
+		return
+	if Services.net != null and msg.sender_id == Services.net.local_player_id():
+		return
+	Sfx.play(&"chat_receive")
 
 
 func _populate_items() -> void:
@@ -183,6 +213,7 @@ func send_preset(id: String) -> bool:
 		return false
 	if Services.net != null:
 		Services.net.send_chat(ChatMessage.preset(id))
+	Sfx.play(&"chat_send")
 	_start_cooldown()
 	close_panel()
 	return true
@@ -193,6 +224,7 @@ func send_emote(id: String) -> bool:
 		return false
 	if Services.net != null:
 		Services.net.send_chat(ChatMessage.emote(id))
+	Sfx.play(&"chat_send")
 	_start_cooldown()
 	close_panel()
 	return true

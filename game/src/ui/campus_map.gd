@@ -336,6 +336,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func select_place(p: Dictionary) -> void:
+	Sfx.play(&"ui_click")
 	selected_place = p
 	_confirm_label.text = "%s — buraya ışınlan?" % str(p.get("name", ""))
 	_confirm.visible = true
@@ -347,6 +348,7 @@ func select_place(p: Dictionary) -> void:
 func travel() -> void:
 	if selected_place.is_empty():
 		return
+	Sfx.play(&"teleport")
 	var pos: Array = selected_place.get("pos", [0, 0])
 	Services.net.leave_zone()
 	Services.pending_teleport = Vector2(float(pos[0]), float(pos[1]))
@@ -355,6 +357,7 @@ func travel() -> void:
 
 
 func close() -> void:
+	Sfx.play(&"ui_click")
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 
@@ -408,6 +411,7 @@ func _build_ui() -> void:
 	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cancel.add_theme_font_size_override("font_size", 30)
 	cancel.pressed.connect(func() -> void:
+		Sfx.play(&"ui_click")
 		_confirm.visible = false
 		selected_place = {}
 		queue_redraw())

@@ -149,6 +149,7 @@ func _process_toast(delta: float) -> void:
 
 
 func _on_eat_pressed() -> void:
+	Sfx.play(&"ui_click")
 	if get_cooldown_remaining("eat") > 0.0:
 		return
 	var pos: Vector3 = _get_player_position()
@@ -159,12 +160,14 @@ func _on_eat_pressed() -> void:
 
 
 func _on_rest_pressed() -> void:
+	Sfx.play(&"ui_click")
 	if get_cooldown_remaining("rest") > 0.0:
 		return
 	_trigger_care_action("rest")
 
 
 func _on_play_pressed() -> void:
+	Sfx.play(&"ui_click")
 	if get_cooldown_remaining("play") > 0.0:
 		return
 	_trigger_care_action("play")
@@ -182,6 +185,7 @@ func _on_care_updated(state: Dictionary, ok: bool, reason: String) -> void:
 		_update_bars()
 		_update_mood()
 	if ok:
+		Sfx.play(&"care_ok")
 		if not _pending_action.is_empty():
 			var act: String = _pending_action
 			_last_action_time[act] = int(Time.get_unix_time_from_system())
@@ -192,6 +196,7 @@ func _on_care_updated(state: Dictionary, ok: bool, reason: String) -> void:
 				_play_care_emote(&"emote_yes")
 		_update_buttons()
 	else:
+		Sfx.play(&"care_fail")
 		_pending_action = ""
 		if not reason.is_empty():
 			show_toast(reason, TOAST_DEFAULT_DURATION)
@@ -348,6 +353,7 @@ func is_mood_warning_visible() -> bool:
 
 
 func _play_care_emote(anim: StringName) -> void:
+	Sfx.play(&"emote")
 	var p: Node3D = _get_player()
 	if p != null and "visual" in p and p.visual != null:
 		if p.visual.has_method("play_emote"):

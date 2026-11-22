@@ -51,6 +51,7 @@ func _add_logout_button() -> void:
 	b.position = Vector2(16, 16)
 	b.custom_minimum_size = Vector2(140, 96)
 	b.pressed.connect(func() -> void:
+		Sfx.play(&"ui_click")
 		Services.auth.sign_out()
 		get_tree().change_scene_to_file(LOGIN_SCENE))
 	add_child(b)
@@ -88,18 +89,22 @@ func _connect_signals() -> void:
 
 
 func _on_head_change_pressed() -> void:
+	Sfx.play(&"ui_click")
 	cycle_accessory(&"head")
 
 
 func _on_face_change_pressed() -> void:
+	Sfx.play(&"ui_click")
 	cycle_accessory(&"face")
 
 
 func _on_neck_change_pressed() -> void:
+	Sfx.play(&"ui_click")
 	cycle_accessory(&"neck")
 
 
 func _on_back_change_pressed() -> void:
+	Sfx.play(&"ui_click")
 	cycle_accessory(&"back")
 
 
@@ -150,14 +155,17 @@ func set_pet_index(index: int, play_emote: bool = true) -> void:
 		_pet_visual.set_character(def)
 		if play_emote:
 			_pet_visual.play_emote(&"emote_wave")
+			Sfx.play(&"emote")
 	_apply_profile_accessories_to_visual()
 
 
 func next_pet() -> void:
+	Sfx.play(&"ui_click")
 	set_pet_index(_current_pet_index + 1, true)
 
 
 func prev_pet() -> void:
+	Sfx.play(&"ui_click")
 	set_pet_index(_current_pet_index - 1, true)
 
 
@@ -242,5 +250,6 @@ func load_selection(path: String = "") -> void:
 
 
 func start_game() -> void:
+	Sfx.play(&"ui_click")
 	save_selection()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
