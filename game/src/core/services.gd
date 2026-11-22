@@ -12,6 +12,7 @@ const CharacterRegistry := preload("res://src/characters/character_registry.gd")
 const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
 const ZoneCatalog := preload("res://src/world/zone_catalog.gd")
 const ProfileSync := preload("res://src/net/profile_sync.gd")
+const Feedback := preload("res://src/net/feedback.gd")
 
 var net: NetworkService
 var auth: AuthService
@@ -20,6 +21,8 @@ var accessories: AccessoryRegistry
 var zones: ZoneCatalog
 ## Profilin Supabase'e senkronu (sadece supabase girişinde etkin).
 var profile_sync: ProfileSync
+## Oyuncu geri bildirimi (Supabase `feedback`; geliştirmede cihaza).
+var feedback: Feedback
 ## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
 var current_zone: String = ""
 ## Haritadan ışınlanma hedefi (kampüs XZ). Oyuncu sahnesi bir kez kullanır ve sıfırlar.
@@ -39,6 +42,8 @@ func _ready() -> void:
 	add_child(auth)
 	profile_sync = ProfileSync.new()
 	add_child(profile_sync)
+	feedback = Feedback.new()
+	add_child(feedback)
 
 
 ## Sunucu adresine göre ağ servisini seçer: {} → tek oyunculu (offline), {"host","port","ssl"} → Nakama.

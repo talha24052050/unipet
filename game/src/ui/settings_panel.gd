@@ -7,7 +7,7 @@ signal closed
 const LocalSettings := preload("res://src/core/local_settings.gd")
 
 const PANEL_WIDTH: float = 560.0
-const PANEL_HEIGHT: float = 460.0
+const PANEL_HEIGHT: float = 760.0
 const MIN_CONTROL_HEIGHT: float = 64.0
 const FONT_SIZE_TITLE: int = 32
 const FONT_SIZE_CONTROLS: int = 28
@@ -23,6 +23,10 @@ var check_button: CheckButton
 var volume_label: Label
 var volume_slider: HSlider
 var close_button: Button
+var feedback_input: TextEdit
+var feedback_button: Button
+var feedback_status: Label
+const FEEDBACK_INPUT_HEIGHT: float = 140.0
 
 # Erişilebilirlik ve test kolaylığı için kısayol
 var check_box: CheckButton:
@@ -117,6 +121,27 @@ func _setup_layout() -> void:
 
 	vbox.add_child(slider_box)
 
+	# Geri bildirim (kapalı test): kısa metin → Services.feedback
+	feedback_input = TextEdit.new()
+	feedback_input.name = "FeedbackInput"
+	feedback_input.placeholder_text = "Geri bildirim: hata, öneri, ne istersen…"
+	feedback_input.custom_minimum_size = Vector2(0, FEEDBACK_INPUT_HEIGHT)
+	feedback_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	feedback_input.add_theme_font_size_override("font_size", FONT_SIZE_LABEL)
+	vbox.add_child(feedback_input)
+	feedback_button = Button.new()
+	feedback_button.name = "FeedbackButton"
+	feedback_button.text = "Gönder"
+	feedback_button.custom_minimum_size = Vector2(0, MIN_CONTROL_HEIGHT)
+	feedback_button.add_theme_font_size_override("font_size", FONT_SIZE_CONTROLS)
+	feedback_button.pressed.connect(_on_feedback_pressed)
+	vbox.add_child(feedback_button)
+	feedback_status = Label.new()
+	feedback_status.name = "FeedbackStatus"
+	feedback_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	feedback_status.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 4)
+	vbox.add_child(feedback_status)
+
 	close_button = Button.new()
 	close_button.name = "CloseButton"
 	close_button.text = "Kapat"
@@ -151,6 +176,24 @@ func _on_close_button_pressed() -> void:
 	close()
 
 
+func _on_feedback_pressed() -> void:
+	var fb: Node = Services.feedback
+	if fb == null:
+		return
+	feedback_button.disabled = true
+	feedback_status.text = "Gönderiliyor…"
+	if not fb.sent.is_connected(_on_feedback_sent):
+		fb.sent.connect(_on_feedback_sent)
+	fb.send(feedback_input.text)
+
+
+func _on_feedback_sent(ok: bool, message: String) -> void:
+	feedback_button.disabled = false
+	feedback_status.text = message
+	if ok:
+		feedback_input.text = ""
+
+
 func _update_volume_label() -> void:
 	if volume_label != null:
 		volume_label.text = "Ses düzeyi (%d dB)" % int(Sfx.volume_db)
@@ -174,6 +217,9 @@ func refresh_from_settings() -> void:
 func open() -> void:
 	refresh_from_settings()
 	visible = true
+	# Ağaç dışında ayarlanan çapalar CanvasLayer altında (0,0)'a göre kalıyor: açılırken ekranın ortasına al.
+	if is_inside_tree():
+		position = ((get_viewport_rect().size - size) * 0.5).floor()
 
 
 func close() -> void:

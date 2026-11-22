@@ -15,10 +15,9 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	# Panel kardeş düğüm: sahne kapanırken ebeveyn meşgul olabilir, remove_child yerine sıraya al.
 	if panel != null and is_instance_valid(panel):
-		if panel.get_parent() != null:
-			panel.get_parent().remove_child(panel)
-		panel.free()
+		panel.queue_free()
 		panel = null
 
 
@@ -49,7 +48,10 @@ func _ensure_panel() -> void:
 	if panel == null or not is_instance_valid(panel):
 		panel = SettingsPanel.new()
 		var p: Node = get_parent()
-		if p != null:
+		if p == null:
+			add_child(panel)
+		elif p.is_node_ready():
 			p.add_child(panel)
 		else:
-			add_child(panel)
+			# Ebeveyn hâlâ kuruluyor (_ready sırasında): doğrudan add_child başarısız olur ve panel hiç ekrana girmez.
+			p.add_child.call_deferred(panel)
