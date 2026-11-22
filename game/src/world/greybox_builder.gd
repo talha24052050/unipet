@@ -6,6 +6,8 @@ extends Node3D
 const BuildingStyle := preload("res://src/world/building_style.gd")
 const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
 const PATH_COBBLE_SHADER: Shader = preload("res://assets/shaders/path_cobble.gdshader")
+const GRASS_SHADER: Shader = preload("res://assets/shaders/grass.gdshader")
+const GRASS_KINDS: PackedStringArray = ["grass", "park", "garden"]
 const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
 ## Ortabahçe'yi çevreleyen bina (avlu tespiti için).
 const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
@@ -302,7 +304,7 @@ func _build_ground_rect(rect: Rect2) -> void:
 	var mesh: MeshInstance3D = MeshInstance3D.new()
 	var bm: BoxMesh = BoxMesh.new()
 	bm.size = box.size
-	bm.material = _material(GROUND_COLOR)
+	bm.material = _grass_material(GROUND_COLOR)
 	mesh.mesh = bm
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body.add_child(shape)
@@ -322,7 +324,7 @@ func _build_ground(half_size: float, center: Vector2 = Vector2.ZERO) -> void:
 	var mesh: MeshInstance3D = MeshInstance3D.new()
 	var bm: BoxMesh = BoxMesh.new()
 	bm.size = box.size
-	bm.material = _material(GROUND_COLOR)
+	bm.material = _grass_material(GROUND_COLOR)
 	mesh.mesh = bm
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body.add_child(shape)
@@ -416,7 +418,8 @@ func _build_area(a: Dictionary) -> void:
 	if mesh == null:
 		return
 	var color: Color = AREA_COLORS.get(str(a.get("kind", "grass")), AREA_COLORS["grass"])
-	var mat: Material = _water_material() if str(a.get("name", "")).to_lower().contains("havuz") else _shared_material(color)
+	var kind: String = str(a.get("kind", "grass"))
+	var mat: Material = _water_material() if str(a.get("name", "")).to_lower().contains("havuz") 		else (_grass_material(color) if GRASS_KINDS.has(kind) else _shared_material(color))
 	if _batching:
 		_batch_mesh(mesh, mat, _poly_box(poly).get_center())
 		return
@@ -472,6 +475,17 @@ func _build_path(p: Dictionary) -> void:
 
 var _shared_materials: Dictionary = {}
 var _style_materials: Dictionary = {}  # bina stili -> ortak duvar ShaderMaterial
+var _grass_materials: Dictionary = {}
+
+
+## Alacalı çim (aynı renk = aynı malzeme, birleştirmeye uygun).
+func _grass_material(color: Color) -> ShaderMaterial:
+	if not _grass_materials.has(color):
+		var m: ShaderMaterial = ShaderMaterial.new()
+		m.shader = GRASS_SHADER
+		m.set_shader_parameter("base_color", color)
+		_grass_materials[color] = m
+	return _grass_materials[color]
 
 
 ## Aynı renk = aynı malzeme nesnesi (birleştirme anahtarı malzeme kimliği).
