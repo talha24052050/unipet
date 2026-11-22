@@ -3,21 +3,25 @@ extends Node3D
 ## Binalar: taban şekli yukarı uzatılmış, çarpışmalı. Alanlar/yollar: zemin üstünde düz, çarpışmasız.
 ## NavigationRegion3D'nin çocuğu olmalı: kurulum, bölgenin navmesh pişirmesinden önce (_ready) biter.
 
+const BuildingStyle := preload("res://src/world/building_style.gd")
+const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
+
 @export_file("*.json") var data_path: String = ""
 ## Bina adlarını üstlerinde göster (greybox'ta yön bulmak için).
 @export var show_labels: bool = true
 
 const PATH_WIDTHS: Dictionary = {"footway": 2.0, "path": 1.5, "pedestrian": 4.0, "service": 4.0}
 const AREA_COLORS: Dictionary = {
-	"park": Color(0.45, 0.68, 0.38),
-	"garden": Color(0.5, 0.72, 0.42),
-	"grass": Color(0.55, 0.75, 0.45),
+	"park": Color(0.490, 0.729, 0.310), # #7DBA4F canlı yeşil
+	"garden": Color(0.45, 0.68, 0.28),
+	"grass": Color(0.490, 0.729, 0.310), # #7DBA4F
 	"playground": Color(0.8, 0.7, 0.45),
 	"pitch": Color(0.3, 0.55, 0.3),
 }
-const BUILDING_COLOR: Color = Color(0.86, 0.82, 0.74)
-const GROUND_COLOR: Color = Color(0.72, 0.72, 0.7)
-const PATH_COLOR: Color = Color(0.9, 0.9, 0.88)
+const BUILDING_COLOR: Color = Color(0.91, 0.93, 0.94)
+const GROUND_COLOR: Color = Color(0.490, 0.729, 0.310) # #7DBA4F canlı yeşil
+const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
+const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
 ## Z-fighting olmasın diye katmanlar arası küçük yükseklik farkı.
 const AREA_Y: float = 0.02
 const PATH_Y: float = 0.04
@@ -233,7 +237,21 @@ func _build_building(b: Dictionary) -> void:
 	if mesh == null:
 		push_warning("Bina üçgenlenemedi, atlandı: %s" % b.get("name", "?"))
 		return
-	mesh.surface_set_material(0, _material(BUILDING_COLOR))
+
+	var name_text: String = str(b.get("name", ""))
+	var area: float = BuildingStyle.polygon_area(poly)
+	var style: StringName = BuildingStyle.style_for(name_text, height, area)
+	var sdata: Dictionary = BuildingStyle.get_style_data(style)
+
+	var wall_mat: ShaderMaterial = ShaderMaterial.new()
+	wall_mat.shader = BUILDING_WALL_SHADER
+	wall_mat.set_shader_parameter("wall_color", sdata["wall_color"])
+	wall_mat.set_shader_parameter("window_color", sdata["window_color"])
+	wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
+	wall_mat.set_shader_parameter("roof_color", sdata["roof_color"])
+	wall_mat.set_shader_parameter("style", sdata["shader_style"])
+
+	mesh.surface_set_material(0, wall_mat)
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Building%d" % building_count
 	var mi: MeshInstance3D = MeshInstance3D.new()
@@ -244,10 +262,21 @@ func _build_building(b: Dictionary) -> void:
 	shape.shape = trimesh
 	body.add_child(mi)
 	body.add_child(shape)
-	var label_text: String = str(b.get("name", ""))
-	if show_labels and not label_text.is_empty():
+
+	# Tarihi binalara kırma çatı
+	if style == BuildingStyle.STYLE_HISTORIC:
+		var roof_mesh: ArrayMesh = build_hip_roof(poly, height, 2.5, 2.0)
+		if roof_mesh != null:
+			var roof_mat: StandardMaterial3D = _material(sdata["roof_color"])
+			roof_mesh.surface_set_material(0, roof_mat)
+			var roof_mi: MeshInstance3D = MeshInstance3D.new()
+			roof_mi.name = "Roof"
+			roof_mi.mesh = roof_mesh
+			body.add_child(roof_mi)
+
+	if show_labels and not name_text.is_empty():
 		var label: Label3D = Label3D.new()
-		label.text = label_text
+		label.text = name_text
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.font_size = LABEL_FONT_SIZE
 		label.pixel_size = LABEL_PIXEL_SIZE
@@ -265,6 +294,7 @@ func _build_building(b: Dictionary) -> void:
 	building_count += 1
 
 
+
 func _build_area(a: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(a.get("points", []))
 	var mesh: ArrayMesh = flat_polygon_mesh(poly, AREA_Y)
@@ -279,7 +309,8 @@ func _build_area(a: Dictionary) -> void:
 
 func _build_path(p: Dictionary) -> void:
 	var pts: PackedVector2Array = to_polygon(p.get("points", []))
-	var width: float = PATH_WIDTHS.get(str(p.get("kind", "footway")), 2.0)
+	var kind: String = str(p.get("kind", "footway"))
+	var width: float = PATH_WIDTHS.get(kind, 2.0)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
@@ -298,10 +329,111 @@ func _build_path(p: Dictionary) -> void:
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
-	mesh.surface_set_material(0, _material(PATH_COLOR))
+	var path_color: Color = SERVICE_PATH_COLOR if kind == "service" else PATH_COLOR
+	mesh.surface_set_material(0, _material(path_color))
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	add_child(mi)
+
+
+## Tarihi binalara kırma (hip) çatı mesh'i üretir.
+## Çokgen ofseti başarısız olursa null döner (çağıran düz çatıda kalır).
+static func build_hip_roof(poly: PackedVector2Array, base_height: float, roof_height: float = 2.5, depth: float = 2.0) -> ArrayMesh:
+	var base_poly: PackedVector2Array = poly.duplicate()
+	if Geometry2D.is_polygon_clockwise(base_poly):
+		base_poly.reverse()
+
+	var off: Array[PackedVector2Array] = Geometry2D.offset_polygon(base_poly, -depth)
+	if off.is_empty():
+		off = Geometry2D.offset_polygon(base_poly, -depth * 0.5)
+	if off.is_empty():
+		return null
+
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(-1)
+
+	var has_geometry: bool = false
+
+	for inner_poly: PackedVector2Array in off:
+		if inner_poly.size() < 3:
+			continue
+
+		var hole_poly: PackedVector2Array = inner_poly.duplicate()
+		if not Geometry2D.is_polygon_clockwise(hole_poly):
+			hole_poly.reverse()
+
+		var best_i: int = 0
+		var best_j: int = 0
+		var min_d_sq: float = INF
+		for i: int in base_poly.size():
+			for j: int in hole_poly.size():
+				var d_sq: float = base_poly[i].distance_squared_to(hole_poly[j])
+				if d_sq < min_d_sq:
+					min_d_sq = d_sq
+					best_i = i
+					best_j = j
+
+		var bridge_poly: PackedVector2Array = PackedVector2Array()
+		var bridge_y: PackedFloat32Array = PackedFloat32Array()
+
+		var n_base: int = base_poly.size()
+		for k: int in n_base:
+			var idx: int = (best_i + k) % n_base
+			bridge_poly.append(base_poly[idx])
+			bridge_y.append(base_height)
+		bridge_poly.append(base_poly[best_i])
+		bridge_y.append(base_height)
+
+		var n_in: int = hole_poly.size()
+		for k: int in n_in:
+			var idx: int = (best_j + k) % n_in
+			bridge_poly.append(hole_poly[idx])
+			bridge_y.append(base_height + roof_height)
+		bridge_poly.append(hole_poly[best_j])
+		bridge_y.append(base_height + roof_height)
+
+		bridge_poly.append(base_poly[best_i])
+		bridge_y.append(base_height)
+
+		var slope_tris: PackedInt32Array = Geometry2D.triangulate_polygon(bridge_poly)
+		if slope_tris.is_empty():
+			continue
+
+		for t: int in range(0, slope_tris.size(), 3):
+			var i0: int = slope_tris[t]
+			var i1: int = slope_tris[t + 1]
+			var i2: int = slope_tris[t + 2]
+			var v0: Vector3 = Vector3(bridge_poly[i0].x, bridge_y[i0], bridge_poly[i0].y)
+			var v1: Vector3 = Vector3(bridge_poly[i1].x, bridge_y[i1], bridge_poly[i1].y)
+			var v2: Vector3 = Vector3(bridge_poly[i2].x, bridge_y[i2], bridge_poly[i2].y)
+			var norm: Vector3 = (v2 - v0).cross(v1 - v0)
+			if norm.y <= 0.0:
+				st.add_vertex(v0)
+				st.add_vertex(v2)
+				st.add_vertex(v1)
+			else:
+				st.add_vertex(v0)
+				st.add_vertex(v1)
+				st.add_vertex(v2)
+
+		var top_poly: PackedVector2Array = inner_poly.duplicate()
+		if Geometry2D.is_polygon_clockwise(top_poly):
+			top_poly.reverse()
+		var top_tris: PackedInt32Array = Geometry2D.triangulate_polygon(top_poly)
+		for t: int in range(0, top_tris.size(), 3):
+			for k: int in [0, 1, 2]:
+				var pt: Vector2 = top_poly[top_tris[t + k]]
+				st.add_vertex(Vector3(pt.x, base_height + roof_height, pt.y))
+
+		has_geometry = true
+
+	if not has_geometry:
+		return null
+
+	st.generate_normals()
+	return st.commit()
+
 
 
 func _count_gates(poly: PackedVector2Array) -> int:
