@@ -79,7 +79,7 @@
         353.8,
         -183.8
       ],
-      "zone": "",
+      "zone": "fef",
       "source": "manual"
     },
     {
@@ -306,7 +306,7 @@
         -354.9,
         -474.6
       ],
-      "zone": "",
+      "zone": "egitim",
       "source": "manual"
     },
     {
@@ -317,7 +317,7 @@
         -170.0,
         -450.0
       ],
-      "zone": "",
+      "zone": "egitim",
       "source": "manual"
     },
     {
@@ -395,7 +395,7 @@
         -200.0,
         530.0
       ],
-      "zone": "",
+      "zone": "guney",
       "source": "manual"
     },
     {
@@ -430,7 +430,7 @@
         -70.0,
         -345.0
       ],
-      "zone": "",
+      "zone": "fef",
       "source": "manual"
     },
     {
@@ -463,7 +463,7 @@
         15.0,
         830.0
       ],
-      "zone": "",
+      "zone": "guney",
       "source": "manual"
     },
     {
