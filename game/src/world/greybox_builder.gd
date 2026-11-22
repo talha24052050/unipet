@@ -88,6 +88,9 @@ func _ready() -> void:
 		_path_boxes.append(_poly_box(line))
 	for b: Dictionary in data.get("buildings", []):
 		_build_building(b)
+	# Binaya bağlı olmayan simge yapılar (kampüs kapıları)
+	for n: Node3D in free_landmarks():
+		add_child(n)
 
 
 static func load_data(path: String) -> Dictionary:
@@ -559,6 +562,23 @@ static func landmark_decor(building_name: String) -> Node3D:
 	var node: Node3D = (load(path) as PackedScene).instantiate() as Node3D
 	node.name = "Landmark"
 	return node
+
+
+## landmarks.json "free" listesi: binaya bağlı olmayan süs modelleri (kapılar). Sahne koordinatlarında.
+static func free_landmarks() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	var f: FileAccess = FileAccess.open(LANDMARKS_PATH, FileAccess.READ)
+	if f == null:
+		return out
+	var data: Variant = JSON.parse_string(f.get_as_text())
+	if not data is Dictionary:
+		return out
+	for path: Variant in (data as Dictionary).get("free", []):
+		if ResourceLoader.exists(str(path)):
+			var n: Node3D = (load(str(path)) as PackedScene).instantiate() as Node3D
+			n.name = "Gate"
+			out.append(n)
+	return out
 
 
 ## Kenarın dışa bakan birim normali (XZ). Çokgen yönünden bağımsız: kenar ortasının hemen dışı çokgen dışında olmalı.

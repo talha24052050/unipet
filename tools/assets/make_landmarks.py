@@ -41,6 +41,8 @@ COLORS = {
     "palm_trunk": (0.50, 0.38, 0.26),
     "palm_leaf": (0.30, 0.55, 0.25),
     "cut_stone": (0.82, 0.77, 0.66),
+    "concrete": (0.72, 0.71, 0.68),
+    "sign_navy": (0.16, 0.20, 0.42),
 }
 
 
@@ -441,6 +443,63 @@ def recipe_domed(b, poly, h, spec, rng):
         b.cylinder(q[0], q[1], 0.6, drum + 1.5, drum + 2.2, "dome", seg=8, cone=True)
 
 
+def nearest_road(pos, paths_all):
+    """Kapı konumuna en yakın yol parçası: (yakın nokta, birim yön, tür)."""
+    best = None
+    for kind, line in paths_all:
+        for j in range(len(line) - 1):
+            c = seg_closest(pos, line[j], line[j + 1])
+            d = math.dist(c, pos)
+            if best is None or d < best[0]:
+                L = math.dist(line[j], line[j + 1]) or 1.0
+                best = (d, c, ((line[j + 1][0] - line[j][0]) / L, (line[j + 1][1] - line[j][1]) / L), kind)
+    return best[1], best[2], best[3]
+
+
+def _quad(c, u, along, across):
+    ux, uz = u
+    nx, nz = -uz, ux
+    return [(c[0] + ux * a * along / 2 + nx * s * across / 2, c[1] + uz * a * along / 2 + nz * s * across / 2)
+            for a, s in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+
+
+def gate_portal(b, c, u, half_open):
+    """Ana giriş: iki kalın beton duvar + üstte eğik beton tabla + lacivert YTÜ panosu (fotoğraftaki brütalist kapı)."""
+    ux, uz = u
+    nx, nz = -uz, ux
+    depth, thick, h_low, h_high, T = 7.0, 1.6, 8.0, 10.5, 0.8
+    for side, top in ((-1, h_low), (1, h_high)):
+        off = half_open + thick / 2
+        b.prism(_quad((c[0] + nx * side * off, c[1] + nz * side * off), u, depth, thick), 0.0, top, "concrete")
+    span = 2 * (half_open + thick) + 2.0
+    pts = {}
+    for a in (-1, 1):
+        for s_ in (-1, 1):
+            y = (h_low if s_ < 0 else h_high) + 0.05
+            pts[(a, s_)] = (c[0] + ux * a * (depth + 2) / 2 + nx * s_ * span / 2, y, c[1] + uz * a * (depth + 2) / 2 + nz * s_ * span / 2)
+    up = lambda q: (q[0], q[1] + T, q[2])
+    A, B, C, D = pts[(-1, -1)], pts[(-1, 1)], pts[(1, 1)], pts[(1, -1)]
+    faces = [[A, B, C, D], [up(A), up(D), up(C), up(B)],
+             [A, D, up(D), up(A)], [B, up(B), up(C), C], [A, up(A), up(B), B], [D, C, up(C), up(D)]]
+    b._add_faces("concrete", faces, None, center=(c[0], (h_low + h_high) / 2 + T / 2, c[1]))
+    # pano: yüksek duvarın yol tarafındaki yüzünde
+    b.prism(_quad((c[0] + nx * (half_open - 0.08), c[1] + nz * (half_open - 0.08)), u, 4.0, 0.12), 5.2, 6.6, "sign_navy")
+
+
+def gate_simple(b, c, u, half_open):
+    """Yaya girişi: iki taş ayak + üstte lacivert pano."""
+    ux, uz = u
+    nx, nz = -uz, ux
+    yaw = math.atan2(uz, ux)
+    for side in (-1, 1):
+        x, z = c[0] + nx * side * (half_open + 0.6), c[1] + nz * side * (half_open + 0.6)
+        b.box(x, z, 1.2, 1.2, 0.0, 4.2, "cut_stone", yaw)
+        b.box(x, z, 1.5, 1.5, 4.2, 4.6, "cut_stone", yaw)
+    b.prism(_quad(c, u, 0.25, 2 * half_open + 2.4), 3.6, 4.4, "sign_navy")
+
+
+GATES = {"portal": gate_portal, "simple": gate_simple}
+
 RECIPES = {"library": recipe_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
 
 
@@ -465,6 +524,15 @@ def main():
         write_glb(os.path.join(out_dir, spec["id"] + ".glb"), spec["id"], b)
         manifest["buildings"][spec["match"]] = "res://assets/buildings/%s.glb" % spec["id"]
         print("OK %s: %d üçgen" % (spec["id"], tris))
+    paths_all = [(p.get("kind", ""), [tuple(q) for q in p["points"]]) for p in grey.get("paths", [])]
+    manifest["free"] = []
+    for g in spec_all.get("gates", []):
+        c, u, kind = nearest_road(tuple(g["pos"]), paths_all)
+        b = Builder()
+        GATES[g["style"]](b, c, u, 5.0 if kind == "service" else 2.5)
+        write_glb(os.path.join(out_dir, g["id"] + ".glb"), g["id"], b)
+        manifest["free"].append("res://assets/buildings/%s.glb" % g["id"])
+        print("OK kapı %s (%s yolu): %d üçgen" % (g["id"], kind, b.tri_count()))
     with open(os.path.join(ROOT, "game/data/landmarks.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
         f.write("\n")

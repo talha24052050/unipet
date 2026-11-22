@@ -9,5 +9,9 @@
     "Şehit Prof. Dr. İlhan Varank Kütüphanesi": "res://assets/buildings/kutuphane.glb",
     "Otağ-ı Hümayun": "res://assets/buildings/otag.glb",
     "Tarihi Hamam": "res://assets/buildings/hamam.glb"
-  }
+  },
+  "free": [
+    "res://assets/buildings/kapi_b.glb",
+    "res://assets/buildings/kapi_a.glb"
+  ]
 }

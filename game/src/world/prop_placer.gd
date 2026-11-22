@@ -17,6 +17,8 @@ const PROP_PATHS: Dictionary = {
 	"tree_birch": "res://assets/props/tree_birch.glb",
 	"tree_pine": "res://assets/props/tree_pine.glb",
 	"tree_common": "res://assets/props/tree_common.glb",
+	"tree_plane": "res://assets/props/tree_plane.glb",
+	"tree_cypress": "res://assets/props/tree_cypress.glb",
 	"bush_common": "res://assets/props/bush_common.glb",
 	"bush_berries": "res://assets/props/bush_berries.glb",
 	"bench": "res://assets/props/bench.glb",
@@ -30,6 +32,8 @@ const TYPE_SCALES: Dictionary = {
 	"tree_birch": 1.4,
 	"tree_pine": 1.4,
 	"tree_common": 1.1,
+	"tree_plane": 1.0,
+	"tree_cypress": 1.0,
 	"bush_common": 1.0,
 	"bush_berries": 1.0,
 	"bench": 2.4,
@@ -95,6 +99,7 @@ func build_props(data: Dictionary) -> void:
 		var pos_arr: Array = item.get("pos", [0.0, 0.0])
 		var px: float = float(pos_arr[0])
 		var pz: float = float(pos_arr[1])
+		t = local_species(t, px, pz)
 		var cell: Vector2i = get_cell(Vector2(px, pz))
 
 		if not by_cell.has(cell):
@@ -106,7 +111,7 @@ func build_props(data: Dictionary) -> void:
 		# Çarpışma şekillerini kur (çalılara yok)
 		var yaw: float = float(item.get("yaw", 0.0))
 		match t:
-			"tree_birch", "tree_pine", "tree_common", "lamp":
+			"tree_birch", "tree_pine", "tree_common", "tree_plane", "tree_cypress", "lamp":
 				var col := CollisionShape3D.new()
 				col.shape = cylinder_shape
 				col.position = Vector3(px, CYLINDER_HEIGHT * 0.5, pz)
@@ -212,3 +217,18 @@ static func load_data(path: String) -> Dictionary:
 		push_error("Prop verisi okunamadı: %s" % path)
 		return {}
 	return parsed
+
+
+## Davutpaşa'da ağaçların çoğu çınar, yollarda/tarihi binalarda servi var. Veri dosyasını (ve navmesh'i) değiştirmeden
+## genel türleri konuma bağlı, her açılışta aynı olacak şekilde yerel türlere çevirir.
+const PLANE_SHARE: float = 0.6     # "tree_common" → çınar oranı
+const CYPRESS_SHARE: float = 0.5   # "tree_pine" → servi oranı
+
+
+static func local_species(t: String, x: float, z: float) -> String:
+	var h: float = fposmod(sin(x * 12.9898 + z * 78.233) * 43758.5453, 1.0)
+	if t == "tree_common" and h < PLANE_SHARE:
+		return "tree_plane"
+	if t == "tree_pine" and h < CYPRESS_SHARE:
+		return "tree_cypress"
+	return t

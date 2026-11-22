@@ -47,5 +47,25 @@
       "domes": 3,
       "chimneys": 0
     }
+  ],
+  "gates": [
+    {
+      "id": "kapi_b",
+      "name": "B Girişi (EEF yakını)",
+      "pos": [
+        -70.0,
+        -470.0
+      ],
+      "style": "portal"
+    },
+    {
+      "id": "kapi_a",
+      "name": "A Girişi",
+      "pos": [
+        800.0,
+        575.0
+      ],
+      "style": "simple"
+    }
   ]
 }
