@@ -308,6 +308,26 @@ def main():
         if sum(1 for w in ends if math.dist(v, w) < 1.5) >= 3 and all(math.dist(v, c) > BED_RADIUS * 3 for c in beds):
             beds.append(v)
 
+    # Ortabahçe büfesi (Street View 2017: kavşaktaki çiçek tarhının arkasında, mavi çatılı küçük yapı + otomatlar)
+    KIOSK_NEAR = (-23.0, 47.0)   # panorama konumundan kestirim (kampüs XZ)
+    kiosks = []
+    if beds:
+        bed = min(beds, key=lambda b: math.dist(b, KIOSK_NEAR))
+        best = None
+        for k in range(24):
+            ang = k * math.tau / 24
+            for r in (7.0, 9.0, 11.0):
+                q = (bed[0] + r * math.cos(ang), bed[1] + r * math.sin(ang))
+                d, _ = sgrid.nearest(q)
+                if d < 4.5 or bgrid.near(q, 4.0) or placed.any_within(q, 4.0):
+                    continue
+                if best is None or d > best[0]:
+                    best = (d, q)
+        if best:
+            q = best[1]
+            yaw = math.atan2(bed[0] - q[0], bed[1] - q[1])  # önü tarha baksın
+            kiosks.append([round(q[0], 2), round(q[1], 2), round(yaw, 3)])
+
     # Stadyum (en büyük 'pitch'): çevresine kırmızı koşu pisti
     pitches = sorted((L.clean([tuple(q) for q in a["points"]]) for a in grey["areas"] if a.get("kind") == "pitch"),
                      key=lambda p: -abs(L.signed_area(p)) if len(p) > 2 else 0)
@@ -324,11 +344,11 @@ def main():
         trees = [t for t in trees if not L.inside((t[1], t[2]), ring)]
         print("pist üstünden çıkarılan ağaç:", n0 - len(trees))
     out = {"_note": "tools/assets/make_greenery.py üretir; elle düzenleme. trees: [tür, x, z, yaw, ölçek]",
-           "trees": trees, "beds": [[round(x, 2), round(z, 2)] for x, z in beds], "tracks": tracks}
+           "trees": trees, "beds": [[round(x, 2), round(z, 2)] for x, z in beds], "tracks": tracks, "kiosks": kiosks}
     with open(os.path.join(ROOT, "game/data/zones/kampus_greenery.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
         f.write("\n")
-    print("ağaç:", len(trees), stats, "tarh:", len(beds), "pist:", len(tracks))
+    print("ağaç:", len(trees), stats, "tarh:", len(beds), "pist:", len(tracks), "büfe:", kiosks)
 
 
 if __name__ == "__main__":

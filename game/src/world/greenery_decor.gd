@@ -28,6 +28,16 @@ const FLOWERBED_SHADER: Shader = preload("res://assets/shaders/flowerbed.gdshade
 var tree_count: int = 0
 var bed_count: int = 0
 var track_count: int = 0
+var kiosk_count: int = 0
+
+## Ortabahçe büfesi (Street View): koyu turkuaz gövde, mavi düz çatı, ahşap direkli saçak, önde iki kırmızı otomat.
+const KIOSK_BODY: Vector3 = Vector3(5.0, 2.6, 3.4)
+const KIOSK_ROOF: Vector3 = Vector3(7.6, 0.22, 5.6)
+const KIOSK_BODY_COLOR: Color = Color(0.16, 0.3, 0.36)
+const KIOSK_ROOF_COLOR: Color = Color(0.2, 0.42, 0.68)
+const KIOSK_POST_COLOR: Color = Color(0.5, 0.38, 0.27)
+const VENDING_COLOR: Color = Color(0.74, 0.12, 0.13)
+const VENDING_SIZE: Vector3 = Vector3(0.9, 1.9, 0.75)
 
 
 func build_from_file(path: String) -> void:
@@ -43,6 +53,8 @@ func build(data: Dictionary) -> void:
 	_build_beds(data.get("beds", []))
 	for t: Variant in data.get("tracks", []):
 		_build_track(t as Dictionary)
+	for k: Variant in data.get("kiosks", []):
+		_build_kiosk(Vector3(float(k[0]), 0.0, float(k[1])), float(k[2]))
 
 
 func _build_trees(trees: Array) -> void:
@@ -156,3 +168,38 @@ func _build_track(t: Dictionary) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 	track_count += 1
+
+
+func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	var bm: BoxMesh = BoxMesh.new()
+	bm.size = size
+	var m: StandardMaterial3D = StandardMaterial3D.new()
+	m.albedo_color = color
+	m.roughness = 0.85
+	bm.material = m
+	mi.mesh = bm
+	mi.position = pos
+	parent.add_child(mi)
+
+
+func _build_kiosk(pos: Vector3, yaw: float) -> void:
+	var root: StaticBody3D = StaticBody3D.new()
+	root.name = "Kiosk"
+	root.position = pos
+	root.rotation.y = yaw
+	_box(root, KIOSK_BODY, Vector3(0.0, KIOSK_BODY.y * 0.5, -0.6), KIOSK_BODY_COLOR)
+	var roof_y: float = KIOSK_BODY.y + 0.25
+	_box(root, KIOSK_ROOF, Vector3(0.0, roof_y, 0.0), KIOSK_ROOF_COLOR)
+	for sx: float in [-1.0, 1.0]:
+		_box(root, Vector3(0.14, roof_y, 0.14), Vector3(sx * (KIOSK_ROOF.x * 0.5 - 0.3), roof_y * 0.5, KIOSK_ROOF.z * 0.5 - 0.3), KIOSK_POST_COLOR)
+	for sx: float in [-0.55, 0.55]:
+		_box(root, VENDING_SIZE, Vector3(sx, VENDING_SIZE.y * 0.5, KIOSK_BODY.z * 0.5 - 0.6 + VENDING_SIZE.z * 0.5), VENDING_COLOR)
+	var col: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = KIOSK_BODY
+	col.shape = shape
+	col.position = Vector3(0.0, KIOSK_BODY.y * 0.5, -0.6)
+	root.add_child(col)
+	add_child(root)
+	kiosk_count += 1
