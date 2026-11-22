@@ -13,6 +13,11 @@ const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
 const PATTERN_COBBLE: int = 0
 const PATTERN_PINK_CONCRETE: int = 1
 var _courtyard_hull: PackedVector2Array = PackedVector2Array()
+## Düz yüzey birleştirme: yollar ve alanlar tek tek MeshInstance olunca ~450 çizim çağrısı oluyordu (telefon).
+## _ready'de açılır; aynı malzeme + aynı 150 m hücre → tek mesh. Tek başına çağrılınca (testler) eski davranış.
+const BATCH_CELL: float = 300.0
+var _batching: bool = false
+var _batches: Dictionary = {}  # "matid|cx|cz" -> {"mat", "verts": PackedVector3Array, "uvs": PackedVector2Array}
 var _courtyard_poly: PackedVector2Array = PackedVector2Array()
 
 static var _cobble_materials: Dictionary = {}
@@ -88,6 +93,7 @@ func _ready() -> void:
 	var extent: Rect2 = data_extent(data)
 	_build_ground_rect(extent.grow(GROUND_MARGIN))
 	_find_courtyard(data)
+	_batching = true
 	for a: Dictionary in data.get("areas", []):
 		_build_area(a)
 	for p: Dictionary in data.get("paths", []):
@@ -97,6 +103,8 @@ func _ready() -> void:
 		_path_boxes.append(_poly_box(line))
 	for b: Dictionary in data.get("buildings", []):
 		_build_building(b)
+	_flush_batches()
+	_batching = false
 	# Binaya bağlı olmayan simge yapılar (kampüs kapıları)
 	for n: Node3D in free_landmarks():
 		add_child(n)
@@ -338,14 +346,17 @@ func _build_building(b: Dictionary) -> void:
 	var style: StringName = BuildingStyle.style_for(name_text, height, area)
 	var sdata: Dictionary = BuildingStyle.get_style_data(style)
 
-	var wall_mat: ShaderMaterial = ShaderMaterial.new()
+	var is_kisla: bool = name_text == KISLA_NAME
+	var wall_mat: ShaderMaterial = _style_materials.get(style) if not is_kisla and _style_materials.has(style) else ShaderMaterial.new()
+	if not is_kisla:
+		_style_materials[style] = wall_mat
 	wall_mat.shader = BUILDING_WALL_SHADER
 	wall_mat.set_shader_parameter("wall_color", sdata["wall_color"])
 	wall_mat.set_shader_parameter("window_color", sdata["window_color"])
 	wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
 	wall_mat.set_shader_parameter("roof_color", sdata["roof_color"])
 	wall_mat.set_shader_parameter("style", sdata["shader_style"])
-	if name_text == KISLA_NAME and _courtyard_hull.size() >= 3:
+	if is_kisla and _courtyard_hull.size() >= 3:
 		var cc: Vector2 = Vector2.ZERO
 		for v: Vector2 in _courtyard_hull:
 			cc += v
@@ -361,7 +372,11 @@ func _build_building(b: Dictionary) -> void:
 	var trimesh: ConcavePolygonShape3D = mesh.create_trimesh_shape()
 	trimesh.backface_collision = true
 	shape.shape = trimesh
-	body.add_child(mi)
+	if _batching and not is_kisla:
+		_batch_mesh(mesh, wall_mat, _poly_box(poly).get_center())  # aynı stil + hücre → tek çizim
+		mi.free()
+	else:
+		body.add_child(mi)
 	body.add_child(shape)
 
 	# Tarihi binalara kırma çatı
@@ -401,10 +416,11 @@ func _build_area(a: Dictionary) -> void:
 	if mesh == null:
 		return
 	var color: Color = AREA_COLORS.get(str(a.get("kind", "grass")), AREA_COLORS["grass"])
-	if str(a.get("name", "")).to_lower().contains("havuz"):
-		mesh.surface_set_material(0, _water_material())  # Süs Havuzu (drone'da mavi su)
-	else:
-		mesh.surface_set_material(0, _material(color))
+	var mat: Material = _water_material() if str(a.get("name", "")).to_lower().contains("havuz") else _shared_material(color)
+	if _batching:
+		_batch_mesh(mesh, mat, _poly_box(poly).get_center())
+		return
+	mesh.surface_set_material(0, mat)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # düz yüzey: gölge geçişinde boşa çizilmesin
@@ -436,27 +452,101 @@ func _build_path(p: Dictionary) -> void:
 		var indices: Array[int] = [0, 2, 1, 0, 3, 2]
 		for idx: int in indices:
 			st.set_uv(uvs[idx])
+			st.set_uv2(Vector2(width, 0.0))  # genişlik (m): tek parke malzemesiyle birleştirme için
 			st.add_vertex(q[idx])
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
-	if kind == "service":
-		mesh.surface_set_material(0, _material(SERVICE_PATH_COLOR))
-	else:
-		var mid: Vector2 = pts[pts.size() / 2]
-		mesh.surface_set_material(0, _get_cobble_material(width, PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE))
+	var mid: Vector2 = pts[pts.size() / 2]
+	var mat: Material = _shared_material(SERVICE_PATH_COLOR) if kind == "service" \
+		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE)
+	if _batching:
+		_batch_mesh(mesh, mat, mid)
+		return
+	mesh.surface_set_material(0, mat)
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 
 
-static func _get_cobble_material(width: float, pattern: int = PATTERN_COBBLE) -> ShaderMaterial:
-	var key: Vector2 = Vector2(width, pattern)
+var _shared_materials: Dictionary = {}
+var _style_materials: Dictionary = {}  # bina stili -> ortak duvar ShaderMaterial
+
+
+## Aynı renk = aynı malzeme nesnesi (birleştirme anahtarı malzeme kimliği).
+func _shared_material(color: Color) -> StandardMaterial3D:
+	if not _shared_materials.has(color):
+		_shared_materials[color] = _material(color)
+	return _shared_materials[color]
+
+
+func _batch_mesh(mesh: ArrayMesh, mat: Material, at: Vector2) -> void:
+	var arr: Array = mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var uvs: Variant = arr[Mesh.ARRAY_TEX_UV]
+	var idx: Variant = arr[Mesh.ARRAY_INDEX]
+	var key: String = "%d|%d|%d" % [mat.get_instance_id(), floori(at.x / BATCH_CELL), floori(at.y / BATCH_CELL)]
+	if not _batches.has(key):
+		_batches[key] = {"mat": mat, "verts": PackedVector3Array(), "uvs": PackedVector2Array(), "uv2s": PackedVector2Array(), "normals": PackedVector3Array()}
+	var b: Dictionary = _batches[key]
+	var bv: PackedVector3Array = b["verts"]
+	var bu: PackedVector2Array = b["uvs"]
+	var bn: PackedVector3Array = b["normals"]
+	var b2: PackedVector2Array = b["uv2s"]
+	var uv2: Variant = arr[Mesh.ARRAY_TEX_UV2]
+	var has_uv2: bool = uv2 is PackedVector2Array and not (uv2 as PackedVector2Array).is_empty()
+	var nrm: Variant = arr[Mesh.ARRAY_NORMAL]
+	var has_uv: bool = uvs is PackedVector2Array and not (uvs as PackedVector2Array).is_empty()
+	var has_n: bool = nrm is PackedVector3Array and not (nrm as PackedVector3Array).is_empty()
+	var order: PackedInt32Array = idx if idx is PackedInt32Array and not (idx as PackedInt32Array).is_empty() else PackedInt32Array(range(verts.size()))
+	for i: int in order:
+		bv.append(verts[i])
+		bu.append((uvs as PackedVector2Array)[i] if has_uv else Vector2.ZERO)
+		bn.append((nrm as PackedVector3Array)[i] if has_n else Vector3.UP)
+		b2.append((uv2 as PackedVector2Array)[i] if has_uv2 else Vector2.ZERO)
+	b["uv2s"] = b2
+	b["verts"] = bv
+	b["uvs"] = bu
+	b["normals"] = bn
+
+
+func _flush_batches() -> void:
+	for key: String in _batches:
+		var b: Dictionary = _batches[key]
+		var verts: PackedVector3Array = b["verts"]
+		if verts.is_empty():
+			continue
+		var normals: PackedVector3Array = b["normals"]
+		var arrays: Array = []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = verts
+		arrays[Mesh.ARRAY_NORMAL] = normals
+		arrays[Mesh.ARRAY_TEX_UV] = b["uvs"]
+		arrays[Mesh.ARRAY_TEX_UV2] = b["uv2s"]
+		var mesh: ArrayMesh = ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.surface_set_material(0, b["mat"])
+		var mi: MeshInstance3D = MeshInstance3D.new()
+		mi.name = "Batch"
+		mi.mesh = mesh
+		# Düz yüzeyler (yol/alan) gölge düşürmez; bina birleşimleri düşürür
+		var flat: bool = true
+		for n: Vector3 in normals:
+			if n.y < 0.9:
+				flat = false
+				break
+		if flat:
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+	_batches.clear()
+
+
+static func _get_cobble_material(pattern: int = PATTERN_COBBLE) -> ShaderMaterial:
+	var key: int = pattern
 	if not _cobble_materials.has(key):
 		var mat: ShaderMaterial = ShaderMaterial.new()
 		mat.shader = PATH_COBBLE_SHADER
-		mat.set_shader_parameter("road_width", width)
 		mat.set_shader_parameter("pattern", pattern)
 		_cobble_materials[key] = mat
 	return _cobble_materials[key]

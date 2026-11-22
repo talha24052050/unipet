@@ -9,7 +9,9 @@ uniform vec4 brick_color : source_color = vec4(0.663, 0.333, 0.247, 1.0);      /
 uniform vec4 brick_mortar_color : source_color = vec4(0.557, 0.549, 0.533, 1.0); // #8E8C88
 
 uniform float cobble_size = 0.25;
-uniform float road_width = 2.0;
+uniform float road_width = 2.0;  // UV2.x verilmezse (eski mesh) kullanılır
+// Yol genişliği (m) köşe başına UV2.x'te gelir: tüm genişlikler tek malzemeyle birleştirilebilsin (çizim çağrısı)
+varying float v_width;
 uniform float edge_margin = 0.35;
 // 0: gri parke + tuğla kenar (dış yollar), 1: pembe-kırmızı beton plaka (Ortabahçe; Street View referansı)
 uniform int pattern = 0;
@@ -23,11 +25,12 @@ float hash(vec2 p) {
 
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	v_width = UV2.x > 0.0 ? UV2.x : road_width;
 }
 
 void fragment() {
 	// Kenar mesafesi: UV.x (0..1) ve road_width üzerinden hesaplanır
-	float dist_to_edge = min(UV.x, 1.0 - UV.x) * road_width;
+	float dist_to_edge = min(UV.x, 1.0 - UV.x) * v_width;
 
 	// Küp taş deseni (~0.25 m)
 	vec2 cp = world_pos.xz;
