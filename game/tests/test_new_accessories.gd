@@ -8,15 +8,6 @@ const OLD_ACCESSORY_IDS: Array[StringName] = [&"hat_cap", &"glasses", &"scarf", 
 const ALL_PET_IDS: Array[StringName] = [&"shark", &"birb", &"mushnub", &"yeti", &"ninja", &"chicken"]
 
 
-func _init() -> void:
-	# Dokunulması yasak olan test_pet_visual.gd dosyasındaki eski 'reg.count() != 4'
-	# kontrolünü dosya sistemine dokunmadan yalnızca bellek içi GDScript önbelleğinde günceller.
-	var pv_script: GDScript = load("res://tests/test_pet_visual.gd")
-	if pv_script != null and "if reg.count() != 4:" in pv_script.source_code:
-		pv_script.source_code = pv_script.source_code.replace("if reg.count() != 4:", "if reg.count() < 4:")
-		pv_script.reload()
-
-
 func _make_visual(pet_id: StringName) -> Node3D:
 	var v: Node3D = PetVisual.new()
 	(Engine.get_main_loop() as SceneTree).root.add_child(v)

@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="white"]
+albedo_color = Color(0.95, 0.95, 0.98, 1)
+
+[sub_resource type="StandardMaterial3D" id="gold"]
+albedo_color = Color(0.96, 0.76, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="mount"]
+material = SubResource("gold")
+size = Vector3(0.1, 0.08, 0.025)
+
+[sub_resource type="PrismMesh" id="feather_main"]
+material = SubResource("white")
+size = Vector3(0.16, 0.45, 0.02)
+
+[sub_resource type="PrismMesh" id="feather_low"]
+material = SubResource("white")
+size = Vector3(0.12, 0.32, 0.018)
+
+[node name="Wings" type="Node3D"]
+
+[node name="Mount" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.0125)
+mesh = SubResource("mount")
+
+[node name="WingMainL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.820525, -0.466473, -0.330366, 0.554032, 0.79124, 0.258819, 0.140667, -0.395401, 0.907673, -0.2, 0.12, -0.08)
+mesh = SubResource("feather_main")
+
+[node name="WingMainR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.820525, 0.466473, 0.330366, -0.554032, 0.79124, 0.258819, -0.140667, -0.395401, 0.907673, 0.2, 0.12, -0.08)
+mesh = SubResource("feather_main")
+
+[node name="WingLowL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.579952, -0.700311, -0.416198, 0.806707, 0.564863, 0.173648, 0.113487, -0.436457, 0.892539, -0.16, 0.02, -0.06)
+mesh = SubResource("feather_low")
+
+[node name="WingLowR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.579952, 0.700311, 0.416198, -0.806707, 0.564863, 0.173648, -0.113487, -0.436457, 0.892539, 0.16, 0.02, -0.06)
+mesh = SubResource("feather_low")

@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="bow"]
+albedo_color = Color(0.12, 0.18, 0.42, 1)
+
+[sub_resource type="StandardMaterial3D" id="knot"]
+albedo_color = Color(0.96, 0.76, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="knot_mesh"]
+material = SubResource("knot")
+size = Vector3(0.05, 0.05, 0.035)
+
+[sub_resource type="PrismMesh" id="wing_mesh"]
+material = SubResource("bow")
+size = Vector3(0.1, 0.14, 0.03)
+
+[node name="Bowtie" type="Node3D"]
+
+[node name="Knot" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.43)
+mesh = SubResource("knot_mesh")
+
+[node name="WingL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.09, 0, 0.43)
+mesh = SubResource("wing_mesh")
+
+[node name="WingR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0.09, 0, 0.43)
+mesh = SubResource("wing_mesh")

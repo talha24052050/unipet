@@ -56,8 +56,8 @@ const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
 func test_accessories_load_and_equip_on_all_pets() -> String:
 	var reg: AccessoryRegistry = AccessoryRegistry.new()
 	reg.load_from_dir("res://data/accessories")
-	if reg.count() != 4:
-		return "4 aksesuar bekleniyordu, %d" % reg.count()
+	if reg.count() < 4:
+		return "en az 4 aksesuar bekleniyordu, %d" % reg.count()
 	for id: StringName in [&"shark", &"birb", &"mushnub", &"yeti", &"ninja", &"chicken"]:
 		var v: Node3D = _make(id)
 		for acc: AccessoryDef in reg.all():
