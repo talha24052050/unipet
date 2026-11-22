@@ -56,8 +56,8 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 5.1 OSM'den Davutpaşa bina yerleşimi çekme scripti
 - [ ] 5.2 Blender scriptiyle low-poly binalar (fotoğraf referanslı): fakülteler, Büyükev, Hokka, kafeler, yemekhane, büyük saha
 - [~] 5.3 Ortabahçe detaylı: ağaçlar, banklar, yollar
-- [ ] 5.4 Bölgeler arası geçiş
-- [~] 5.5 Pet bakımı: açlık/mutluluk/enerji, sunucuda saklama
+- [x] 5.4 Bölgeler arası geçiş
+- [x] 5.5 Pet bakımı: açlık/mutluluk/enerji, sunucuda saklama
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test
