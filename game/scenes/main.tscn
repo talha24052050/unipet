@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/care_hud.tscn" id="11"]
 [ext_resource type="Script" path="res://src/ui/map_button.gd" id="12"]
 [ext_resource type="Script" path="res://src/world/day_night.gd" id="13"]
+[ext_resource type="Script" path="res://src/world/street_lights.gd" id="14"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -133,6 +134,12 @@ data_path = "res://data/zones/ortabahce_greybox.json"
 [node name="PropPlacer" type="Node3D" parent="World"]
 script = ExtResource("10")
 data_path = "res://data/zones/ortabahce_props.json"
+
+[node name="StreetLights" type="Node3D" parent="World" node_paths=PackedStringArray("day_night", "player")]
+script = ExtResource("14")
+data_path = "res://data/zones/ortabahce_props.json"
+day_night = NodePath("../../DayNight")
+player = NodePath("../../Player")
 
 [node name="TapMarker" type="MeshInstance3D" parent="."]
 mesh = SubResource("marker_mesh")
