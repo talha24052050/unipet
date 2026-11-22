@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="navy"]
+albedo_color = Color(0.12, 0.18, 0.42, 1)
+
+[sub_resource type="StandardMaterial3D" id="gold"]
+albedo_color = Color(0.96, 0.76, 0.2, 1)
+
+[sub_resource type="TorusMesh" id="cuff"]
+material = SubResource("gold")
+inner_radius = 0.2
+outer_radius = 0.26
+rings = 8
+ring_segments = 5
+
+[sub_resource type="SphereMesh" id="dome"]
+material = SubResource("navy")
+radius = 0.23
+height = 0.22
+is_hemisphere = true
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="pompom"]
+material = SubResource("gold")
+radius = 0.045
+height = 0.09
+radial_segments = 6
+rings = 3
+
+[node name="Beanie" type="Node3D"]
+
+[node name="Cuff" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+mesh = SubResource("cuff")
+
+[node name="Dome" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("dome")
+
+[node name="PomPom" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("pompom")
