@@ -58,7 +58,7 @@ jobs:
           printf 'runtime:\n  env:\n    - "UNIPET_DEV_AUTH=true"\n' > runtime-env.yml
           ./nakama --config server/nakama/local.yml --config runtime-env.yml --database.address "$DB" \
             --runtime.path "$PWD/server/nakama/modules" --socket.server_key unipet-dev-server-key \
-            --logger.stdout false --logger.file nakama.log &
+            --logger.stdout false --logger.file "$PWD/nakama.log" &
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:7350/healthcheck && break; sleep 1; done
           grep -q "UniPet modülü yüklendi" nakama.log
       - name: Import
