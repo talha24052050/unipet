@@ -22,3 +22,4 @@ animation_speed = {}
 accessory_bones = {}
 accessory_offsets = {}
 selectable = false
+legendary = true

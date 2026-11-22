@@ -41,5 +41,14 @@ func selectable() -> Array[CharacterDef]:
 	return out
 
 
+## Seçim ekranında gösterilecekler: normal petler + kilidi açılmış efsanevi petler.
+func available(unlocked: PackedStringArray, dev_mode: bool = false) -> Array[CharacterDef]:
+	var out: Array[CharacterDef] = selectable()
+	for d: CharacterDef in _defs.values():
+		if d.legendary and (dev_mode or unlocked.has(str(d.id))):
+			out.append(d)
+	return out
+
+
 func count() -> int:
 	return _defs.size()

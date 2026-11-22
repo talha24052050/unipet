@@ -18,6 +18,9 @@ extends Resource
 ## Slot bazında aksesuar yerleşim düzeltmesi (offset/rotation/scale).
 @export var accessory_offsets: Dictionary = {}
 @export var selectable: bool = true
+## Efsanevi pet (Kutbi): normalde seçilemez; sadece kilidi açık hesaplarda (sunucu OP_UNLOCKS) ya da geliştirici
+## modunda seçim ekranında görünür.
+@export var legendary: bool = false
 
 const REQUIRED_ANIMS: PackedStringArray = ["idle", "walk", "run", "emote_wave", "emote_jump"]
 const ACCESSORY_SLOTS: PackedStringArray = ["head", "face", "neck", "back"]

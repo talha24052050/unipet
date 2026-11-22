@@ -9,6 +9,7 @@ const OP_CHAT: int = 2
 const OP_SNAPSHOT: int = 3
 const OP_PROFILE: int = 4
 const OP_CARE: int = 5
+const OP_UNLOCKS: int = 6
 
 var host: String = "127.0.0.1"
 var port: int = 7350
@@ -197,6 +198,8 @@ func _handle_match_data(md: Dictionary) -> void:
 			chat_received.emit(ChatMessage.from_dict({"kind": k, "payload": str(d.get("p", "")), "sender_id": str(d.get("s", ""))}))
 		OP_PROFILE:
 			player_profile.emit(str(d.get("id", "")), decode_profile(d))
+		OP_UNLOCKS:
+			unlocks_received.emit(PackedStringArray(d.get("pets", [])), PackedStringArray(d.get("fresh", [])))
 		OP_CARE:
 			var st: Variant = d.get("state")
 			if st is Dictionary:

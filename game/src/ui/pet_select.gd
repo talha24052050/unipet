@@ -36,7 +36,7 @@ var _accessory_labels: Dictionary = {}
 
 func _ready() -> void:
 	_setup_ui()
-	_selectable_pets = Services.characters.selectable()
+	_selectable_pets = _available_pets()
 	load_selection(profile_path)
 	_connect_signals()
 	_add_logout_button()
@@ -146,9 +146,18 @@ func _drag_yaw(dx: float) -> void:
 	_drag_pause_timer = 3.0
 
 
+const LEGENDARY_COLOR: Color = Color(1.0, 0.84, 0.42)
+
+
+## Normal petler + kilidi açık efsanevi petler (sunucunun bildirdiği; geliştirici modunda hepsi).
+func _available_pets() -> Array[CharacterDef]:
+	var prof: RefCounted = LocalProfile.load_or_default()
+	return Services.characters.available(prof.get("unlocked"), Config.DEV_MODE)
+
+
 func set_pet_index(index: int, play_emote: bool = true) -> void:
 	if _selectable_pets.is_empty():
-		_selectable_pets = Services.characters.selectable()
+		_selectable_pets = _available_pets()
 	if _selectable_pets.is_empty():
 		return
 	_current_pet_index = posmod(index, _selectable_pets.size())
@@ -157,7 +166,8 @@ func set_pet_index(index: int, play_emote: bool = true) -> void:
 		profile = LocalProfile.load_or_default()
 	profile.pet_id = def.id
 	if _pet_name_label != null:
-		_pet_name_label.text = def.display_name
+		_pet_name_label.text = ("%s · EFSANEVİ" % def.display_name) if def.legendary else def.display_name
+		_pet_name_label.add_theme_color_override("font_color", LEGENDARY_COLOR if def.legendary else Color.WHITE)
 	if _pet_visual != null:
 		_pet_visual.set_character(def)
 		if play_emote:
@@ -247,7 +257,7 @@ func load_selection(path: String = "") -> void:
 	var target_path: String = path if not path.is_empty() else profile_path
 	profile = LocalProfile.load_or_default(target_path)
 	if _selectable_pets.is_empty():
-		_selectable_pets = Services.characters.selectable()
+		_selectable_pets = _available_pets()
 	var idx: int = 0
 	for i: int in _selectable_pets.size():
 		if _selectable_pets[i].id == profile.pet_id:

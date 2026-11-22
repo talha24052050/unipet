@@ -37,7 +37,8 @@ func test_scene_loads() -> String:
 
 func test_pet_navigation_updates_profile() -> String:
 	var scene: PetSelect = _make_scene()
-	var pets: Array[CharacterDef] = Services.characters.selectable()
+	# Seçim ekranıyla aynı liste: normal petler + (geliştirici modunda / kilidi açıksa) efsanevi Kutbi
+	var pets: Array[CharacterDef] = Services.characters.available(LocalProfile.load_or_default().get("unlocked"), Config.DEV_MODE)
 	if pets.size() < 2:
 		scene.queue_free()
 		return "En az 2 seçilebilir pet bekleniyor, %d bulundu" % pets.size()

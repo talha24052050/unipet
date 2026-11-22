@@ -78,6 +78,8 @@ func _connect_network_signals() -> void:
 		net.connected.connect(_on_connected)
 	if not net.disconnected.is_connected(_on_disconnected):
 		net.disconnected.connect(_on_disconnected)
+	if net.has_signal("unlocks_received") and not net.unlocks_received.is_connected(_on_unlocks):
+		net.unlocks_received.connect(_on_unlocks)
 	if not net.room_joined.is_connected(_on_room_joined):
 		net.room_joined.connect(_on_room_joined)
 	if not net.player_joined.is_connected(_on_player_joined):
@@ -97,6 +99,8 @@ func _disconnect_network_signals() -> void:
 		net.connected.disconnect(_on_connected)
 	if net.disconnected.is_connected(_on_disconnected):
 		net.disconnected.disconnect(_on_disconnected)
+	if net.has_signal("unlocks_received") and net.unlocks_received.is_connected(_on_unlocks):
+		net.unlocks_received.disconnect(_on_unlocks)
 	if net.room_joined.is_connected(_on_room_joined):
 		net.room_joined.disconnect(_on_room_joined)
 	if net.player_joined.is_connected(_on_player_joined):
@@ -133,6 +137,18 @@ func _on_disconnected(_reason: String) -> void:
 		_reconnect_attempts += 1
 	else:
 		_waiting_reconnect = false
+
+
+## Sunucudan açık efsanevi petler: kaydet; yeni açıldıysa oyuncuya duyur.
+func _on_unlocks(pets: PackedStringArray, fresh: PackedStringArray) -> void:
+	var prof: RefCounted = LocalProfile.load_or_default()
+	prof.set("unlocked", pets)
+	prof.call("save")
+	if fresh.has("kutbi"):
+		var hud: Node = get_tree().current_scene.find_child("CareHud", true, false) if get_tree().current_scene else null
+		if hud != null and hud.has_method("show_toast"):
+			hud.call("show_toast", "Kapalı test hediyesi: efsanevi pet KUTBİ açıldı! Pet ekranından seçebilirsin.", 6.0)
+		Sfx.play(&"care_ok")
 
 
 func _on_room_joined(_room_id: String) -> void:

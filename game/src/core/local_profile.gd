@@ -10,6 +10,8 @@ var display_name: String = ""
 const NAME_MAX: int = 16
 ## slot (StringName) -> aksesuar id (StringName)
 var accessories: Dictionary = {}
+## Sunucunun bildirdiği açık efsanevi petler (OP_UNLOCKS); seçim ekranı bunlara bakar.
+var unlocked: PackedStringArray = PackedStringArray()
 
 
 static func load_or_default(path: String = PATH) -> RefCounted:
@@ -22,6 +24,7 @@ static func load_or_default(path: String = PATH) -> RefCounted:
 			var acc: String = str(cfg.get_value("accessories", slot, ""))
 			if not acc.is_empty():
 				p.accessories[StringName(slot)] = StringName(acc)
+		p.unlocked = PackedStringArray(str(cfg.get_value("unlocks", "pets", "")).split(",", false))
 	if p.pet_id == &"":
 		p.pet_id = Config.DEFAULT_PET_ID
 	return p
@@ -31,6 +34,7 @@ func save(path: String = PATH) -> Error:
 	var cfg: ConfigFile = ConfigFile.new()
 	cfg.set_value("pet", "id", str(pet_id))
 	cfg.set_value("player", "name", display_name)
+	cfg.set_value("unlocks", "pets", ",".join(unlocked))
 	for slot: StringName in accessories:
 		cfg.set_value("accessories", str(slot), str(accessories[slot]))
 	return cfg.save(path)

@@ -46,3 +46,7 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 - Geliştirici modu (Talha 2026-11-22): Ayarlar'dan aç/kapa (`LocalSettings.dev_mode`). Açık: giriş ekranı yok, cihaza
   özel sahte hesapla otomatik giriş. Kapalı (normal): Supabase mail + kod. Varsayılan: Godot'tan çalışırken açık, APK'da
   kapalı; imzalı yayında her zaman kapalı ve anahtar gizli.
+- Kutbi (Talha 2026-11-22): YTÜ'ye özel efsanevi yıldız pet; reklamda tanıtıldı, 3D model `tools/assets/make_kutbi.py`.
+  Elde etme: **kapalı test hediyesi** — sunucuda `UNIPET_CLOSED_TEST=true` iken odaya giren her hesaba kalıcı açılır
+  (Nakama storage `unlocks/pets`, sadece sunucu yazar); kilitli hesabın Kutbi profili sunucuda reddedilir.
+  Geliştirici modunda herkese görünür.

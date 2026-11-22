@@ -22,7 +22,8 @@ var OP_STATE = 1;    // c→s {p:[x,y,z], y:yaw, a:anim}            s→c {id, p
 var OP_CHAT = 2;     // c→s {k:0|1|2, p:payload}                 s→c {s:senderId, k, p}
 var OP_SNAPSHOT = 3; // s→c {players:[{id, p, y, a, pet, acc}]}  (sadece yeni katılana)
 var OP_PROFILE = 4;  // c→s {pet, acc:{slot:id}, name}           s→c {id, pet, acc, name}
-var OP_CARE = 5;     // c→s {act}                                s→c {ok, reason, state:{food,joy,energy,t}} (sadece o oyuncuya)
+var OP_CARE = 5;
+var OP_UNLOCKS = 6;  // s→c {pets:[...], fresh:[...]}  (sadece o oyuncuya; fresh = bu girişte yeni açılanlar)     // c→s {act}                                s→c {ok, reason, state:{food,joy,energy,t}} (sadece o oyuncuya)
 
 // ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
 var CARE_MAX = 100;
@@ -98,6 +99,37 @@ var CARE_SPOTS = {
     }
   ]
 };
+// ---- efsanevi petler (Kutbi): sadece kilidi açılmış hesaplar seçebilir
+// Kapalı test hediyesi (Talha 2026-11-22): UNIPET_CLOSED_TEST=true iken odaya giren her hesaba Kutbi kalıcı açılır.
+var LEGENDARY_PETS = ["kutbi"];
+var UNLOCK_COLLECTION = "unlocks";
+var UNLOCK_KEY = "pets";
+
+function unlocksLoad(nk, userId) {
+  var objs = nk.storageRead([{ collection: UNLOCK_COLLECTION, key: UNLOCK_KEY, userId: userId }]);
+  if (objs && objs.length > 0 && objs[0].value && objs[0].value.pets) return objs[0].value.pets.slice();
+  return [];
+}
+
+// Verilenleri ekler, yeni açılanları döndürür.
+function unlocksGrant(nk, userId, pets) {
+  var have = unlocksLoad(nk, userId);
+  var fresh = [];
+  for (var i = 0; i < pets.length; i++) {
+    if (have.indexOf(pets[i]) < 0) { have.push(pets[i]); fresh.push(pets[i]); }
+  }
+  if (fresh.length > 0) {
+    nk.storageWrite([{ collection: UNLOCK_COLLECTION, key: UNLOCK_KEY, userId: userId, value: { pets: have },
+      permissionRead: 1, permissionWrite: 0 }]);
+  }
+  return fresh;
+}
+
+// Profilde seçilebilir mi: efsanevi değilse evet, efsaneviyse kilidi açıksa.
+function petAllowed(pet, unlocked) {
+  return LEGENDARY_PETS.indexOf(pet) < 0 || unlocked.indexOf(pet) >= 0;
+}
+
 var CARE_COLLECTION = "pet";
 var CARE_KEY = "care";
 
@@ -355,6 +387,10 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     var p = presences[i];
     state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", lastChat: 0 };
     state.players[p.userId].presence = p;
+    // Efsanevi pet kilitleri: kapalı testte Kutbi hediye; oyuncuya güncel liste
+    var fresh = env(ctx, "UNIPET_CLOSED_TEST", "false") === "true" ? unlocksGrant(nk, p.userId, ["kutbi"]) : [];
+    state.players[p.userId].unlocked = unlocksLoad(nk, p.userId);
+    dispatcher.broadcastMessage(OP_UNLOCKS, JSON.stringify({ pets: state.players[p.userId].unlocked, fresh: fresh }), [p], null, true);
     // Yeni gelene odadaki herkesin son durumu.
     var list = [];
     for (var id in state.players) {
@@ -461,6 +497,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       dispatcher.broadcastMessage(OP_CARE, JSON.stringify(res), [pl.presence], null, true);
     } else if (m.opCode === OP_PROFILE) {
       if (!ID_PATTERN.test(String(data.pet))) continue;
+      if (!petAllowed(String(data.pet), pl.unlocked || [])) continue;  // kilitli efsanevi pet: profil kabul edilmez
       var acc = {};
       var slots = ["head", "face", "neck", "back"];
       for (var s = 0; s < slots.length; s++) {

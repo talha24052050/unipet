@@ -61,3 +61,16 @@ func test_defs_match_models() -> String:
 		if not err.is_empty():
 			return err
 	return ""
+
+
+func test_legendary_availability() -> String:
+	var reg: RefCounted = (load("res://src/characters/character_registry.gd") as GDScript).new()
+	reg.call("load_from_dir", "res://data/characters")
+	var ids := func(list: Array) -> Array: return list.map(func(d: CharacterDef) -> String: return str(d.id))
+	if ids.call(reg.call("available", PackedStringArray(), false)).has("kutbi"):
+		return "kilitliyken Kutbi görünmemeli"
+	if not ids.call(reg.call("available", PackedStringArray(["kutbi"]), false)).has("kutbi"):
+		return "kilidi açıkken Kutbi görünmeli"
+	if not ids.call(reg.call("available", PackedStringArray(), true)).has("kutbi"):
+		return "geliştirici modunda Kutbi görünmeli"
+	return ""

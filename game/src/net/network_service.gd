@@ -14,6 +14,8 @@ signal chat_received(message: ChatMessage)
 signal player_profile(player_id: String, profile: Dictionary)
 ## Yerel petin bakım durumu: state = {"food", "joy", "energy", "t"}; ok=false ise reason kullanıcıya gösterilir.
 signal care_updated(state: Dictionary, ok: bool, reason: String)
+## Sunucu: hesabın açık efsanevi petleri; fresh = bu girişte yeni açılanlar.
+signal unlocks_received(pets: PackedStringArray, fresh: PackedStringArray)
 
 
 func connect_to_server(_session_token: String) -> void:

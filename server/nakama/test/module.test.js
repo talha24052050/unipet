@@ -30,6 +30,15 @@ var nk = {
   _matches: []
 };
 var env = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "anon" };
+
+// --- efsanevi pet kilitleri (Kutbi, kapalı test hediyesi)
+assert.deepEqual(JSON.parse(JSON.stringify(M.unlocksLoad(nk, "k-1"))), [], "başta kilit yok");
+assert.deepEqual(JSON.parse(JSON.stringify(M.unlocksGrant(nk, "k-1", ["kutbi"]))), ["kutbi"], "ilk verişte yeni");
+assert.deepEqual(JSON.parse(JSON.stringify(M.unlocksGrant(nk, "k-1", ["kutbi"]))), [], "ikinci verişte yeni yok");
+assert.deepEqual(JSON.parse(JSON.stringify(M.unlocksLoad(nk, "k-1"))), ["kutbi"], "kalıcı");
+assert.strictEqual(M.petAllowed("kutbi", []), false, "kilitliyken seçilemez");
+assert.strictEqual(M.petAllowed("kutbi", ["kutbi"]), true);
+assert.strictEqual(M.petAllowed("shark", []), true, "normal pet her zaman");
 var req = M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-1", vars: { supabase_token: "good" } } });
 assert.strictEqual(req.account.vars.supabase_token, undefined, "token saklanmamalı");
 assert.throws(function () { M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-1", vars: { supabase_token: "bad" } } }); });
