@@ -290,8 +290,41 @@ function rpcFindRoom(ctx, logger, nk, payload) {
       best = matches[i];
     }
   }
-  var matchId = best ? best.matchId : nk.matchCreate("zone_room", { zone: zone });
+  if (best) return JSON.stringify({ match_id: best.matchId });
+  // Arama dizini (label) birkaç yüz ms gecikebilir: yeni açılmış oda listede görünmeyebilir.
+  // Bölgenin "son açılan oda" kaydına bak; hâlâ yaşıyor ve yer varsa onu kullan (aynı anda gelenler ayrı odaya düşmesin).
+  var ptr = roomPointerRead(nk, zone);
+  if (ptr) {
+    var m = nk.matchGet(ptr.id);
+    if (m && m.size < cap) return JSON.stringify({ match_id: ptr.id });
+  }
+  var matchId = nk.matchCreate("zone_room", { zone: zone });
+  if (!roomPointerWrite(nk, zone, matchId, ptr ? ptr.version : "*")) {
+    // Başkası aynı anda oda açtı: onunkini kullan (bizimki boş kalır, 30 sn sonra kapanır).
+    var other = roomPointerRead(nk, zone);
+    if (other) matchId = other.id;
+  }
   return JSON.stringify({ match_id: matchId });
+}
+
+var ROOM_PTR_COLLECTION = "rooms";
+var SYSTEM_USER = "00000000-0000-0000-0000-000000000000";
+
+function roomPointerRead(nk, zone) {
+  var r = nk.storageRead([{ collection: ROOM_PTR_COLLECTION, key: zone, userId: SYSTEM_USER }]);
+  if (!r || r.length === 0) return null;
+  return { id: r[0].value.id, version: r[0].version };
+}
+
+// version: "*" = sadece yoksa yaz; aksi halde okunan sürüm değişmediyse yaz. Çakışmada false.
+function roomPointerWrite(nk, zone, matchId, version) {
+  try {
+    nk.storageWrite([{ collection: ROOM_PTR_COLLECTION, key: zone, userId: SYSTEM_USER, value: { id: matchId },
+      version: version, permissionRead: 0, permissionWrite: 0 }]);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------- oda
