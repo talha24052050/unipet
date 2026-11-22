@@ -17,7 +17,9 @@ $Apk = "C:\Tools\downloads\unipet-local.apk"
 $Package = "io.github.talha24052050.unipet"
 
 # adb sunucusu ayrı başlatılır: ilk adb çağrısı onu başlatırsa çıktı kanalını açık tutar, script kapanmaz.
-Start-Process -FilePath $Adb -ArgumentList "start-server" -WindowStyle Hidden -Wait -RedirectStandardOutput "$env:TEMP\adb-start.out" -RedirectStandardError "$env:TEMP\adb-start.err"
+# (-Wait KULLANMA: adb'nin başlattığı kalıcı sunucu sürecini de bekler ve hiç bitmez.)
+$adbStart = Start-Process -FilePath $Adb -ArgumentList "start-server" -WindowStyle Hidden -PassThru
+[void]$adbStart.WaitForExit(15000)
 $devices = (& $Adb devices) | Select-String "\tdevice$"
 if (-not $devices) { Write-Host "Telefon bulunamadı: USB hata ayıklama açık mı, 'Bu bilgisayara izin ver' onaylandı mı?" -ForegroundColor Red; exit 1 }
 
