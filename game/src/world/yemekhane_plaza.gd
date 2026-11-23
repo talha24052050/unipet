@@ -12,20 +12,21 @@ const STORE_P3: Vector2 = Vector2(-113.01, -47.20)  # Güney (Amfi merdiven kö�
 const YEM_FRONT_MID: Vector2 = Vector2(-83.58, -77.76)
 const YEM_FRONT_OUT: Vector2 = Vector2(0.781, 0.624)
 
-const COL_PLAZA_LIGHT: Color = Color(0.76, 0.77, 0.75)
-const COL_PLAZA_MID: Color = Color(0.68, 0.69, 0.68)
-const COL_CONCRETE: Color = Color(0.84, 0.84, 0.82)
-const COL_SEAT_STEP: Color = Color(0.62, 0.60, 0.57)
-const COL_ANTHRACITE: Color = Color(0.21, 0.23, 0.26)
-const COL_WHITE: Color = Color(0.95, 0.95, 0.93)
-const COL_A101_CYAN: Color = Color(0.11, 0.66, 0.90)
-const COL_GLASS_DARK: Color = Color(0.14, 0.19, 0.24)
-const COL_POSTER_A: Color = Color(0.92, 0.86, 0.45)
-const COL_POSTER_B: Color = Color(0.45, 0.76, 0.92)
-const COL_GREEN_BED: Color = Color(0.28, 0.44, 0.22)
-const COL_SOIL: Color = Color(0.40, 0.30, 0.22)
-const COL_GOLD: Color = Color(0.95, 0.78, 0.24)
-const COL_METAL: Color = Color(0.32, 0.35, 0.39)
+const COL_PLAZA_LIGHT: Color = Color(0.50, 0.52, 0.53)
+const COL_PLAZA_MID: Color = Color(0.42, 0.44, 0.46)
+const COL_CONCRETE: Color = Color(0.66, 0.66, 0.64)
+const COL_SEAT_STEP: Color = Color(0.46, 0.47, 0.48)
+const COL_ANTHRACITE: Color = Color(0.14, 0.16, 0.19)
+const COL_OPENING_DARK: Color = Color(0.10, 0.12, 0.15)
+const COL_WHITE: Color = Color(0.86, 0.86, 0.84)
+const COL_A101_CYAN: Color = Color(0.08, 0.56, 0.82)
+const COL_GLASS_DARK: Color = Color(0.10, 0.14, 0.19)
+const COL_POSTER_A: Color = Color(0.86, 0.78, 0.32)
+const COL_POSTER_B: Color = Color(0.32, 0.66, 0.86)
+const COL_GREEN_BED: Color = Color(0.22, 0.38, 0.17)
+const COL_SOIL: Color = Color(0.32, 0.23, 0.16)
+const COL_GOLD: Color = Color(0.84, 0.64, 0.16)
+const COL_METAL: Color = Color(0.26, 0.29, 0.33)
 
 
 func _ready() -> void:
@@ -86,11 +87,14 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, across, out, base_y)
 
-	# Üst beyaz giriş terası (14.1 m x 2.6 m x 1.8 m yükseklik) + 3 koyu giriş açıklığı
+	# Ön cephe temiz beyaz sıvalı alınlık (üstteki pencere bandını kapatır) + 3 koyu giriş açıklığı
+	_add_box_xf(st, xf, Vector3(w + 0.1, 3.65, 0.14), Vector3(0.0, 1.65 + 1.825, 0.04), COL_WHITE)
+	# Üst beyaz giriş terası (14.1 m x 2.4 m x 1.65 m yükseklik)
 	_add_box_xf(st, xf, Vector3(w, 1.65, 2.4), Vector3(0.0, 0.825, 1.2), COL_CONCRETE)
+	# 3 giriş açıklığı: y = 1.65..3.85 (tabelanın altında 0.45 m temiz beyaz boşluk kalır!)
 	for ox: float in [-4.5, 0.0, 4.5]:
 		var ow: float = 4.2 if ox == 0.0 else 3.0
-		_add_box_xf(st, xf, Vector3(ow, 2.7, 0.3), Vector3(ox, 1.65 + 1.35, 0.08), COL_GLASS_DARK)
+		_add_box_xf(st, xf, Vector3(ow, 2.20, 0.18), Vector3(ox, 1.65 + 1.10, 0.10), COL_OPENING_DARK)
 
 	# 8 basamaklı geniş amfi-oturma merdiveni (öğrencilerin oturduğu alan)
 	var steps: int = 8
@@ -130,38 +134,38 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 
 
 func _build_yildiz_store_sign(st: SurfaceTool, xf: Transform3D) -> void:
-	var sign_y: float = 4.42
-	# Arkadaki ince yatay montaj rayları (fotoğraftaki gibi)
-	for ry: float in [sign_y - 0.30, sign_y, sign_y + 0.30]:
-		_add_box_xf(st, xf, Vector3(4.6, 0.045, 0.04), Vector3(0.0, ry, 0.06), Color(0.55, 0.57, 0.60))
+	var sign_y: float = 4.58
+	# Arkadaki 3 ince yatay koyu metal montaj rayı (giriş açıklığının tamamen üstünde, temiz beyaz alınlıkta)
+	for ry: float in [sign_y - 0.28, sign_y, sign_y + 0.28]:
+		_add_box_xf(st, xf, Vector3(4.9, 0.045, 0.05), Vector3(0.05, ry, 0.13), Color(0.32, 0.34, 0.38))
 
 	# Solda 3D 8 köşeli altın YTÜ yıldızı (iki döndürülmüş 4 köşeli yıldız + iç halka)
-	var gold_sign: Color = Color(0.84, 0.64, 0.17)
-	var navy_sign: Color = Color(0.15, 0.22, 0.34)
-	var star_x: float = -1.72
+	var gold_sign: Color = Color(0.84, 0.62, 0.14)
+	var navy_sign: Color = Color(0.12, 0.19, 0.32)
+	var star_x: float = -1.80
 	for k: int in 4:
 		var ang: float = float(k) * PI * 0.25
-		var rot_xf: Transform3D = xf * Transform3D(Basis(Vector3.BACK, ang), Vector3(star_x, sign_y, 0.13))
-		_add_box_xf(st, rot_xf, Vector3(1.06, 0.20, 0.10), Vector3.ZERO, gold_sign)
-	_add_box_xf(st, xf, Vector3(0.42, 0.42, 0.11), Vector3(star_x, sign_y, 0.13), COL_WHITE)
+		var rot_xf: Transform3D = xf * Transform3D(Basis(Vector3.BACK, ang), Vector3(star_x, sign_y, 0.20))
+		_add_box_xf(st, rot_xf, Vector3(0.96, 0.18, 0.10), Vector3.ZERO, gold_sign)
+	_add_box_xf(st, xf, Vector3(0.38, 0.38, 0.12), Vector3(star_x, sign_y, 0.20), COL_WHITE)
 
 	var sign_root: Node3D = Node3D.new()
 	sign_root.name = "YildizStoreSign"
-	sign_root.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, sign_y, 0.12))
+	sign_root.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, sign_y, 0.20))
 	add_child(sign_root)
 
-	# Ortada kalın 3D beyaz "YTU"
-	var ytu_mi: MeshInstance3D = _make_3d_text("YTU", 0.88, 0.12, COL_WHITE, 0.35)
-	ytu_mi.position = Vector3(-0.18, 0.0, 0.0)
+	# Ortada kalın 3D "YTU" (beyaz alınlık üstünde net kontrast için açık gümüş/lacivert ton)
+	var ytu_mi: MeshInstance3D = _make_3d_text("YTU", 0.80, 0.14, Color(0.18, 0.24, 0.36), 0.35)
+	ytu_mi.position = Vector3(-0.22, 0.0, 0.0)
 	sign_root.add_child(ytu_mi)
 
 	# Sağda üstte altın "YILDIZ", altta lacivert "STORE"
-	var yildiz_mi: MeshInstance3D = _make_3d_text("YILDIZ", 0.36, 0.10, gold_sign, 0.35)
-	yildiz_mi.position = Vector3(1.48, 0.22, 0.0)
+	var yildiz_mi: MeshInstance3D = _make_3d_text("YILDIZ", 0.34, 0.12, gold_sign, 0.35)
+	yildiz_mi.position = Vector3(1.78, 0.20, 0.0)
 	sign_root.add_child(yildiz_mi)
 
-	var store_mi: MeshInstance3D = _make_3d_text("STORE", 0.36, 0.10, navy_sign, 0.45)
-	store_mi.position = Vector3(1.48, -0.22, 0.0)
+	var store_mi: MeshInstance3D = _make_3d_text("STORE", 0.34, 0.12, navy_sign, 0.45)
+	store_mi.position = Vector3(1.78, -0.20, 0.0)
 	sign_root.add_child(store_mi)
 
 
@@ -191,6 +195,8 @@ func _build_a101_facade(st: SurfaceTool, gst: SurfaceTool) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, along, out, base_y)
 
+	# A101 cephesi temiz beyaz sıva arka duvarı (greybox pencere şeridini örter)
+	_add_box_xf(st, xf, Vector3(22.0, 4.95, 0.10), Vector3(2.0, 2.475, 0.05), COL_WHITE)
 	# Kalın koyu antrasit U-şekilli portal çerçeve (a101.jpg referansı)
 	var pw: float = 9.4
 	var ph: float = 4.85
@@ -200,19 +206,22 @@ func _build_a101_facade(st: SurfaceTool, gst: SurfaceTool) -> void:
 	_add_box_xf(st, xf, Vector3(pw + thick, thick * 0.85, 0.45), Vector3(0.0, ph - thick * 0.4, 0.22), COL_ANTHRACITE)
 
 	# Portal içi turkuaz A•101 tabelası + 2 koyu cam kapı + parlak kampanya afişleri
-	_add_box_xf(st, xf, Vector3(2.3, 1.55, 0.18), Vector3(0.0, 3.25, 0.12), COL_A101_CYAN)
+	_add_box_xf(st, xf, Vector3(2.3, 1.55, 0.18), Vector3(0.0, 3.25, 0.14), COL_A101_CYAN)
 	for dx: float in [-2.1, 2.1]:
-		_add_box_xf(st, xf, Vector3(3.4, 2.15, 0.14), Vector3(dx, 1.08, 0.08), COL_ANTHRACITE)
-		_add_box_xf(gst, xf, Vector3(3.0, 1.9, 0.06), Vector3(dx, 1.08, 0.16), COL_GLASS_DARK)
-		_add_box_xf(st, xf, Vector3(0.75, 1.35, 0.04), Vector3(dx - 0.9, 1.05, 0.14), COL_POSTER_A)
-		_add_box_xf(st, xf, Vector3(0.75, 1.35, 0.04), Vector3(dx + 0.9, 1.05, 0.14), COL_POSTER_B)
+		_add_box_xf(st, xf, Vector3(3.4, 2.15, 0.14), Vector3(dx, 1.08, 0.10), COL_ANTHRACITE)
+		_add_box_xf(st, xf, Vector3(3.0, 1.9, 0.08), Vector3(dx, 1.08, 0.15), COL_OPENING_DARK)
+		_add_box_xf(st, xf, Vector3(0.75, 1.35, 0.05), Vector3(dx - 0.9, 1.05, 0.20), COL_POSTER_A)
+		_add_box_xf(st, xf, Vector3(0.75, 1.35, 0.05), Vector3(dx + 0.9, 1.05, 0.20), COL_POSTER_B)
 
-	# Sağdaki beyaz duvarda YTÜ yıldız kabartması + 3'lü vitrin penceresi
+	# Sağdaki beyaz duvarda 8 köşeli YTÜ yıldız kabartması + 3'lü vitrin penceresi
 	var rx: float = 7.8
-	_add_box_xf(st, xf, Vector3(2.1, 2.1, 0.12), Vector3(rx, 3.3, 0.08), COL_CONCRETE)
-	_add_box_xf(st, xf, Vector3(1.5, 1.5, 0.16), Vector3(rx, 3.3, 0.12), COL_GOLD)
-	_add_box_xf(st, xf, Vector3(3.6, 1.7, 0.14), Vector3(rx, 1.25, 0.08), COL_ANTHRACITE)
-	_add_box_xf(gst, xf, Vector3(3.3, 1.45, 0.06), Vector3(rx, 1.25, 0.16), COL_GLASS_DARK)
+	for k: int in 4:
+		var ang: float = float(k) * PI * 0.25
+		var sxf: Transform3D = xf * Transform3D(Basis(Vector3.BACK, ang), Vector3(rx, 3.35, 0.14))
+		_add_box_xf(st, sxf, Vector3(1.85, 0.28, 0.10), Vector3.ZERO, COL_CONCRETE)
+	_add_box_xf(st, xf, Vector3(0.65, 0.65, 0.12), Vector3(rx, 3.35, 0.14), COL_WHITE)
+	_add_box_xf(st, xf, Vector3(3.6, 1.7, 0.14), Vector3(rx, 1.25, 0.10), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(3.3, 1.45, 0.08), Vector3(rx, 1.25, 0.15), COL_OPENING_DARK)
 
 	# Ön kaldırım bandı
 	_add_box_xf(st, xf, Vector3(24.0, 0.16, 2.8), Vector3(2.0, 0.08, 1.4), COL_PLAZA_LIGHT)
@@ -242,9 +251,12 @@ func _build_yemekhane_front(st: SurfaceTool, gst: SurfaceTool, col_body: StaticB
 	# Geniş açık gri taş meydan (Yemekhane önü + Yıldız Store tarafına kesintisiz bağlantı)
 	_add_box_xf(st, xf, Vector3(44.0, 0.12, 22.0), Vector3(-4.0, 0.06, 11.2), COL_PLAZA_LIGHT)
 
-	# Giriş cam kapısı + beyaz çerçeve + iki yandaki dikey cam merdiven boşlukları (yemekhane_1/2.jpg)
+	# Giriş cam kapısı + beyaz çerçeve + alüminyum dikey kayıtlar + iki yandaki dikey cam merdiven boşlukları
 	_add_box_xf(st, xf, Vector3(7.4, 3.5, 0.24), Vector3(0.0, 1.15 + 1.75, 0.12), COL_WHITE)
-	_add_box_xf(gst, xf, Vector3(6.8, 3.1, 0.08), Vector3(0.0, 1.15 + 1.55, 0.22), COL_GLASS_DARK)
+	_add_box_xf(st, xf, Vector3(6.8, 3.1, 0.10), Vector3(0.0, 1.15 + 1.55, 0.22), COL_OPENING_DARK)
+	for mx: float in [-2.2, -0.8, 0.8, 2.2]:
+		_add_box_xf(st, xf, Vector3(0.08, 3.1, 0.14), Vector3(mx, 1.15 + 1.55, 0.24), COL_CONCRETE)
+	_add_box_xf(st, xf, Vector3(6.8, 0.08, 0.14), Vector3(0.0, 1.15 + 2.35, 0.24), COL_CONCRETE)
 	for gx: float in [-4.8, 4.8]:
 		_add_box_xf(gst, xf, Vector3(1.6, 12.5, 0.12), Vector3(gx, 6.25, 0.14), COL_GLASS_DARK)
 
