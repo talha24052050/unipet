@@ -3,14 +3,10 @@
 
 Kaynak: AWS Open Data Terrain Tiles (Terrarium PNG, zoom 14, ~7 m/piksel, ücretsiz, anahtar gerektirmez).
 Formül: elev_m = (R * 256 + G + B / 256.0) - 32768.0
-Çıktı: game/data/zones/kampus_terrain.json
-  {
-    "origin": {"lat": ..., "lon": ...},
-    "origin_elevation_m": 79.0,
-    "min_x": -525.0, "min_z": -750.0,
-    "step": 25.0, "cols": 59, "rows": 68,
-    "heights": [h00, h10, ...]  # satır öncelikli (z * cols + x), orijine göre metre
-  }
+Özellikler:
+- 12.5 m ızgara çözünürlüğü (yol, bina ve saha geçişleri pürüzsüz).
+- Ortabahçe avlusu, Stadyum pisti (kampus_greenery.json -> tracks) ve tüm spor sahaları / oyun alanları
+  (kampus_greybox.json -> areas: pitch, playground) yumuşak geçişle tam düzleştirilir.
 
 Kullanım:
     python tools/osm/fetch_elevation.py
@@ -32,7 +28,7 @@ OUT_PATH = ROOT / "game" / "data" / "zones" / "kampus_terrain.json"
 M_PER_DEG_LAT = 110_540.0
 M_PER_DEG_LON_EQ = 111_320.0
 
-STEP_M = 25.0
+STEP_M = 12.5
 MARGIN_M = 50.0
 ZOOM = 14
 TILE_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
@@ -81,8 +77,8 @@ def sample_tile_elev(img: Image.Image, px: float, py: float) -> float:
     return (e00 * (1.0 - fx) + e10 * fx) * (1.0 - fy) + (e01 * (1.0 - fx) + e11 * fx) * fy
 
 
-def smooth_grid(grid: list[list[float]], passes: int = 2) -> list[list[float]]:
-    """3x3 Gaussian benzeri yumuşatma: DEM gürültüsünü giderir."""
+def smooth_grid(grid: list[list[float]], passes: int = 3) -> list[list[float]]:
+    """3x3 Gaussian benzeri yumuşatma: DEM basamaklanmasını giderir."""
     rows = len(grid)
     cols = len(grid[0])
     cur = [row[:] for row in grid]
@@ -104,45 +100,57 @@ def smooth_grid(grid: list[list[float]], passes: int = 2) -> list[list[float]]:
     return cur
 
 
-def flatten_ellipse(
+def flatten_box(
     grid: list[list[float]],
     min_x: float,
     min_z: float,
     step: float,
-    cx: float,
-    cz: float,
-    rx: float,
-    rz: float,
-    blend: float,
+    bx0: float,
+    bx1: float,
+    bz0: float,
+    bz1: float,
+    pad: float = 10.0,
+    blend: float = 28.0,
     target_h: float | None = None,
-) -> None:
-    """Belirli bir düz alanı (Ortabahçe avlusu, stadyum sahası) yumuşak geçişle düzleştirir."""
+) -> float:
+    """Dikdörtgen bir alanı (stadyum, halı saha, kort, avlu) yumuşak geçişle düzleştirir."""
     rows = len(grid)
     cols = len(grid[0])
+    x0, x1 = bx0 - pad, bx1 + pad
+    z0, z1 = bz0 - pad, bz1 + pad
+
     if target_h is None:
         samples = []
         for r in range(rows):
             z = min_z + r * step
+            if z < z0 or z > z1:
+                continue
             for c in range(cols):
                 x = min_x + c * step
-                if math.hypot((x - cx) / rx, (z - cz) / rz) <= 1.0:
+                if x0 <= x <= x1:
                     samples.append(grid[r][c])
         if not samples:
-            return
+            return 0.0
         target_h = sum(samples) / len(samples)
 
-    blend_ratio = blend / min(rx, rz)
     for r in range(rows):
         z = min_z + r * step
+        dz = 0.0 if (z0 <= z <= z1) else (z0 - z if z < z0 else z - z1)
+        if dz > blend:
+            continue
         for c in range(cols):
             x = min_x + c * step
-            d = math.hypot((x - cx) / rx, (z - cz) / rz)
-            if d <= 1.0:
+            dx = 0.0 if (x0 <= x <= x1) else (x0 - x if x < x0 else x - x1)
+            if dx > blend:
+                continue
+            dist = math.hypot(dx, dz)
+            if dist <= 0.0:
                 grid[r][c] = target_h
-            elif d < 1.0 + blend_ratio:
-                t = (d - 1.0) / blend_ratio
+            elif dist < blend:
+                t = dist / blend
                 s = t * t * (3.0 - 2.0 * t)
                 grid[r][c] = target_h * (1.0 - s) + grid[r][c] * s
+    return target_h
 
 
 def sample_bilinear(grid: list[list[float]], min_x: float, min_z: float, step: float, x: float, z: float) -> float:
@@ -180,7 +188,7 @@ def main() -> None:
 
     cols = int(round((max_x - min_x) / STEP_M)) + 1
     rows = int(round((max_z - min_z) / STEP_M)) + 1
-    print(f"Grid: {cols}x{rows} ({cols * rows} nokta), X=[{min_x}, {max_x}], Z=[{min_z}, {max_z}]")
+    print(f"Grid: {cols}x{rows} ({cols * rows} nokta, adım={STEP_M} m), X=[{min_x}, {max_x}], Z=[{min_z}, {max_z}]")
 
     tiles: dict[tuple[int, int], Image.Image] = {}
     grid: list[list[float]] = []
@@ -197,24 +205,33 @@ def main() -> None:
             row_vals.append(sample_tile_elev(tiles[(tx, ty)], px, py))
         grid.append(row_vals)
 
-    grid = smooth_grid(grid, passes=2)
+    grid = smooth_grid(grid, passes=3)
 
-    # Ortabahçe (Kışla içi avlu) gerçekte düzdür -> yumuşak geçişle düzleştir
-    flatten_ellipse(grid, min_x, min_z, STEP_M, cx=0.0, cz=0.0, rx=95.0, rz=85.0, blend=35.0)
+    # 1) Ortabahçe + Kışla kompleksi (gerçekte düz plato)
+    flatten_box(grid, min_x, min_z, STEP_M, -110.0, 145.0, -90.0, 95.0, pad=12.0, blend=35.0)
 
-    # Stadyum pisti/saha gerçekte düzdür -> greenery.json'dan merkezini alıp düzleştir
+    # 2) Stadyum pisti ve iç saha (kampus_greenery.json -> tracks listesi)
     if GREENERY_PATH.exists():
         greenery = json.loads(GREENERY_PATH.read_text(encoding="utf-8"))
-        track = greenery.get("track")
-        if isinstance(track, dict) and "center" in track:
-            tc = track["center"]
-            flatten_ellipse(
-                grid, min_x, min_z, STEP_M,
-                cx=float(tc[0]), cz=float(tc[1]),
-                rx=max(float(track.get("rx", 60.0)) + 15.0, 65.0),
-                rz=max(float(track.get("rz", 40.0)) + 15.0, 50.0),
-                blend=30.0,
-            )
+        for tr in greenery.get("tracks", []):
+            pts = tr.get("outer", [])
+            if pts:
+                txs = [float(p[0]) for p in pts]
+                tzs = [float(p[1]) for p in pts]
+                th = flatten_box(grid, min_x, min_z, STEP_M, min(txs), max(txs), min(tzs), max(tzs), pad=16.0, blend=35.0)
+                print(f"  Stadyum pisti düzleştirildi: X=[{min(txs):.0f}..{max(txs):.0f}] Z=[{min(tzs):.0f}..{max(tzs):.0f}] -> {th:.1f} m")
+
+    # 3) Tüm spor sahaları (pitch) ve oyun alanları (playground)
+    flat_count = 0
+    for a in greybox.get("areas", []):
+        if a.get("kind") in ("pitch", "playground"):
+            pts = a.get("points", [])
+            if pts:
+                axs = [float(p[0]) for p in pts]
+                azs = [float(p[1]) for p in pts]
+                flatten_box(grid, min_x, min_z, STEP_M, min(axs), max(axs), min(azs), max(azs), pad=8.0, blend=22.0)
+                flat_count += 1
+    print(f"  {flat_count} spor sahası / oyun alanı düzleştirildi")
 
     origin_h = sample_bilinear(grid, min_x, min_z, STEP_M, 0.0, 0.0)
     heights: list[float] = []

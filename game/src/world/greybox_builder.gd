@@ -6,6 +6,7 @@ extends Node3D
 const BuildingStyle := preload("res://src/world/building_style.gd")
 const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
 const PATH_COBBLE_SHADER: Shader = preload("res://assets/shaders/path_cobble.gdshader")
+const ROAD_ASPHALT_SHADER: Shader = preload("res://assets/shaders/road_asphalt.gdshader")
 const GRASS_SHADER: Shader = preload("res://assets/shaders/grass.gdshader")
 const GRASS_KINDS: PackedStringArray = ["grass", "park", "garden"]
 const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
@@ -42,8 +43,8 @@ const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
 const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
 ## Z-fighting olmasın diye katmanlar arası küçük yükseklik farkı.
 const AREA_Y: float = 0.04
-const PATH_Y: float = 0.09
-const PATH_SUBDIV_M: float = 8.0
+const PATH_Y: float = 0.08
+const PATH_SUBDIV_M: float = 4.0
 const BUILDING_FOUNDATION_M: float = 2.5
 const GROUND_MARGIN: float = 30.0
 const CampusMap := preload("res://src/ui/campus_map.gd")
@@ -332,13 +333,13 @@ func _build_ground_rect(rect: Rect2) -> void:
 
 
 func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
-	var step: float = maxf(th.step, 10.0)
-	var x0: float = rect.position.x
-	var z0: float = rect.position.y
-	var nx: int = maxi(2, ceili(rect.size.x / step) + 1)
-	var nz: int = maxi(2, ceili(rect.size.y / step) + 1)
-	var dx: float = rect.size.x / float(nx - 1)
-	var dz: float = rect.size.y / float(nz - 1)
+	# Zemin mesh'ini TerrainHeight ızgarasıyla birebir hizala (yollar ve binalarla 0.0 mm örtüşme).
+	var c0: int = clampi(floori((rect.position.x - th.min_x) / th.step), 0, th.cols - 2)
+	var r0: int = clampi(floori((rect.position.y - th.min_z) / th.step), 0, th.rows - 2)
+	var c1: int = clampi(ceili((rect.end.x - th.min_x) / th.step), c0 + 1, th.cols - 1)
+	var r1: int = clampi(ceili((rect.end.y - th.min_z) / th.step), r0 + 1, th.rows - 1)
+	var nx: int = c1 - c0 + 1
+	var nz: int = r1 - r0 + 1
 
 	var verts: PackedVector3Array = PackedVector3Array()
 	var normals: PackedVector3Array = PackedVector3Array()
@@ -348,11 +349,13 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 	uvs.resize(nx * nz)
 
 	for r: int in nz:
-		var z: float = z0 + float(r) * dz
+		var gr: int = r0 + r
+		var z: float = th.min_z + float(gr) * th.step
 		for c: int in nx:
-			var x: float = x0 + float(c) * dx
+			var gc: int = c0 + c
+			var x: float = th.min_x + float(gc) * th.step
 			var idx: int = r * nx + c
-			verts[idx] = Vector3(x, th.height_at(x, z), z)
+			verts[idx] = Vector3(x, th.heights[gr * th.cols + gc], z)
 			normals[idx] = th.normal_at(x, z)
 			uvs[idx] = Vector2(x * 0.05, z * 0.05)
 
@@ -566,18 +569,22 @@ func _build_canopy(poly: PackedVector2Array, height: float) -> void:
 
 func _build_area(a: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(a.get("points", []))
+	var kind: String = str(a.get("kind", "grass"))
 	var is_water: bool = str(a.get("name", "")).to_lower().contains("havuz")
 	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	# Eğimli yamaçtaki büyük çim/park çokgenleri zaten çim olan araziyi kesip z-fighting yapmasın.
+	if has_terrain and GRASS_KINDS.has(kind) and not is_water:
+		if _polygon_max_height(poly) - _polygon_min_height(poly) > 0.35:
+			return
 	var mesh: ArrayMesh
-	if has_terrain and is_water:
+	if has_terrain and (is_water or kind == "pitch" or kind == "playground"):
 		var ctr: Vector2 = _polygon_center(poly)
 		mesh = flat_polygon_mesh(poly, TerrainHeight.active_height(ctr.x, ctr.y) + AREA_Y, false)
 	else:
 		mesh = flat_polygon_mesh(poly, AREA_Y, has_terrain)
 	if mesh == null:
 		return
-	var color: Color = AREA_COLORS.get(str(a.get("kind", "grass")), AREA_COLORS["grass"])
-	var kind: String = str(a.get("kind", "grass"))
+	var color: Color = AREA_COLORS.get(kind, AREA_COLORS["grass"])
 	var mat: Material = _water_material() if is_water \
 		else (_grass_material(color) if GRASS_KINDS.has(kind) else _shared_material(color))
 	if _batching:
@@ -641,7 +648,7 @@ func _build_path(p: Dictionary) -> void:
 	if mesh.get_surface_count() == 0:
 		return
 	var mid: Vector2 = pts[pts.size() / 2]
-	var mat: Material = _shared_material(SERVICE_PATH_COLOR) if kind == "service" \
+	var mat: Material = _get_asphalt_material() if kind == "service" \
 		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE)
 	if _batching:
 		_batch_mesh(mesh, mat, mid, 0.0, false)
@@ -751,6 +758,16 @@ func _flush_batches() -> void:
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
 	_batches.clear()
+
+
+static var _asphalt_material: ShaderMaterial
+
+
+static func _get_asphalt_material() -> ShaderMaterial:
+	if _asphalt_material == null:
+		_asphalt_material = ShaderMaterial.new()
+		_asphalt_material.shader = ROAD_ASPHALT_SHADER
+	return _asphalt_material
 
 
 static func _get_cobble_material(pattern: int = PATTERN_COBBLE) -> ShaderMaterial:
@@ -1086,4 +1103,13 @@ static func _polygon_min_height(poly: PackedVector2Array) -> float:
 	var m: float = TerrainHeight.active_height(poly[0].x, poly[0].y)
 	for i: int in range(1, poly.size()):
 		m = minf(m, TerrainHeight.active_height(poly[i].x, poly[i].y))
+	return m
+
+
+static func _polygon_max_height(poly: PackedVector2Array) -> float:
+	if poly.is_empty():
+		return 0.0
+	var m: float = TerrainHeight.active_height(poly[0].x, poly[0].y)
+	for i: int in range(1, poly.size()):
+		m = maxf(m, TerrainHeight.active_height(poly[i].x, poly[i].y))
 	return m

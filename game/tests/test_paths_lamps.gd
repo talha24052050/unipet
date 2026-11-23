@@ -91,20 +91,17 @@ func test_service_path_does_not_use_cobble_material() -> String:
 		return "service yolu için MeshInstance3D oluşturulamadı"
 
 	var mat: Material = mi.mesh.surface_get_material(0)
-	if mat is ShaderMaterial:
-		var sm: ShaderMaterial = mat as ShaderMaterial
-		if sm.shader != null and sm.shader.resource_path == PATH_COBBLE_SHADER_PATH:
-			builder.free()
-			return "service yolu cobble materyali KULLANMAMALI (asfalt kalmalı)"
-
-	if not mat is StandardMaterial3D:
+	if not mat is ShaderMaterial:
 		builder.free()
-		return "service yolu StandardMaterial3D kullanmalı"
+		return "service yolu asfalt ShaderMaterial kullanmalı"
 
-	var std_mat: StandardMaterial3D = mat as StandardMaterial3D
-	if std_mat.albedo_color != Greybox.SERVICE_PATH_COLOR:
+	var sm: ShaderMaterial = mat as ShaderMaterial
+	if sm.shader != null and sm.shader.resource_path == PATH_COBBLE_SHADER_PATH:
 		builder.free()
-		return "service yolu SERVICE_PATH_COLOR kullanmalı"
+		return "service yolu cobble materyali KULLANMAMALI (asfalt kalmalı)"
+	if sm.shader == null or sm.shader.resource_path != "res://assets/shaders/road_asphalt.gdshader":
+		builder.free()
+		return "service yolu road_asphalt.gdshader kullanmalı"
 
 	builder.free()
 	return ""

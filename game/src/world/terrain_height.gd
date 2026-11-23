@@ -1,14 +1,15 @@
 class_name TerrainHeight
 extends RefCounted
-## Kampüs yükseklik haritası (DEM): (x, z) konumundaki gerçek zemin kotunu bilinear enterpolasyonla verir.
-## Tek bir aktif örnek üzerinden tüm dünya bileşenleri (binalar, yollar, proplar, ağaçlar, oyuncu) sorgular.
-## Config.TERRAIN_ENABLED = false yapılırsa tüm sorgular 0.0 döner (düz zemine güvenli geri dönüş).
+## Kampüs yükseklik haritası (DEM): (x, z) konumundaki gerçek zemin kotunu verir.
+## Zemin mesh'iyle birebir aynı üçgenleme (i00-i10-i11 / i00-i11-i01) üzerinden barisentrik
+## enterpolasyon yapar; böylece yollar ve nesneler zemin üçgenleriyle milimetrik örtüşür.
+## Config.TERRAIN_ENABLED = false yapılırsa tüm sorgular 0.0 döner.
 
 static var active: TerrainHeight = null
 
 var min_x: float = 0.0
 var min_z: float = 0.0
-var step: float = 25.0
+var step: float = 12.5
 var cols: int = 0
 var rows: int = 0
 var heights: PackedFloat32Array = PackedFloat32Array()
@@ -18,6 +19,7 @@ func is_valid() -> bool:
 	return cols >= 2 and rows >= 2 and step > 0.0 and heights.size() == cols * rows
 
 
+## Zemin üçgenleriyle birebir aynı yüzey yüksekliği (yolların gömülmesini / havada kalmasını önler).
 func height_at(x: float, z: float) -> float:
 	if not is_valid():
 		return 0.0
@@ -29,13 +31,16 @@ func height_at(x: float, z: float) -> float:
 	var tz: float = fz - float(r0)
 
 	var idx00: int = r0 * cols + c0
-	var idx10: int = idx00 + 1
-	var idx01: int = idx00 + cols
-	var idx11: int = idx01 + 1
+	var h00: float = heights[idx00]
+	var h10: float = heights[idx00 + 1]
+	var h01: float = heights[idx00 + cols]
+	var h11: float = heights[idx00 + cols + 1]
 
-	var h0: float = lerpf(heights[idx00], heights[idx10], tx)
-	var h1: float = lerpf(heights[idx01], heights[idx11], tx)
-	return lerpf(h0, h1, tz)
+	# Üçgen bölünmesi (i00 -> i11 köşegeni): greybox_builder._build_terrain_ground ile birebir aynı
+	if tx >= tz:
+		return h00 + (h10 - h00) * tx + (h11 - h10) * tz
+	else:
+		return h00 + (h11 - h01) * tx + (h01 - h00) * tz
 
 
 func normal_at(x: float, z: float, eps: float = 1.0) -> Vector3:
@@ -74,7 +79,7 @@ static func from_dict(d: Dictionary) -> TerrainHeight:
 		return th
 	th.min_x = float(d.get("min_x", 0.0))
 	th.min_z = float(d.get("min_z", 0.0))
-	th.step = float(d.get("step", 25.0))
+	th.step = float(d.get("step", 12.5))
 	th.cols = int(d.get("cols", 0))
 	th.rows = int(d.get("rows", 0))
 	var raw: Variant = d.get("heights", [])

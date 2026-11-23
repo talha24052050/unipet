@@ -199,3 +199,27 @@ func test_prebaked_kampus_navmesh_has_elevation() -> String:
 	if (max_y - min_y) < 5.0:
 		return "kampus_navmesh.res hâlâ düz görünüyor (Y aralığı: %.2f..%.2f)" % [min_y, max_y]
 	return ""
+
+
+func test_stadium_is_flat_and_asphalt_shader_valid() -> String:
+	var th: TerrainHeight = TerrainHeight.load_from_file(TERRAIN_PATH)
+	var gr: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/zones/kampus_greenery.json"))
+	if th == null or not (gr is Dictionary):
+		return "terrain veya greenery yüklenemedi"
+	var tracks: Array = (gr as Dictionary).get("tracks", [])
+	if tracks.is_empty():
+		return "greenery içinde stadyum pisti yok"
+	var outer: Array = (tracks[0] as Dictionary).get("outer", [])
+	var lo: float = INF
+	var hi: float = -INF
+	for pt: Array in outer:
+		var h: float = th.height_at(float(pt[0]), float(pt[1]))
+		lo = minf(lo, h)
+		hi = maxf(hi, h)
+	if (hi - lo) > 0.25:
+		return "Stadyum pisti düz olmalı, kot farkı %.2f m bulundu (%.2f..%.2f)" % [hi - lo, lo, hi]
+
+	var shader: Shader = load("res://assets/shaders/road_asphalt.gdshader") as Shader
+	if shader == null:
+		return "road_asphalt.gdshader yüklenemedi"
+	return ""
