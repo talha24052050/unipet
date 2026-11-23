@@ -2,55 +2,19 @@
 
 [ext_resource type="Script" path="res://src/ui/care_hud.gd" id="1"]
 
-[sub_resource type="StyleBoxFlat" id="bars_panel_style"]
-bg_color = Color(0.12, 0.14, 0.18, 0.88)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.3, 0.35, 0.45, 0.8)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
-
 [sub_resource type="StyleBoxFlat" id="bar_bg_style"]
-bg_color = Color(0.08, 0.1, 0.14, 0.9)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+bg_color = Color(0.07, 0.09, 0.13, 0.92)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="bar_fill_green"]
 bg_color = Color(0.2, 0.8, 0.2, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="action_btn_style"]
-bg_color = Color(0.18, 0.42, 0.8, 0.95)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(1, 1, 1, 0.9)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
-
-[sub_resource type="StyleBoxFlat" id="toast_panel_style"]
-bg_color = Color(0.1, 0.12, 0.16, 0.95)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.85, 0.35, 0.3, 0.9)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="CareHud" type="Control"]
 layout_mode = 3
@@ -66,11 +30,11 @@ script = ExtResource("1")
 unique_name_in_owner = true
 layout_mode = 1
 offset_left = 24.0
-offset_top = 64.0
-offset_right = 352.0
-offset_bottom = 236.0
+offset_top = 60.0
+offset_right = 376.0
+offset_bottom = 192.0
 mouse_filter = 0
-theme_override_styles/panel = SubResource("bars_panel_style")
+theme_type_variation = &"HudStatusPanel"
 
 [node name="Margin" type="MarginContainer" parent="BarsPanel"]
 layout_mode = 2
@@ -81,30 +45,33 @@ theme_override_constants/margin_bottom = 8
 
 [node name="BarsBox" type="VBoxContainer" parent="BarsPanel/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/separation = 6
 
 [node name="MoodWarningLabel" type="Label" parent="BarsPanel/Margin/BarsBox"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.35, 0.35, 1)
+theme_override_colors/font_color = Color(1, 0.4, 0.38, 1)
 theme_override_font_sizes/font_size = 26
 text = "Petin acıktı"
 
-[node name="FoodBox" type="VBoxContainer" parent="BarsPanel/Margin/BarsBox"]
+[node name="FoodBox" type="HBoxContainer" parent="BarsPanel/Margin/BarsBox"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 10
 
 [node name="FoodLabel" type="Label" parent="BarsPanel/Margin/BarsBox/FoodBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(182, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = "Tokluk %80"
 
 [node name="FoodBar" type="ProgressBar" parent="BarsPanel/Margin/BarsBox/FoodBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 theme_override_styles/background = SubResource("bar_bg_style")
 theme_override_styles/fill = SubResource("bar_fill_green")
 max_value = 100.0
@@ -112,20 +79,23 @@ step = 0.01
 value = 80.0
 show_percentage = false
 
-[node name="JoyBox" type="VBoxContainer" parent="BarsPanel/Margin/BarsBox"]
+[node name="JoyBox" type="HBoxContainer" parent="BarsPanel/Margin/BarsBox"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 10
 
 [node name="JoyLabel" type="Label" parent="BarsPanel/Margin/BarsBox/JoyBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(182, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = "Mutluluk %80"
 
 [node name="JoyBar" type="ProgressBar" parent="BarsPanel/Margin/BarsBox/JoyBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 theme_override_styles/background = SubResource("bar_bg_style")
 theme_override_styles/fill = SubResource("bar_fill_green")
 max_value = 100.0
@@ -133,20 +103,23 @@ step = 0.01
 value = 80.0
 show_percentage = false
 
-[node name="EnergyBox" type="VBoxContainer" parent="BarsPanel/Margin/BarsBox"]
+[node name="EnergyBox" type="HBoxContainer" parent="BarsPanel/Margin/BarsBox"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 10
 
 [node name="EnergyLabel" type="Label" parent="BarsPanel/Margin/BarsBox/EnergyBox"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(182, 0)
 layout_mode = 2
 theme_override_font_sizes/font_size = 26
 text = "Enerji %80"
 
 [node name="EnergyBar" type="ProgressBar" parent="BarsPanel/Margin/BarsBox/EnergyBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 theme_override_styles/background = SubResource("bar_bg_style")
 theme_override_styles/fill = SubResource("bar_fill_green")
 max_value = 100.0
@@ -175,8 +148,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 mouse_filter = 0
+theme_type_variation = &"ActionButton"
 theme_override_font_sizes/font_size = 26
-theme_override_styles/normal = SubResource("action_btn_style")
 text = "Ye"
 
 [node name="RestButton" type="Button" parent="ActionButtonsBox"]
@@ -184,8 +157,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 mouse_filter = 0
+theme_type_variation = &"ActionButton"
 theme_override_font_sizes/font_size = 26
-theme_override_styles/normal = SubResource("action_btn_style")
 text = "Dinlen"
 
 [node name="PlayButton" type="Button" parent="ActionButtonsBox"]
@@ -193,8 +166,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(96, 96)
 layout_mode = 2
 mouse_filter = 0
+theme_type_variation = &"ActionButton"
 theme_override_font_sizes/font_size = 26
-theme_override_styles/normal = SubResource("action_btn_style")
 text = "Oyna"
 
 [node name="ToastContainer" type="PanelContainer" parent="."]
@@ -213,7 +186,7 @@ offset_bottom = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("toast_panel_style")
+theme_type_variation = &"ToastPanel"
 
 [node name="Margin" type="MarginContainer" parent="ToastContainer"]
 layout_mode = 2

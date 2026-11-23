@@ -68,6 +68,7 @@ clear_button_enabled = true
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 104)
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
 theme_override_font_sizes/font_size = 32
 text = "Kod gönder"
 
@@ -121,6 +122,7 @@ virtual_keyboard_type = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 104)
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
 theme_override_font_sizes/font_size = 32
 text = "Giriş yap"
 
