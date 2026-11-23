@@ -58,15 +58,24 @@ void fragment() {
 		// Zemin seviyesi (en alt 0.3m süpürgelik)
 		if (world_pos.y >= 0.3) {
 			if (style == 0) {
-				// 0: Modern yatay pencere şeridi
-				if (floor_y >= 1.05 && floor_y <= 2.45) {
-					float u_grid = mod(wall_u, 2.0);
-					if (floor_y <= 1.15 || floor_y >= 2.35 || u_grid <= 0.08 || u_grid >= 1.92) {
+				// 0: Modern kompozit panel cephe (Alucobond derz ızgarası + yatay cam pencere şeridi)
+				float p_u = fract(wall_u / 1.8);
+				float p_y = fract(floor_y / 1.15);
+				float panel_tone = 0.97 + 0.04 * hash12(vec2(floor(wall_u / 1.8), floor(world_pos.y / 1.15)));
+				col = wall_color.rgb * panel_tone;
+				if (p_u < 0.025 || p_y < 0.025) {
+					col *= 0.88;  // ince alüminyum panel derzi
+				}
+				if (floor_y >= 1.05 && floor_y <= 2.48) {
+					float u_grid = mod(wall_u, 1.8);
+					if (floor_y <= 1.14 || floor_y >= 2.39 || u_grid <= 0.07 || u_grid >= 1.73 || abs(u_grid - 0.9) < 0.03) {
 						col = frame_color.rgb;
+						roughness = 0.55;
 					} else {
-						col = window_color.rgb;
-						roughness = 0.25;
-						metallic = 0.2;
+						float sky_grad = clamp((floor_y - 1.14) / 1.25, 0.0, 1.0);
+						col = mix(window_color.rgb * 0.82, window_color.rgb * 1.35 + vec3(0.05, 0.08, 0.07), sky_grad);
+						roughness = 0.18;
+						metallic = 0.25;
 					}
 				}
 			} else if (style == 1) {
@@ -82,44 +91,81 @@ void fragment() {
 					}
 				}
 			} else if (style == 2) {
-				// 2: Tarihi binalar: taş kaide, pilastırlar, kat silmesi, kemerli pencereler
-				float pil = mod(wall_u, PILASTER_SPACING);
-				bool on_pilaster = pil < PILASTER_WIDTH;
-				bool on_band = floor_y > FLOOR_HEIGHT - 0.22;  // kat silmesi
+				// 2: Tarihi Taşbina (Kışla) cephesi — YTÜ resmi fotoğraf referansı:
+				// İç avlu: eskitilmiş gri-bej kireçtaşı sıva, koyu kat silmesi, yağmur oluğu,
+				// taş kemer söveli ve beyaz çok bölmeli (mullion) kemerli pencereler.
+				// Dış cephe: organik çok tonlu kaba moloz taş örgü + tuğla kemer + beyaz bölmeli cam.
 				float u_mod = mod(wall_u, 3.0);
 				bool outer = outer_stone && dot(world_normal.xz, world_pos.xz - courtyard_center) > 0.0;
+				bool on_band = floor_y > FLOOR_HEIGHT - 0.26;
+				bool under_band = floor_y > FLOOR_HEIGHT - 0.38 && !on_band;
 				if (outer) {
-					// Kaba taş örgü: 0.45 m sıralar, sıra başına kaydırılmış düzensiz blok uzunlukları
-					float row = floor(world_pos.y / 0.45);
-					float bu = wall_u / (0.7 + 0.5 * hash12(vec2(row, 3.0))) + hash12(vec2(row, 7.0));
+					// Kaba moloz taş örgü: düzensiz bloklar + koyu gölgeli derz
+					float row = floor(world_pos.y / 0.38);
+					float row_w = 0.55 + 0.45 * hash12(vec2(row, 3.1));
+					float bu = wall_u / row_w + hash12(vec2(row, 7.3)) * 3.0;
 					vec2 cell = vec2(floor(bu), row);
 					float fu = fract(bu);
-					float fy = fract(world_pos.y / 0.45);
-					float tone = 0.86 + 0.24 * hash12(cell);
-					col = rubble_color.rgb * tone;
-					if (fu < 0.05 || fy < 0.08) {
-						col = rubble_color.rgb * 1.18;  // açık renk derz
+					float fy = fract(world_pos.y / 0.38);
+					float tone = 0.78 + 0.34 * hash12(cell);
+					float warm = hash12(cell + vec2(11.0, 5.0));
+					vec3 stone_tint = mix(rubble_color.rgb, rubble_color.rgb * vec3(1.06, 0.98, 0.88), warm);
+					col = stone_tint * tone;
+					if (fu < 0.06 || fy < 0.09) {
+						col = rubble_color.rgb * 0.62;  // koyu harç/gölge derzi
 					}
-					roughness = 1.0;
+					roughness = 0.98;
+				} else {
+					// İç avlu: eskitilmiş kireçtaşı sıva dokusu (hafif ton çeşitliliği)
+					float grain = 0.96 + 0.08 * hash12(vec2(floor(wall_u * 1.4), floor(world_pos.y * 1.4)));
+					float blotch = 0.97 + 0.06 * hash12(vec2(floor(wall_u * 0.35), floor(world_pos.y * 0.4)));
+					col = wall_color.rgb * grain * blotch;
+					roughness = 0.93;
+					if (world_pos.y < PLINTH_HEIGHT) {
+						col = wall_color.rgb * 0.80;  // taş subasman
+					} else if (on_band) {
+						col = wall_color.rgb * 0.58;  // koyu taş kat silmesi (tasbina_stone.jpg)
+						roughness = 0.96;
+					} else if (under_band) {
+						col = col * 0.86;  // silme altı gölge
+					}
+					// Dikey yağmur oluğu borusu (her 15 m'de bir)
+					if (mod(wall_u + 1.5, 15.0) < 0.13) {
+						col = vec3(0.64, 0.66, 0.68);
+						roughness = 0.55;
+						metallic = 0.25;
+					}
 				}
-				if (!outer && (world_pos.y < PLINTH_HEIGHT || on_pilaster || on_band)) {
-					col = stone_color.rgb;
-					roughness = 0.95;
-				} else
-				if (u_mod >= 0.9 && u_mod <= 2.1) {
+				// Kemerli pencereler: dış taş/tuğla kemer sövesi + beyaz çok bölmeli doğrama + cam
+				if (u_mod >= 0.78 && u_mod <= 2.22 && !on_band) {
 					float center_u = 1.5;
-					float half_w = 0.6;
-					float dx = (u_mod - center_u) / half_w;
-					float arch_top = 2.55 + 0.4 * sqrt(max(0.0, 1.0 - dx * dx));
-
-					if (floor_y >= 0.9 && floor_y <= arch_top) {
-						float inner_arch = 2.45 + 0.35 * sqrt(max(0.0, 1.0 - dx * dx));
-						if (floor_y <= 1.0 || floor_y >= inner_arch || u_mod <= 1.0 || u_mod >= 2.0) {
-							col = outer ? brick_arch_color.rgb : frame_color.rgb;
+					float half_w_outer = 0.70;
+					float half_w_inner = 0.56;
+					float dx_o = (u_mod - center_u) / half_w_outer;
+					float arch_outer = 2.48 + 0.48 * sqrt(max(0.0, 1.0 - dx_o * dx_o));
+					if (floor_y >= 0.82 && floor_y <= arch_outer) {
+						float dx_i = (u_mod - center_u) / half_w_inner;
+						bool in_opening = abs(dx_i) <= 1.0 && floor_y >= 0.94 && floor_y <= (2.46 + 0.40 * sqrt(max(0.0, 1.0 - dx_i * dx_i)));
+						if (!in_opening) {
+							// Kemer sövesi / denizlik: iç cephede koyu taş söve, dış cephede tuğla kemer
+							col = outer ? brick_arch_color.rgb * (0.9 + 0.16 * hash12(vec2(floor(u_mod * 8.0), floor(floor_y * 8.0)))) : wall_color.rgb * 0.68;
+							roughness = 0.94;
 						} else {
-							col = window_color.rgb;
-							roughness = 0.3;
-							metallic = 0.1;
+							// Beyaz pencere çerçevesi + çok bölmeli kayıtlar (1 dikey + 2 yatay + kemer yelpazesi)
+							float arch_in = 2.46 + 0.40 * sqrt(max(0.0, 1.0 - dx_i * dx_i));
+							bool outer_frame = floor_y <= 1.02 || floor_y >= arch_in - 0.06 || abs(u_mod - center_u) >= half_w_inner - 0.06;
+							bool mid_vert = abs(u_mod - center_u) < 0.042;
+							bool horiz_bars = abs(floor_y - 1.50) < 0.036 || abs(floor_y - 2.02) < 0.036 || abs(floor_y - 2.46) < 0.042;
+							bool arch_fan = floor_y > 2.46 && (abs(abs(u_mod - center_u) - (floor_y - 2.46) * 0.95) < 0.032);
+							if (outer_frame || mid_vert || horiz_bars || arch_fan) {
+								col = frame_color.rgb;
+								roughness = 0.65;
+							} else {
+								float g_grad = clamp((floor_y - 1.0) / 1.8, 0.0, 1.0);
+								col = mix(window_color.rgb * 0.78, window_color.rgb * 1.45 + vec3(0.04, 0.06, 0.09), g_grad);
+								roughness = 0.22;
+								metallic = 0.15;
+							}
 						}
 					}
 				}

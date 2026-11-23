@@ -52,11 +52,11 @@ const BRICK_BAND: Color = Color(0.92, 0.91, 0.88)
 const BRICK_WINDOW: Color = Color(0.17, 0.21, 0.26)
 const BRICK_ROOF: Color = Color(0.6, 0.62, 0.64)
 
-## Renk paleti (YTÜ Davutpaşa harita stili)
-const HISTORIC_WALL: Color = Color(0.937, 0.890, 0.784)  # krem #EFE3C8
-const HISTORIC_ROOF: Color = Color(0.63, 0.34, 0.27)   # yıpranmış kiremit (drone referansı; eski #B9473A fazla canlıydı)
-const HISTORIC_WINDOW: Color = Color(0.18, 0.22, 0.28)
-const HISTORIC_FRAME: Color = Color(1.0, 1.0, 1.0)       # beyaz pencere çerçevesi
+## Renk paleti (YTÜ Davutpaşa resmi fotoğraf referansı: eskitilmiş gri-bej kireçtaşı sıvası + kiremit çatı)
+const HISTORIC_WALL: Color = Color(0.75, 0.73, 0.69)     # gerçek Taşbina eskitilmiş taş-sıva gri-bej
+const HISTORIC_ROOF: Color = Color(0.66, 0.35, 0.27)     # sıcak kiremit çatı (dji_0114 / dji_0081 referansı)
+const HISTORIC_WINDOW: Color = Color(0.14, 0.18, 0.23)
+const HISTORIC_FRAME: Color = Color(0.95, 0.95, 0.94)    # beyaz çok bölmeli pencere doğraması
 
 const MODERN_WALL: Color = Color(0.91, 0.93, 0.94)       # açık gri / beyaz
 const MODERN_ROOF: Color = Color(0.68, 0.71, 0.74)       # açık gri düz çatı

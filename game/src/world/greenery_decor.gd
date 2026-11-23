@@ -53,10 +53,13 @@ func build(data: Dictionary) -> void:
 	_build_beds(data.get("beds", []))
 	for t: Variant in data.get("tracks", []):
 		_build_track(t as Dictionary)
-	for k: Variant in data.get("kiosks", []):
+	var kiosks: Array = data.get("kiosks", [])
+	for k: Variant in kiosks:
 		var kx: float = float(k[0])
 		var kz: float = float(k[1])
 		_build_kiosk(Vector3(kx, TerrainHeight.active_height(kx, kz), kz), float(k[2]))
+	if not kiosks.is_empty():
+		_build_ortabahce_monument(Vector2(-2.1, 5.3))
 
 
 func _build_trees(trees: Array) -> void:
@@ -427,23 +430,147 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:
 	parent.add_child(mi)
 
 
+## Ortabahçe yuvarlak kafe/büfe pavyonu (dji_0114 drone referansı):
+## Geniş dairesel gri saçak çatı, koyu cam + ahşap gövde, 8 ince çelik direk, dairesel taş platform ve 2 otomat.
+## Tüm parçalar tek köşe-renkli ArrayMesh'te birleşir (= 1 çizim çağrısı).
 func _build_kiosk(pos: Vector3, yaw: float) -> void:
 	var root: StaticBody3D = StaticBody3D.new()
 	root.name = "Kiosk"
 	root.position = pos
 	root.rotation.y = yaw
-	_box(root, KIOSK_BODY, Vector3(0.0, KIOSK_BODY.y * 0.5, -0.6), KIOSK_BODY_COLOR)
-	var roof_y: float = KIOSK_BODY.y + 0.25
-	_box(root, KIOSK_ROOF, Vector3(0.0, roof_y, 0.0), KIOSK_ROOF_COLOR)
-	for sx: float in [-1.0, 1.0]:
-		_box(root, Vector3(0.14, roof_y, 0.14), Vector3(sx * (KIOSK_ROOF.x * 0.5 - 0.3), roof_y * 0.5, KIOSK_ROOF.z * 0.5 - 0.3), KIOSK_POST_COLOR)
+
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(-1)
+
+	var base_col: Color = Color(0.76, 0.74, 0.70)
+	var core_dark: Color = Color(0.16, 0.20, 0.24)
+	var glass_col: Color = Color(0.14, 0.22, 0.28)
+	var wood_col: Color = Color(0.56, 0.34, 0.22)
+	var roof_col: Color = Color(0.62, 0.64, 0.66)
+	var fascia_col: Color = Color(0.26, 0.28, 0.31)
+	var post_col: Color = Color(0.24, 0.26, 0.29)
+	var red_accent: Color = Color(0.72, 0.16, 0.16)
+
+	# 1) Dairesel taş pavyon tabanı (r=4.8m, h=0.14m)
+	_add_colored_cyl(st, 4.8, 0.14, Vector3(0.0, 0.07, 0.0), 16, base_col)
+	# 2) Alt ahşap/kiremit tezgah bandı (r=3.1m, h=0.95m)
+	_add_colored_cyl(st, 3.1, 0.95, Vector3(0.0, 0.14 + 0.475, 0.0), 14, wood_col)
+	# 3) Üst koyu cam vitrin gövdesi (r=3.02m, h=1.85m)
+	_add_colored_cyl(st, 3.02, 1.85, Vector3(0.0, 1.09 + 0.925, 0.0), 14, glass_col)
+	# 4) Üst koyu alınlık halkası + geniş dairesel saçak çatı (r=4.7m)
+	_add_colored_cyl(st, 3.15, 0.22, Vector3(0.0, 2.94 + 0.11, 0.0), 14, core_dark)
+	_add_colored_cyl(st, 4.75, 0.24, Vector3(0.0, 3.16 + 0.12, 0.0), 16, fascia_col)
+	_add_colored_cyl(st, 4.65, 0.10, Vector3(0.0, 3.40 + 0.05, 0.0), 16, roof_col)
+	# Çatı üstü klima / ışıklık kutusu
+	_add_colored_box(st, Vector3(1.8, 0.42, 1.4), Vector3(0.0, 3.68, 0.0), Color(0.72, 0.74, 0.76))
+	# 5) 8 adet ince saçak taşıyıcı çelik direk
+	for i: int in 8:
+		var ang: float = TAU * float(i) / 8.0
+		var px: float = cos(ang) * 4.25
+		var pz: float = sin(ang) * 4.25
+		_add_colored_box(st, Vector3(0.12, 3.05, 0.12), Vector3(px, 0.14 + 1.525, pz), post_col)
+	# 6) Kırmızı büfe tabelası / otomat çifti (giriş yanında)
 	for sx: float in [-0.55, 0.55]:
-		_box(root, VENDING_SIZE, Vector3(sx, VENDING_SIZE.y * 0.5, KIOSK_BODY.z * 0.5 - 0.6 + VENDING_SIZE.z * 0.5), VENDING_COLOR)
+		_add_colored_box(st, Vector3(0.85, 1.85, 0.70), Vector3(sx, 0.14 + 0.925, 3.45), red_accent)
+		_add_colored_box(st, Vector3(0.62, 1.05, 0.06), Vector3(sx, 0.14 + 1.18, 3.81), Color(0.88, 0.92, 0.96))
+
+	st.generate_normals()
+	var mesh: ArrayMesh = st.commit()
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.78
+	mesh.surface_set_material(0, mat)
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.name = "KioskMesh"
+	mi.mesh = mesh
+	root.add_child(mi)
+
 	var col: CollisionShape3D = CollisionShape3D.new()
-	var shape: BoxShape3D = BoxShape3D.new()
-	shape.size = KIOSK_BODY
+	var shape: CylinderShape3D = CylinderShape3D.new()
+	shape.radius = 3.25
+	shape.height = 3.4
 	col.shape = shape
-	col.position = Vector3(0.0, KIOSK_BODY.y * 0.5, -0.6)
+	col.position = Vector3(0.0, 1.7, 0.0)
 	root.add_child(col)
 	add_child(root)
 	kiosk_count += 1
+
+
+## Ortabahçe merkez anıt meydanı (dji_0081 referansı): dairesel basamaklı taş platform + granit kaide + bronz anıt.
+func _build_ortabahce_monument(xz: Vector2) -> void:
+	var base_y: float = TerrainHeight.active_height(xz.x, xz.y)
+	var root: StaticBody3D = StaticBody3D.new()
+	root.name = "OrtabahceMonument"
+	root.position = Vector3(xz.x, base_y, xz.y)
+
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(-1)
+
+	var plaza_stone: Color = Color(0.84, 0.82, 0.78)
+	var step_stone: Color = Color(0.74, 0.72, 0.69)
+	var granite: Color = Color(0.56, 0.55, 0.53)
+	var bronze: Color = Color(0.24, 0.22, 0.19)
+	var gold: Color = Color(0.86, 0.68, 0.22)
+
+	# Geniş dairesel taş meydan + 2 basamaklı kaide (yolun üstüne temiz oturur)
+	_add_colored_cyl(st, 3.8, 0.14, Vector3(0.0, 0.07, 0.0), 20, plaza_stone)
+	_add_colored_cyl(st, 2.2, 0.24, Vector3(0.0, 0.14 + 0.12, 0.0), 16, step_stone)
+	_add_colored_box(st, Vector3(1.55, 1.55, 1.55), Vector3(0.0, 0.38 + 0.775, 0.0), granite)
+	_add_colored_box(st, Vector3(1.72, 0.16, 1.72), Vector3(0.0, 1.93 + 0.08, 0.0), step_stone)
+	# Bronz anıt sütun + üstünde oturan altın YTÜ yıldız tacı
+	_add_colored_box(st, Vector3(0.75, 2.05, 0.75), Vector3(0.0, 2.09 + 1.025, 0.0), bronze)
+	_add_colored_box(st, Vector3(0.95, 0.16, 0.95), Vector3(0.0, 4.14 + 0.08, 0.0), bronze)
+	_add_colored_box(st, Vector3(0.24, 0.35, 0.24), Vector3(0.0, 4.30 + 0.175, 0.0), bronze)
+	_add_colored_box(st, Vector3(0.62, 0.62, 0.16), Vector3(0.0, 4.65 + 0.22, 0.0), gold)
+	_add_colored_box(st, Vector3(0.16, 0.62, 0.62), Vector3(0.0, 4.65 + 0.22, 0.0), gold)
+
+	st.generate_normals()
+	var mesh: ArrayMesh = st.commit()
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.72
+	mesh.surface_set_material(0, mat)
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.name = "MonumentMesh"
+	mi.mesh = mesh
+	root.add_child(mi)
+
+	var col: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(1.8, 3.0, 1.8)
+	col.shape = shape
+	col.position = Vector3(0.0, 1.5, 0.0)
+	root.add_child(col)
+	add_child(root)
+
+
+static func _add_colored_cyl(st: SurfaceTool, radius: float, height: float, pos: Vector3, segs: int, color: Color) -> void:
+	var y0: float = pos.y - height * 0.5
+	var y1: float = pos.y + height * 0.5
+	var top_c: Vector3 = Vector3(pos.x, y1, pos.z)
+	var bot_c: Vector3 = Vector3(pos.x, y0, pos.z)
+	st.set_color(color)
+	for i: int in segs:
+		var a0: float = TAU * float(i) / float(segs)
+		var a1: float = TAU * float(i + 1) / float(segs)
+		var p00: Vector3 = Vector3(pos.x + cos(a0) * radius, y0, pos.z + sin(a0) * radius)
+		var p10: Vector3 = Vector3(pos.x + cos(a1) * radius, y0, pos.z + sin(a1) * radius)
+		var p01: Vector3 = Vector3(pos.x + cos(a0) * radius, y1, pos.z + sin(a0) * radius)
+		var p11: Vector3 = Vector3(pos.x + cos(a1) * radius, y1, pos.z + sin(a1) * radius)
+		# Yan yüz (dışarı bakan — Godot sağ el +Y ekseninde a0->a1 saat yönünde döner)
+		st.add_vertex(p00)
+		st.add_vertex(p11)
+		st.add_vertex(p01)
+		st.add_vertex(p00)
+		st.add_vertex(p10)
+		st.add_vertex(p11)
+		# Üst kapak (+Y)
+		st.add_vertex(top_c)
+		st.add_vertex(p01)
+		st.add_vertex(p11)
+		# Alt kapak (-Y)
+		st.add_vertex(bot_c)
+		st.add_vertex(p10)
+		st.add_vertex(p00)
