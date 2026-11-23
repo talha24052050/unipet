@@ -25,9 +25,9 @@ function Start-Tunnel {
         -RedirectStandardError $Log -WindowStyle Hidden | Out-Null
     for ($i = 0; $i -lt 60; $i++) {
         Start-Sleep -Seconds 1
-        $m = Select-String -Path $Log -Pattern "https://[a-z0-9-]+\.trycloudflare\.com" -ErrorAction SilentlyContinue | Select-Object -First 1
+        $m = Select-String -Path $Log -Pattern "https://(?!api\.)[a-z0-9-]+\.trycloudflare\.com" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($m) {
-            $url = $m.Matches[0].Value
+            $url = $m.Matches[0].Value  # cloudflared hata mesajındaki api.trycloudflare.com adresi tünel sayılmamalı (2026-11-23 hatası)
             Set-Content -Path $UrlFile -Value $url -Encoding ascii
             Write-Host ("[{0:HH:mm:ss}] Tünel açık: {1}" -f (Get-Date), $url) -ForegroundColor Green
             return $url
