@@ -21,7 +21,7 @@ $FailLimit = 3
 function Start-Tunnel {
     Get-Process cloudflared -ErrorAction SilentlyContinue | Stop-Process -Force
     if (Test-Path $Log) { Remove-Item $Log -ErrorAction SilentlyContinue }
-    Start-Process -FilePath $Cloudflared -ArgumentList "tunnel --no-autoupdate --protocol http2 --url http://localhost:7350" `
+    Start-Process -FilePath $Cloudflared -ArgumentList "tunnel --no-autoupdate --protocol http2 --metrics 127.0.0.1:20241 --url http://localhost:7350" `
         -RedirectStandardError $Log -WindowStyle Hidden | Out-Null
     for ($i = 0; $i -lt 60; $i++) {
         Start-Sleep -Seconds 1
@@ -37,9 +37,15 @@ function Start-Tunnel {
     return $null
 }
 
+# Sağlık: cloudflared'ın kendi /ready ucu (Cloudflare'a bağlı mı) + yerel Nakama. Eskiden tünel adresine
+# istek atılıyordu; yerel DNS yeni trycloudflare adını dakikalarca çözemeyince sağlam tünel boşuna yenileniyordu.
 function Test-Url([string]$url) {
     if (-not $url) { return $false }
-    try { return (Invoke-WebRequest -UseBasicParsing -Uri "$url/healthcheck" -TimeoutSec 15).StatusCode -eq 200 } catch { return $false }
+    try {
+        $ready = (Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:20241/ready" -TimeoutSec 10).StatusCode -eq 200
+        $nakama = (Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:7350/healthcheck" -TimeoutSec 10).StatusCode -eq 200
+        return $ready -and $nakama
+    } catch { return $false }
 }
 
 $url = $null
