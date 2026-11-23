@@ -7,6 +7,7 @@ const CARE_PATH: String = "user://care.cfg"
 const Stardust := preload("res://src/collect/stardust_rules.gd")
 const WALLET_PATH: String = "user://wallet.cfg"
 const MinigameRules := preload("res://src/minigame/minigame_rules.gd")
+const RaceRules := preload("res://src/minigame/race_rules.gd")
 
 var _zone: String = ""
 var _player_id: String = "local"
@@ -101,6 +102,54 @@ func send_minigame_result(game: String, score: int) -> void:
 	var v: Dictionary = Stardust.view(w, _points.size())
 	v["reward"] = r
 	_set_wallet(v)
+
+
+# ---- tek kişilik yarış (sunucuyla aynı kurallar)
+var _race: Dictionary = RaceRules.new_race()
+var _race_cps: Array = []
+
+
+func _ms() -> int:
+	return Time.get_ticks_msec()
+
+
+func send_race(act: String, i: int = 0) -> void:
+	if _race_cps.is_empty():
+		_race_cps = RaceRules.load_cps()
+	var now: int = _ms()
+	match act:
+		"join":
+			var why: String = RaceRules.join(_race, _player_id, _last_pos, now, _race_cps)
+			if not why.is_empty():
+				race_updated.emit({"error": why})
+				return
+		"leave":
+			RaceRules.leave(_race, _player_id)
+		"cp":
+			var res: int = RaceRules.checkpoint(_race, _player_id, i, _last_pos, now, _race_cps)
+			if res == 0:
+				return
+			if res == 2:
+				var rc: Dictionary = _race["racers"][_player_id]
+				var w: Dictionary = _wallet_load()
+				var rw: int = clampi(RaceRules.reward(int(rc["place"]), int(_race["n"])), 0, MinigameRules.DAILY_CAP - int(w["mg"]))
+				if rw > 0:
+					w["dust"] = int(w["dust"]) + rw
+					w["mg"] = int(w["mg"]) + rw
+					_wallet_save(w)
+				var v: Dictionary = Stardust.view(w, _points.size())
+				v["reward"] = rw
+				_set_wallet(v)
+	_emit_race(now)
+
+
+func _emit_race(now: int) -> void:
+	race_updated.emit(RaceRules.view(_race, now, {_player_id: "Sen"}, _race_cps))
+
+
+func _process(_delta: float) -> void:
+	if _race["phase"] != "idle" and RaceRules.tick(_race, _ms()):
+		_emit_race(_ms())
 
 
 func buy_item(item: String) -> void:

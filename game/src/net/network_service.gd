@@ -20,6 +20,8 @@ signal unlocks_received(pets: PackedStringArray, fresh: PackedStringArray)
 signal wallet_updated(wallet: Dictionary)
 ## Satın alma sonucu (reason boşsa başarılı).
 signal purchase_finished(item: String, ok: bool, reason: String)
+## Koşu yarışı durumu (RaceRules.view) ya da {"error": neden}.
+signal race_updated(view: Dictionary)
 
 ## Son bilinen cüzdan (ekranlar hemen okuyabilsin).
 var wallet: Dictionary = {}
@@ -72,6 +74,11 @@ func request_wallet() -> void:
 
 ## Mini oyun bitti: sunucu skora göre yıldız tozu verir → wallet_updated (wallet.reward).
 func send_minigame_result(_game: String, _score: int) -> void:
+	pass
+
+
+## Yarış: act = "join" | "leave" | "cp" (i = geçilen kontrol noktası).
+func send_race(_act: String, _i: int = 0) -> void:
 	pass
 
 

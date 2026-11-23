@@ -27,6 +27,7 @@ var OP_UNLOCKS = 6;  // s→c {pets:[...], fresh:[...]}  (sadece o oyuncuya; fre
 var OP_WALLET = 7;   // s→c {dust, owned:[...], points:[i...], got}  (sadece o oyuncuya; points = bugün kalan yıldız tozları)
 var OP_COLLECT = 8;  // c→s {i}  yıldız tozu topla → OP_WALLET
 var OP_MINIGAME = 9; // c→s {game, score}  mini oyun bitti → OP_WALLET (reward = verilen toz)
+var OP_RACE = 10;    // c→s {act:"join"|"leave"|"cp", i}   s→c yarış görünümü (odadaki herkese; raceView)
 
 // ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
 var CARE_MAX = 100;
@@ -237,6 +238,97 @@ function rpcBuyItem(ctx, logger, nk, payload) {
   var reason = shopBuy(w, item);
   if (!reason) walletSave(nk, ctx.userId, w);
   return JSON.stringify({ ok: !reason, reason: reason, wallet: walletView(w) });
+}
+
+// ---- koşu yarışı (YTÜ Stadyumu pisti, yarım tur). Sunucu otoriter: lobi → geri sayım → koşu → sonuç.
+// Kontrol noktası geçişi konum + en düşük süre ile doğrulanır. game/src/minigame/race_rules.gd ile AYNI.
+// <race-cps> (tools/collect/make_race_track.py üretir, elle düzenleme)
+var RACE_CPS = [[-322.51,39.14,0.0],[-313.11,4.73,35.7],[-296.8,-26.1,71.4],[-263.06,-32.93,107.0],[-237.47,-9.91,142.7],[-239.09,24.94,178.4],[-248.49,59.35,214.1]];
+// </race-cps>
+var RACE_CP_RADIUS = 9;
+var RACE_JOIN_RADIUS = 25;
+var RACE_LOBBY_MS = 10000;
+var RACE_COUNTDOWN_MS = 3000;
+var RACE_TIMEOUT_MS = 90000;
+var RACE_RESULTS_MS = 8000;
+var RACE_MAX = 8;
+var RACE_MAX_SPEED = 9;  // m/s (pet 4.6 m/s yürür; gecikme payı)
+
+function raceNew() {
+  return { phase: "idle", lobbyEnds: 0, startAt: 0, endsAt: 0, doneUntil: 0, racers: {}, order: [], n: 0 };
+}
+
+function raceDist(pos, cp) {
+  return Math.sqrt(Math.pow(pos[0] - cp[0], 2) + Math.pow(pos[2] - cp[1], 2));
+}
+
+// "" = katıldı; aksi halde neden.
+function raceJoin(r, uid, pos, now) {
+  if (r.phase !== "idle" && r.phase !== "lobby") return "yarış sürüyor";
+  if (r.racers[uid]) return "";
+  if (Object.keys(r.racers).length >= RACE_MAX) return "yarış dolu";
+  if (!pos || raceDist(pos, RACE_CPS[0]) > RACE_JOIN_RADIUS) return "başlangıç çizgisine gel";
+  if (r.phase === "idle") { r.phase = "lobby"; r.lobbyEnds = now + RACE_LOBBY_MS; r.racers = {}; r.order = []; }
+  r.racers[uid] = { cp: 0, time: 0, place: 0 };
+  return "";
+}
+
+function raceLeave(r, uid) {
+  if (!r.racers[uid]) return false;
+  delete r.racers[uid];
+  if (r.phase === "lobby" && Object.keys(r.racers).length === 0) r.phase = "idle";
+  return true;
+}
+
+// Kontrol noktası: sıradaki mi, yakın mı, o mesafeye bu sürede gerçekten koşulabilir mi?
+// Dönen: 0 geçersiz, 1 geçti, 2 bitirdi.
+function raceCp(r, uid, i, pos, now) {
+  var rc = r.racers[uid];
+  if (r.phase !== "running" || !rc || rc.place > 0 || now < r.startAt) return 0;
+  if (i !== rc.cp + 1 || i >= RACE_CPS.length || !pos) return 0;
+  var cp = RACE_CPS[i];
+  if (raceDist(pos, cp) > RACE_CP_RADIUS) return 0;
+  if (cp[2] - 2 * RACE_CP_RADIUS > RACE_MAX_SPEED * (now - r.startAt) / 1000) return 0;
+  rc.cp = i;
+  if (i < RACE_CPS.length - 1) return 1;
+  rc.time = now - r.startAt;
+  r.order.push(uid);
+  rc.place = r.order.length;
+  return 2;
+}
+
+// Zaman ilerlet; aşama değiştiyse true.
+function raceTick(r, now) {
+  if (r.phase === "lobby" && now >= r.lobbyEnds) {
+    r.n = Object.keys(r.racers).length;
+    if (r.n === 0) { r.phase = "idle"; return true; }
+    r.phase = "running"; r.startAt = now + RACE_COUNTDOWN_MS; r.endsAt = r.startAt + RACE_TIMEOUT_MS;
+    return true;
+  }
+  if (r.phase === "running") {
+    var all = true;
+    for (var id in r.racers) if (r.racers[id].place === 0) all = false;
+    if (all || now >= r.endsAt) { r.phase = "done"; r.doneUntil = now + RACE_RESULTS_MS; return true; }
+  }
+  if (r.phase === "done" && now >= r.doneUntil) { r.phase = "idle"; r.racers = {}; r.order = []; return true; }
+  return false;
+}
+
+function raceReward(place, n) {
+  if (place <= 0) return 0;
+  if (place === 1 && n >= 2) return 3;
+  if (place === 2 && n >= 3) return 2;
+  return 1;
+}
+
+function raceView(r, now, names) {
+  var list = [];
+  for (var id in r.racers) {
+    var rc = r.racers[id];
+    list.push({ id: id, name: (names && names[id]) || "", cp: rc.cp, time: rc.time, place: rc.place });
+  }
+  return { phase: r.phase, lobby_in: Math.max(0, r.lobbyEnds - now), start_in: r.startAt - now,
+    racers: list, cps: RACE_CPS.length - 1 };
 }
 
 var CARE_COLLECTION = "pet";
@@ -474,7 +566,7 @@ function matchInit(ctx, logger, nk, params) {
   var zone = params.zone;
   var label = JSON.stringify({ zone: zone });
   return {
-    state: { zone: zone, players: {}, emptyTicks: 0, cap: capacity(ctx), freeChat: env(ctx, "UNIPET_FREE_CHAT", "false") === "true" },
+    state: { zone: zone, players: {}, emptyTicks: 0, cap: capacity(ctx), freeChat: env(ctx, "UNIPET_FREE_CHAT", "false") === "true", race: raceNew() },
     tickRate: TICK_RATE,
     label: label
   };
@@ -501,6 +593,7 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     state.players[p.userId].unlocked = unlocksLoad(nk, p.userId);
     dispatcher.broadcastMessage(OP_UNLOCKS, JSON.stringify({ pets: state.players[p.userId].unlocked, fresh: fresh }), [p], null, true);
     dispatcher.broadcastMessage(OP_WALLET, JSON.stringify(walletView(walletLoad(nk, p.userId, Date.now()))), [p], null, true);
+    if (state.race && state.race.phase !== "idle") raceBroadcast(dispatcher, state, Date.now(), [p]);
     // Yeni gelene odadaki herkesin son durumu.
     var list = [];
     for (var id in state.players) {
@@ -522,8 +615,19 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
 function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
   for (var i = 0; i < presences.length; i++) {
     delete state.players[presences[i].userId];
+    if (state.race) raceLeave(state.race, presences[i].userId);
   }
   return { state: state };
+}
+
+function raceNames(state) {
+  var names = {};
+  for (var id in state.players) names[id] = state.players[id].name || "";
+  return names;
+}
+
+function raceBroadcast(dispatcher, state, now, to) {
+  dispatcher.broadcastMessage(OP_RACE, JSON.stringify(raceView(state.race, now, raceNames(state))), to || null, null, true);
 }
 
 function othersOf(state, userId) {
@@ -605,6 +709,29 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         res.state = cur ? careDecay(cur.state, Math.floor(Date.now() / 1000)) : careNew(Math.floor(Date.now() / 1000));
       }
       dispatcher.broadcastMessage(OP_CARE, JSON.stringify(res), [pl.presence], null, true);
+    } else if (m.opCode === OP_RACE) {
+      var nowR = Date.now();
+      state.race = state.race || raceNew();
+      var act = String(data.act);
+      if (act === "join") {
+        var why = raceJoin(state.race, uid, pl.p, nowR);
+        if (why) dispatcher.broadcastMessage(OP_RACE, JSON.stringify({ error: why }), [pl.presence], null, true);
+        else raceBroadcast(dispatcher, state, nowR);
+      } else if (act === "leave") {
+        if (raceLeave(state.race, uid)) raceBroadcast(dispatcher, state, nowR);
+      } else if (act === "cp") {
+        var res = raceCp(state.race, uid, data.i, pl.p, nowR);
+        if (res > 0) raceBroadcast(dispatcher, state, nowR);
+        if (res === 2) {
+          var rc = state.race.racers[uid];
+          var wr = walletLoad(nk, uid, nowR);
+          var rw = Math.max(0, Math.min(raceReward(rc.place, state.race.n), MINIGAME_DAILY_CAP - wr.mg));
+          if (rw > 0) { wr.dust += rw; wr.mg += rw; walletSave(nk, uid, wr); }
+          var vr = walletView(wr);
+          vr.reward = rw;
+          dispatcher.broadcastMessage(OP_WALLET, JSON.stringify(vr), [pl.presence], null, true);
+        }
+      }
     } else if (m.opCode === OP_MINIGAME) {
       var nowMg = Date.now();
       var wg = walletLoad(nk, uid, nowMg);
@@ -644,6 +771,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       }
     }
   }
+  if (state.race && raceTick(state.race, Date.now())) raceBroadcast(dispatcher, state, Date.now());
   if (Object.keys(state.players).length === 0) {
     state.emptyTicks++;
     if (state.emptyTicks > EMPTY_TICKS_BEFORE_CLOSE) {

@@ -21,6 +21,7 @@
 [ext_resource type="Script" path="res://src/player/pet_interaction.gd" id="19"]
 [ext_resource type="Script" path="res://src/collect/stardust_field.gd" id="20"]
 [ext_resource type="Script" path="res://src/minigame/minigame_hub.gd" id="21"]
+[ext_resource type="Script" path="res://src/minigame/race_client.gd" id="22"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -274,4 +275,10 @@ counter = NodePath("../UI/StardustLabel")
 [node name="MinigameHub" type="Node3D" parent="." node_paths=PackedStringArray("player", "ui")]
 script = ExtResource("21")
 player = NodePath("../Player")
+ui = NodePath("../UI")
+
+[node name="RaceClient" type="Node3D" parent="." node_paths=PackedStringArray("player", "controller", "ui")]
+script = ExtResource("22")
+player = NodePath("../Player")
+controller = NodePath("../PlayerController")
 ui = NodePath("../UI")

@@ -63,6 +63,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 5.8 Pet etkileşimi: kendi petine dokun → kalpler + sevinç hareketi; başka pete dokun → dönüp el sallar, "Selam!" der
 - [x] 5.9 Yıldız tozu + dükkan: her gün 40 toplanabilir yıldız (yaya yollarında, sunucu konumla doğrular), sayaç; pet ekranında 3 yeni ücretli aksesuar (Çiçek tacı 15, Yıldız taç 30, Pelerin 40) denenir/satın alınır; alınmamış ürün takılamaz (sunucu da reddeder)
 - [x] 5.10 Mini oyun: Stadyumda Frizbi — 45 sn, ortadan atılan frizbileri halkaya koşup yakala, 5'li seri bonusu, en iyi skor; skor → yıldız tozu (oyun başına ≤5, günde ≤15, sunucu sınırlar)
+- [x] 5.11 Koşu yarışı (çok oyunculu): Stadyum pistinde yarım tur (~214 m, 6 kapı); başlangıçta "Koşu yarışına katıl" → 10 sn lobi (odadaki herkes katılabilir) → 3-2-1 → koşu; sunucu kapıları konum + süreyle doğrular; sıra/süre, sonuç tablosu; ödül: 1. (2+ koşucu) 3, 2. (3+) 2, bitiren 1 yıldız tozu (mini oyun günlük tavanıyla)
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test

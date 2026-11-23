@@ -80,11 +80,16 @@ foreach ($k in $envVars.Keys) { if ($envVars[$k] -ne "") { $lines += "    - `"$k
 $nkArgs = @("--config", (Join-Path $ServerDir "nakama\local.yml"), "--config", $envYml, "--database.address", $Db,
     "--runtime.path", (Join-Path $ServerDir "nakama\modules"), "--socket.server_key", "unipet-dev-server-key",
     "--logger.file", (Join-Path $Root "nakama.log"), "--logger.stdout", "false")
-Start-Process -FilePath $nakamaExe -ArgumentList $nkArgs -WindowStyle Hidden | Out-Null
-
-for ($i = 0; $i -lt 30; $i++) {
-    Start-Sleep -Seconds 1
-    try { if ((Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:7350/healthcheck" -TimeoutSec 2).StatusCode -eq 200) { Write-Host "Nakama hazır: http://127.0.0.1:7350 (konsol: http://127.0.0.1:7351, admin/password)" -ForegroundColor Green; exit 0 } } catch {}
+# Postgres zorla kapatıldıysa açılışta kurtarma yapar ("database system is starting up"); port açık olsa da Nakama
+# bağlanamayıp kapanır. Nakama düşerse birkaç kez yeniden dene (2026-11-23).
+for ($try = 0; $try -lt 4; $try++) {
+    $proc = Start-Process -FilePath $nakamaExe -ArgumentList $nkArgs -WindowStyle Hidden -PassThru
+    for ($i = 0; $i -lt 30; $i++) {
+        Start-Sleep -Seconds 1
+        try { if ((Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:7350/healthcheck" -TimeoutSec 2).StatusCode -eq 200) { Write-Host "Nakama hazır: http://127.0.0.1:7350 (konsol: http://127.0.0.1:7351, admin/password)" -ForegroundColor Green; exit 0 } } catch {}
+        if ($proc.HasExited) { break }
+    }
+    Start-Sleep -Seconds 3
 }
 Write-Host "Nakama başlamadı. Log: $Root\nakama.log" -ForegroundColor Red
 exit 1

@@ -13,6 +13,7 @@ const OP_UNLOCKS: int = 6
 const OP_WALLET: int = 7
 const OP_COLLECT: int = 8
 const OP_MINIGAME: int = 9
+const OP_RACE: int = 10
 
 var host: String = "127.0.0.1"
 var port: int = 7350
@@ -142,6 +143,10 @@ func send_minigame_result(game: String, score: int) -> void:
 	_send_match_data(OP_MINIGAME, {"game": game, "score": score})
 
 
+func send_race(act: String, i: int = 0) -> void:
+	_send_match_data(OP_RACE, {"act": act, "i": i})
+
+
 func request_wallet() -> void:
 	if not _socket_open:
 		return
@@ -234,6 +239,8 @@ func _handle_match_data(md: Dictionary) -> void:
 			player_profile.emit(str(d.get("id", "")), decode_profile(d))
 		OP_WALLET:
 			_set_wallet(d)
+		OP_RACE:
+			race_updated.emit(d)
 		OP_UNLOCKS:
 			unlocks_received.emit(PackedStringArray(d.get("pets", [])), PackedStringArray(d.get("fresh", [])))
 		OP_CARE:

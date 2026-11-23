@@ -214,4 +214,44 @@ assert.strictEqual(mgMsgs[0].data.reward, 4);
 assert.strictEqual(mgMsgs[1].data.reward, 0, "art arda sonuç ödül almaz");
 assert.strictEqual(M.walletLoad(nk, "G", Date.now()).dust, mgDust0 + 4);
 
+// --- koşu yarışı
+var CP = M.RACE_CPS;
+assert.ok(CP.length === 7, "7 kontrol noktası");
+var r = M.raceNew();
+var t0 = 1000000;
+assert.strictEqual(M.raceJoin(r, "R1", [CP[0][0] + 40, 0, CP[0][1]], t0), "başlangıç çizgisine gel");
+assert.strictEqual(M.raceJoin(r, "R1", [CP[0][0], 0, CP[0][1]], t0), "");
+assert.strictEqual(r.phase, "lobby");
+assert.strictEqual(M.raceJoin(r, "R2", [CP[0][0] + 2, 0, CP[0][1]], t0 + 1000), "");
+assert.ok(!M.raceTick(r, t0 + 5000), "lobi sürüyor");
+assert.ok(M.raceTick(r, t0 + 10000) && r.phase === "running", "lobi bitti → koşu");
+var go = r.startAt;
+assert.strictEqual(M.raceJoin(r, "R3", [CP[0][0], 0, CP[0][1]], go), "yarış sürüyor");
+function at(i) { return [CP[i][0], 0, CP[i][1]]; }
+assert.strictEqual(M.raceCp(r, "R1", 1, at(1), go - 500), 0, "başlamadan geçilmez");
+assert.strictEqual(M.raceCp(r, "R1", 2, at(2), go + 20000), 0, "sıra atlanamaz");
+assert.strictEqual(M.raceCp(r, "R1", 1, at(1), go + 1000), 0, "imkânsız hız");
+var tt = go;
+for (var ci = 1; ci < CP.length; ci++) {
+  tt += 7000;
+  assert.strictEqual(M.raceCp(r, "R1", ci, at(ci), tt), ci === CP.length - 1 ? 2 : 1, "R1 cp " + ci);
+}
+assert.strictEqual(r.racers.R1.place, 1);
+assert.strictEqual(M.raceReward(1, 2), 3);
+assert.strictEqual(M.raceReward(2, 2), 1);
+assert.ok(M.raceTick(r, go + 90001) && r.phase === "done", "süre dolunca biter");
+assert.ok(M.raceTick(r, go + 90001 + 8000) && r.phase === "idle", "sonuçtan sonra boşta");
+// maçta: katıl → görünüm herkese, çıkınca yarıştan düşer
+sent = [];
+var st5 = M.matchInit(ctx({}), logger, nk, { zone: "kampus" }).state;
+var K = { userId: "K" }, L = { userId: "L" };
+st5 = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st5, [K, L]).state;
+st5.players.K.p = at(0);
+sent = [];
+st5 = M.matchLoop(ctx(), logger, nk, dispatcher, 1, st5, [msg(K, 10, { act: "join" })]).state;
+var rv = sent.filter(function (m) { return m.op === 10; })[0];
+assert.ok(rv && rv.data.phase === "lobby" && rv.data.racers.length === 1 && rv.to.length === 0, "lobi herkese yayınlanır");
+st5 = M.matchLeave(ctx(), logger, nk, dispatcher, 2, st5, [K]).state;
+assert.strictEqual(st5.race.phase, "idle", "tek koşucu çıkınca lobi kapanır");
+
 console.log("nakama modül testleri: OK");

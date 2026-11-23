@@ -10,6 +10,8 @@ const LocalProfile := preload("res://src/core/local_profile.gd")
 
 ## İstenen hareket yönü ve şiddeti. Kontrolcüler her karede yazar.
 var move_input: Vector3 = Vector3.ZERO
+## Yarış geri sayımı gibi anlarda hareket kilidi.
+var frozen: bool = false
 
 const STEP_INTERVAL: float = 0.38
 var _step_accum: float = 0.0
@@ -115,7 +117,7 @@ func _fit_collision(size: Vector2) -> void:
 func _physics_process(delta: float) -> void:
 	if _snap_to_navmesh:
 		_try_snap_to_navmesh()
-	velocity = compute_velocity(velocity, move_input, is_on_floor(), _gravity, delta)
+	velocity = compute_velocity(velocity, Vector3.ZERO if frozen else move_input, is_on_floor(), _gravity, delta)
 	move_and_slide()
 
 	var flat: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
