@@ -14,6 +14,9 @@ const ROOM_CAPACITY: int = 40
 ## Pozisyon senkron frekansı (saniyede gönderim).
 const NET_TICK_RATE: int = 10
 
+## Gerçek kampüs yer şekilleri (DEM yükseklik haritası). false yapılırsa tüm dünya düz y=0 olur.
+var TERRAIN_ENABLED: bool = true
+
 ## Serbest chat şimdilik kapalı; altyapı hazır, açmak için true yapılır (+ filtre gerekli).
 const FREE_CHAT_ENABLED: bool = false
 
