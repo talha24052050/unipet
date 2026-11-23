@@ -18,6 +18,7 @@ const POOL_SIZE: int = 6
 
 var volume_db: float = 0.0
 var enabled: bool = true
+var suspended: bool = false
 
 var last_played: StringName = &""
 var play_count: int = 0
@@ -45,6 +46,31 @@ func _ready() -> void:
 		var raw_vol: Variant = settings.get("sfx_volume_db")
 		if raw_vol != null:
 			volume_db = float(raw_vol)
+	if Services != null and Services.lifecycle != null:
+		if not Services.lifecycle.app_paused.is_connected(_on_app_paused):
+			Services.lifecycle.app_paused.connect(_on_app_paused)
+		if not Services.lifecycle.app_resumed.is_connected(_on_app_resumed):
+			Services.lifecycle.app_resumed.connect(_on_app_resumed)
+
+
+func _on_app_paused() -> void:
+	set_suspended(true)
+
+
+func _on_app_resumed(_away_seconds: float) -> void:
+	set_suspended(false)
+
+
+func set_suspended(value: bool) -> void:
+	suspended = value
+	if suspended:
+		stop_all()
+
+
+func stop_all() -> void:
+	for p: AudioStreamPlayer in _pool:
+		if p != null and p.playing:
+			p.stop()
 
 
 func _ensure_pool() -> void:
@@ -57,7 +83,7 @@ func _ensure_pool() -> void:
 
 
 func play(sound_name: StringName) -> void:
-	if not enabled:
+	if not enabled or suspended:
 		return
 	if not SOUNDS.has(sound_name):
 		if not _warned.has(sound_name):

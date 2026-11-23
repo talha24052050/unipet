@@ -113,12 +113,27 @@ func _ensure_nodes() -> void:
 func _connect_signals() -> void:
 	if Services.net != null and not Services.net.care_updated.is_connected(_on_care_updated):
 		Services.net.care_updated.connect(_on_care_updated)
+	if Services.lifecycle != null and not Services.lifecycle.app_resumed.is_connected(_on_app_resumed):
+		Services.lifecycle.app_resumed.connect(_on_app_resumed)
 	if _eat_btn != null and not _eat_btn.pressed.is_connected(_on_eat_pressed):
 		_eat_btn.pressed.connect(_on_eat_pressed)
 	if _rest_btn != null and not _rest_btn.pressed.is_connected(_on_rest_pressed):
 		_rest_btn.pressed.connect(_on_rest_pressed)
 	if _play_btn != null and not _play_btn.pressed.is_connected(_on_play_pressed):
 		_play_btn.pressed.connect(_on_play_pressed)
+
+
+func _exit_tree() -> void:
+	if Services != null and Services.lifecycle != null and Services.lifecycle.app_resumed.is_connected(_on_app_resumed):
+		Services.lifecycle.app_resumed.disconnect(_on_app_resumed)
+
+
+func _on_app_resumed(_away_seconds: float) -> void:
+	var now: int = int(Time.get_unix_time_from_system())
+	_current_state = PetCareRules.decay(_current_state, now)
+	_update_bars()
+	_update_mood()
+	_update_buttons()
 
 
 func _process(delta: float) -> void:

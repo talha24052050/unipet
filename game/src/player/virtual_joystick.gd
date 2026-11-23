@@ -25,6 +25,20 @@ func _ready() -> void:
 	offset_bottom = 0.0
 	_reset()
 	resized.connect(_reset)
+	if Services != null and Services.lifecycle != null and not Services.lifecycle.app_paused.is_connected(release_touch):
+		Services.lifecycle.app_paused.connect(release_touch)
+
+
+func _exit_tree() -> void:
+	if Services != null and Services.lifecycle != null and Services.lifecycle.app_paused.is_connected(release_touch):
+		Services.lifecycle.app_paused.disconnect(release_touch)
+
+
+func release_touch() -> void:
+	if _touch_index == -1:
+		return
+	_reset()
+	touch_ended.emit()
 
 
 ## Joystick _input'ta (arayüzden önce) çalışır: açık bir panelin (Ayarlar, sohbet) üstündeki dokunuşu almasın.

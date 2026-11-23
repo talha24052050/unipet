@@ -55,6 +55,9 @@ func _ready() -> void:
 	elif net != null:
 		_connect_network_signals()
 
+	if Services != null and Services.lifecycle != null and not Services.lifecycle.app_resumed.is_connected(_on_app_resumed):
+		Services.lifecycle.app_resumed.connect(_on_app_resumed)
+
 	_initiate_connection()
 
 
@@ -67,8 +70,21 @@ func set_network_service(new_net: Node) -> void:
 
 
 func _exit_tree() -> void:
+	if Services != null and Services.lifecycle != null and Services.lifecycle.app_resumed.is_connected(_on_app_resumed):
+		Services.lifecycle.app_resumed.disconnect(_on_app_resumed)
 	_disconnect_network_signals()
 	_clear_remote_players()
+
+
+func _on_app_resumed(_away_seconds: float) -> void:
+	if _waiting_reconnect:
+		_reconnect_attempts = 0
+		_waiting_reconnect = false
+		_reconnect_timer = 0.0
+		_initiate_connection()
+	elif _in_room:
+		_has_sent_state = false
+		_heartbeat_accum = HEARTBEAT_INTERVAL
 
 
 func _connect_network_signals() -> void:
