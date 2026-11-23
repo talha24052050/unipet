@@ -19,13 +19,20 @@ func test_noon_bright_night_dark() -> String:
 func test_day_night_node_applies() -> String:
 	var dn: Node = DayNight.new()
 	var sun: DirectionalLight3D = DirectionalLight3D.new()
+	var we: WorldEnvironment = WorldEnvironment.new()
+	we.environment = Environment.new()
 	dn.set("sun", sun)
+	dn.set("environment", we)
 	dn.call("apply", 12.5)
 	var day_energy: float = sun.light_energy
+	var fog_on: bool = we.environment.fog_enabled
 	dn.call("apply", 23.0)
 	var night_energy: float = sun.light_energy
 	dn.free()
 	sun.free()
+	we.free()
 	if day_energy <= night_energy:
 		return "ışık şiddeti saate göre değişmeli"
+	if not fog_on:
+		return "atmosferik derinlik sisi etkin olmalı"
 	return ""

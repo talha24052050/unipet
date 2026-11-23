@@ -183,6 +183,112 @@ func _build_track(t: Dictionary) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 	track_count += 1
+	_build_stadium_details(inner, outer)
+
+
+## Stadyum içi gerçekçi detaylar: beyaz futbol saha çizgileri (tek çizim), iki kale ve 4 aydınlatma direği.
+func _build_stadium_details(inner: Array, outer: Array) -> void:
+	var min_x: float = INF
+	var max_x: float = -INF
+	var min_z: float = INF
+	var max_z: float = -INF
+	for p: Array in inner:
+		min_x = minf(min_x, float(p[0]))
+		max_x = maxf(max_x, float(p[0]))
+		min_z = minf(min_z, float(p[1]))
+		max_z = maxf(max_z, float(p[1]))
+	var cx: float = (min_x + max_x) * 0.5
+	var cz: float = (min_z + max_z) * 0.5
+	var half_w: float = clampf((max_x - min_x) * 0.36, 18.0, 34.0)
+	var half_l: float = clampf((max_z - min_z) * 0.36, 30.0, 52.0)
+	var y: float = TerrainHeight.active_height(cx, cz) + TRACK_Y + 0.025
+
+	# 1) Saha çizgileri (tek ArrayMesh)
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_normal(Vector3.UP)
+	var lw: float = 0.22
+	# Dış dikdörtgen + orta çizgi
+	_line_quad(st, Vector2(cx - half_w, cz - half_l), Vector2(cx + half_w, cz - half_l), lw, y)
+	_line_quad(st, Vector2(cx - half_w, cz + half_l), Vector2(cx + half_w, cz + half_l), lw, y)
+	_line_quad(st, Vector2(cx - half_w, cz - half_l), Vector2(cx - half_w, cz + half_l), lw, y)
+	_line_quad(st, Vector2(cx + half_w, cz - half_l), Vector2(cx + half_w, cz + half_l), lw, y)
+	_line_quad(st, Vector2(cx - half_w, cz), Vector2(cx + half_w, cz), lw, y)
+	# Orta daire (r = 9.15 m)
+	var cr: float = 9.15
+	for i: int in 24:
+		var a0: float = TAU * float(i) / 24.0
+		var a1: float = TAU * float(i + 1) / 24.0
+		_line_quad(st, Vector2(cx + cos(a0) * cr, cz + sin(a0) * cr), Vector2(cx + cos(a1) * cr, cz + sin(a1) * cr), lw, y)
+	# İki ceza sahası (16.5 m derinlik, 36 m genişlik)
+	var box_w: float = minf(18.0, half_w * 0.65)
+	var box_d: float = minf(16.5, half_l * 0.32)
+	for side: float in [-1.0, 1.0]:
+		var z_end: float = cz + side * half_l
+		var z_in: float = cz + side * (half_l - box_d)
+		_line_quad(st, Vector2(cx - box_w, z_in), Vector2(cx + box_w, z_in), lw, y)
+		_line_quad(st, Vector2(cx - box_w, z_end), Vector2(cx - box_w, z_in), lw, y)
+		_line_quad(st, Vector2(cx + box_w, z_end), Vector2(cx + box_w, z_in), lw, y)
+
+	var line_mesh: ArrayMesh = st.commit()
+	var white_mat: StandardMaterial3D = StandardMaterial3D.new()
+	white_mat.albedo_color = Color(0.96, 0.97, 0.96)
+	white_mat.roughness = 0.9
+	line_mesh.surface_set_material(0, white_mat)
+	var lines_mi: MeshInstance3D = MeshInstance3D.new()
+	lines_mi.name = "PitchLines"
+	lines_mi.mesh = line_mesh
+	lines_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(lines_mi)
+
+	# 2) İki futbol kalesi (7.32 m x 2.44 m)
+	var goals_root: Node3D = Node3D.new()
+	goals_root.name = "StadiumGoals"
+	var gw: float = 7.32
+	var gh: float = 2.44
+	var gd: float = 1.6
+	for side: float in [-1.0, 1.0]:
+		var gz: float = cz + side * half_l
+		var back_z: float = gz + side * gd
+		for sx: float in [-1.0, 1.0]:
+			_box(goals_root, Vector3(0.14, gh, 0.14), Vector3(cx + sx * gw * 0.5, y + gh * 0.5, gz), Color(0.96, 0.96, 0.96))
+			_box(goals_root, Vector3(0.1, gh, 0.1), Vector3(cx + sx * gw * 0.5, y + gh * 0.5, back_z), Color(0.85, 0.87, 0.89))
+			_box(goals_root, Vector3(0.1, 0.1, gd), Vector3(cx + sx * gw * 0.5, y + gh, (gz + back_z) * 0.5), Color(0.85, 0.87, 0.89))
+		_box(goals_root, Vector3(gw + 0.14, 0.14, 0.14), Vector3(cx, y + gh, gz), Color(0.96, 0.96, 0.96))
+		_box(goals_root, Vector3(gw, 0.1, 0.1), Vector3(cx, y + gh, back_z), Color(0.85, 0.87, 0.89))
+	add_child(goals_root)
+
+	# 3) 4 köşe stadyum aydınlatma direği (outer track dış köşeleri)
+	var omin_x: float = INF
+	var omax_x: float = -INF
+	var omin_z: float = INF
+	var omax_z: float = -INF
+	for p: Array in outer:
+		omin_x = minf(omin_x, float(p[0]))
+		omax_x = maxf(omax_x, float(p[0]))
+		omin_z = minf(omin_z, float(p[1]))
+		omax_z = maxf(omax_z, float(p[1]))
+	var towers: Node3D = Node3D.new()
+	towers.name = "StadiumTowers"
+	var tower_h: float = 16.0
+	for tx: float in [omin_x - 3.0, omax_x + 3.0]:
+		for tz: float in [omin_z + 18.0, omax_z - 18.0]:
+			var ty: float = TerrainHeight.active_height(tx, tz)
+			_box(towers, Vector3(0.55, tower_h, 0.55), Vector3(tx, ty + tower_h * 0.5, tz), Color(0.45, 0.48, 0.52))
+			_box(towers, Vector3(2.8, 1.1, 0.8), Vector3(tx, ty + tower_h + 0.4, tz), Color(0.92, 0.94, 0.96))
+	add_child(towers)
+
+
+static func _line_quad(st: SurfaceTool, a: Vector2, b: Vector2, width: float, y: float) -> void:
+	if a.distance_to(b) < 0.01:
+		return
+	var side: Vector2 = (b - a).normalized().orthogonal() * (width * 0.5)
+	var p0: Vector3 = Vector3(a.x + side.x, y, a.y + side.y)
+	var p1: Vector3 = Vector3(a.x - side.x, y, a.y - side.y)
+	var p2: Vector3 = Vector3(b.x - side.x, y, b.y - side.y)
+	var p3: Vector3 = Vector3(b.x + side.x, y, b.y + side.y)
+	for v: Vector3 in [p0, p2, p1, p0, p3, p2]:
+		st.add_vertex(v)
 
 
 func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:

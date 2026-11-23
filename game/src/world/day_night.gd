@@ -29,6 +29,11 @@ const AMBIENT_NIGHT: Color = Color(0.32, 0.36, 0.5)
 const AMBIENT_SKY_CONTRIBUTION: float = 0.3
 const GROUND_FAR_DAY: Color = Color(0.33, 0.42, 0.27)
 const GROUND_FAR_NIGHT: Color = Color(0.05, 0.06, 0.08)
+## Atmosferik derinlik sisi: uzaktaki binaları ufuk rengine yumuşakça harmanlar (mobil dostu depth fog).
+const FOG_DEPTH_BEGIN: float = 95.0
+const FOG_DEPTH_END: float = 420.0
+const FOG_DENSITY_DAY: float = 0.62
+const FOG_DENSITY_NIGHT: float = 0.78
 
 var _timer: float = 0.0
 
@@ -80,13 +85,21 @@ func apply(hour: float) -> void:
 		sun.light_energy = s["light_energy"]
 	if environment != null and environment.environment != null:
 		var env: Environment = environment.environment
+		var day_factor: float = clampf((float(s["ambient"]) - 0.6) / 0.4, 0.0, 1.0)
 		env.ambient_light_energy = s["ambient"]
 		env.ambient_light_sky_contribution = AMBIENT_SKY_CONTRIBUTION
-		env.ambient_light_color = AMBIENT_NIGHT.lerp(AMBIENT_DAY, float(s["ambient"] - 0.6) / 0.4)
+		env.ambient_light_color = AMBIENT_NIGHT.lerp(AMBIENT_DAY, day_factor)
+		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		env.fog_enabled = true
+		env.fog_mode = Environment.FOG_MODE_DEPTH
+		env.fog_light_color = s["sky_horizon"]
+		env.fog_depth_begin = FOG_DEPTH_BEGIN
+		env.fog_depth_end = FOG_DEPTH_END
+		env.fog_density = lerpf(FOG_DENSITY_NIGHT, FOG_DENSITY_DAY, day_factor)
 		if env.sky != null and env.sky.sky_material is ProceduralSkyMaterial:
 			var sky: ProceduralSkyMaterial = env.sky.sky_material
 			sky.sky_top_color = s["sky_top"]
 			sky.sky_horizon_color = s["sky_horizon"]
 			sky.ground_horizon_color = s["sky_horizon"]
 			# Zemin bitiminde ufuk altı siyah şerit görünmesin: çim tonuna yakın, gece kararır
-			sky.ground_bottom_color = GROUND_FAR_NIGHT.lerp(GROUND_FAR_DAY, float(s["ambient"] - 0.6) / 0.4)
+			sky.ground_bottom_color = GROUND_FAR_NIGHT.lerp(GROUND_FAR_DAY, day_factor)

@@ -9,16 +9,22 @@ const STYLE_SMALL: StringName = &"small"
 const STYLE_BRICK: StringName = &"brick"
 const STYLE_GLASS: StringName = &"glass"   # sera (OSM building=greenhouse)
 const STYLE_STOREFRONT: StringName = &"storefront"
+const STYLE_TECH: StringName = &"tech"     # Teknopark cam giydirme ofis blokları
 ## Kafe/restoran cepheleri (Google Haritalar fotoğrafları: Büyük Ev 2019 cam cephe + siyah çerçeve; Hokka/Kayıntı
 ## Yemekhane'nin zemin kat ekleri)
 const STOREFRONT_KEYWORDS: PackedStringArray = ["hokka", "kayinti", "buyuk ev"]
 const STOREFRONT_WALL: Color = Color(0.9, 0.9, 0.88)
 const STOREFRONT_FRAME: Color = Color(0.12, 0.12, 0.13)
 const STOREFRONT_GLASS: Color = Color(0.2, 0.26, 0.3)
+## Teknopark blokları: füme/mavi-gri reflekte cam + koyu alüminyum panel
+const TECH_WALL: Color = Color(0.32, 0.37, 0.43)
+const TECH_ROOF: Color = Color(0.36, 0.40, 0.45)
+const TECH_WINDOW: Color = Color(0.16, 0.27, 0.38)
+const TECH_FRAME: Color = Color(0.72, 0.76, 0.80)
 ## OSM 'building' türü → stil (adından çıkarılamayanlar için)
 const KIND_STYLES: Dictionary = {
 	"dormitory": &"dorm", "apartments": &"dorm", "residential": &"dorm",
-	"greenhouse": &"glass", "mosque": &"historic",
+	"greenhouse": &"glass", "mosque": &"historic", "commercial": &"tech",
 }
 const GLASS_WALL: Color = Color(0.62, 0.78, 0.78)
 const GLASS_FRAME: Color = Color(0.85, 0.88, 0.88)
@@ -121,6 +127,13 @@ const STYLES: Dictionary = {
 		"window_color": GLASS_WALL,
 		"frame_color": GLASS_FRAME,
 		"shader_style": SHADER_STYLE_GRID,
+	},
+	STYLE_TECH: {
+		"wall_color": TECH_WALL,
+		"roof_color": TECH_ROOF,
+		"window_color": TECH_WINDOW,
+		"frame_color": TECH_FRAME,
+		"shader_style": SHADER_STYLE_STRIP,
 	},
 	STYLE_SMALL: {
 		"wall_color": SMALL_WALL,
