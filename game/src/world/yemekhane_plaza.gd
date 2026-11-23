@@ -124,18 +124,63 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.825, 1.2))
 	col_body.add_child(col)
 
-	# "YTU YILDIZ STORE" cephe tabelası — merdivenlerin üstünde sol tarafta
-	var lbl: Label3D = Label3D.new()
-	lbl.name = "YildizStoreSign"
-	lbl.text = "★ YTU YILDIZ STORE"
-	lbl.font_size = 72
-	lbl.pixel_size = 0.0085
-	lbl.modulate = COL_ANTHRACITE
-	lbl.outline_size = 6
-	lbl.outline_modulate = COL_WHITE
-	lbl.visibility_range_end = 110.0
-	lbl.transform = xf * Transform3D(Basis.IDENTITY, Vector3(-3.1, 4.25, 0.22))
-	add_child(lbl)
+	# 3D "★ YTU YILDIZ STORE" cephe tabelası (fotoğraftaki birebir tasarım: solda altın 8 köşeli YTÜ yıldızı,
+	# ortada kalın beyaz YTU, sağda üstte altın YILDIZ + altta lacivert STORE, yatay metal raylar üstünde)
+	_build_yildiz_store_sign(st, xf)
+
+
+func _build_yildiz_store_sign(st: SurfaceTool, xf: Transform3D) -> void:
+	var sign_y: float = 4.42
+	# Arkadaki ince yatay montaj rayları (fotoğraftaki gibi)
+	for ry: float in [sign_y - 0.30, sign_y, sign_y + 0.30]:
+		_add_box_xf(st, xf, Vector3(4.6, 0.045, 0.04), Vector3(0.0, ry, 0.06), Color(0.55, 0.57, 0.60))
+
+	# Solda 3D 8 köşeli altın YTÜ yıldızı (iki döndürülmüş 4 köşeli yıldız + iç halka)
+	var gold_sign: Color = Color(0.84, 0.64, 0.17)
+	var navy_sign: Color = Color(0.15, 0.22, 0.34)
+	var star_x: float = -1.72
+	for k: int in 4:
+		var ang: float = float(k) * PI * 0.25
+		var rot_xf: Transform3D = xf * Transform3D(Basis(Vector3.BACK, ang), Vector3(star_x, sign_y, 0.13))
+		_add_box_xf(st, rot_xf, Vector3(1.06, 0.20, 0.10), Vector3.ZERO, gold_sign)
+	_add_box_xf(st, xf, Vector3(0.42, 0.42, 0.11), Vector3(star_x, sign_y, 0.13), COL_WHITE)
+
+	var sign_root: Node3D = Node3D.new()
+	sign_root.name = "YildizStoreSign"
+	sign_root.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, sign_y, 0.12))
+	add_child(sign_root)
+
+	# Ortada kalın 3D beyaz "YTU"
+	var ytu_mi: MeshInstance3D = _make_3d_text("YTU", 0.88, 0.12, COL_WHITE, 0.35)
+	ytu_mi.position = Vector3(-0.18, 0.0, 0.0)
+	sign_root.add_child(ytu_mi)
+
+	# Sağda üstte altın "YILDIZ", altta lacivert "STORE"
+	var yildiz_mi: MeshInstance3D = _make_3d_text("YILDIZ", 0.36, 0.10, gold_sign, 0.35)
+	yildiz_mi.position = Vector3(1.48, 0.22, 0.0)
+	sign_root.add_child(yildiz_mi)
+
+	var store_mi: MeshInstance3D = _make_3d_text("STORE", 0.36, 0.10, navy_sign, 0.45)
+	store_mi.position = Vector3(1.48, -0.22, 0.0)
+	sign_root.add_child(store_mi)
+
+
+static func _make_3d_text(text: String, height_m: float, depth_m: float, color: Color, roughness: float) -> MeshInstance3D:
+	var tm: TextMesh = TextMesh.new()
+	tm.text = text
+	tm.font_size = 64
+	tm.pixel_size = height_m / 48.0
+	tm.depth = depth_m
+	tm.curve_step = 2.5
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = roughness
+	mat.metallic = 0.15 if color.r > 0.7 else 0.05
+	tm.material = mat
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.mesh = tm
+	mi.visibility_range_end = 120.0
+	return mi
 
 
 ## 2) A101 cephesi — Yıldız Store binasının sahaya bakan batı yüzü (edge 2: P2 -> P3).
