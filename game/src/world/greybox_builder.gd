@@ -41,8 +41,10 @@ const GROUND_COLOR: Color = Color(0.39, 0.55, 0.26)  # doğal çim; alanlardan b
 const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
 const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
 ## Z-fighting olmasın diye katmanlar arası küçük yükseklik farkı.
-const AREA_Y: float = 0.02
-const PATH_Y: float = 0.04
+const AREA_Y: float = 0.04
+const PATH_Y: float = 0.09
+const PATH_SUBDIV_M: float = 8.0
+const BUILDING_FOUNDATION_M: float = 2.5
 const GROUND_MARGIN: float = 30.0
 const CampusMap := preload("res://src/ui/campus_map.gd")
 const LANDMARKS_PATH: String = "res://data/landmarks.json"
@@ -92,6 +94,7 @@ func _ready() -> void:
 	var data: Dictionary = load_data(data_path)
 	if data.is_empty():
 		return
+	_load_terrain_for(data_path)
 	var extent: Rect2 = data_extent(data)
 	_build_ground_rect(extent.grow(GROUND_MARGIN))
 	_find_courtyard(data)
@@ -109,12 +112,23 @@ func _ready() -> void:
 	_batching = false
 	# Binaya bağlı olmayan simge yapılar (kampüs kapıları)
 	for n: Node3D in free_landmarks():
+		var lp: Vector3 = n.position
+		lp.y += TerrainHeight.active_height(lp.x, lp.z)
+		n.position = lp
 		add_child(n)
 	# Yeşil doku (ağaçlar, tarhlar, pist): greybox ile aynı klasörde <ad>_greenery.json
 	var decor: Node3D = GreeneryDecor.new()
 	decor.name = "GreeneryDecor"
 	add_child(decor)
 	decor.build_from_file(data_path.replace("_greybox.json", "_greenery.json"))
+
+
+func _load_terrain_for(greybox_path: String) -> void:
+	if not Config.TERRAIN_ENABLED:
+		TerrainHeight.active = null
+		return
+	var terrain_path: String = greybox_path.replace("_greybox.json", "_terrain.json")
+	TerrainHeight.active = TerrainHeight.load_from_file(terrain_path)
 
 
 static func load_data(path: String) -> Dictionary:
@@ -176,9 +190,10 @@ static func _add_gate(gates: Dictionary, poly: PackedVector2Array, i: int, at: V
 
 
 ## Taban çokgenini `height` kadar yukarı uzatan kapalı mesh. Çokgen basit değilse null.
+## `floor_y` negatif verilirse duvarlar temel olarak aşağı uzar (eğimli arazide binalar havada kalmasın).
 ## `paths` verilirse, yolların duvarı kestiği yerlerde GATE_WIDTH genişliğinde, GATE_HEIGHT yüksekliğinde geçit açılır
 ## (geçidin üstündeki duvar ve çatı kalır).
-static func extrude_polygon(poly: PackedVector2Array, height: float, paths: Array[PackedVector2Array] = []) -> ArrayMesh:
+static func extrude_polygon(poly: PackedVector2Array, height: float, paths: Array[PackedVector2Array] = [], floor_y: float = 0.0) -> ArrayMesh:
 	# XZ düzleminde (x, z) → saat yönü/tersi fark etmesin diye tek yöne çevir.
 	if Geometry2D.is_polygon_clockwise(poly):
 		poly.reverse()
@@ -199,10 +214,10 @@ static func extrude_polygon(poly: PackedVector2Array, height: float, paths: Arra
 	for i: int in n:
 		var a: Vector2 = poly[i]
 		var b: Vector2 = poly[(i + 1) % n]
-		var a0: Vector3 = Vector3(a.x, 0.0, a.y)
-		var b0: Vector3 = Vector3(b.x, 0.0, b.y)
+		var a0: Vector3 = Vector3(a.x, floor_y, a.y)
+		var b0: Vector3 = Vector3(b.x, floor_y, b.y)
 		if gates.has(i):
-			_add_wall_with_gates(st, a, b, height, gates[i])
+			_add_wall_with_gates(st, a, b, height, gates[i], floor_y)
 			continue
 		var a1: Vector3 = Vector3(a.x, height, a.y)
 		var b1: Vector3 = Vector3(b.x, height, b.y)
@@ -225,20 +240,20 @@ static func _add_wall_piece(st: SurfaceTool, a: Vector2, b: Vector2, t0: float, 
 
 
 ## Geçitli duvar: geçitlerin arası tam boy, geçidin üstü (lento) GATE_HEIGHT'tan yukarısı.
-static func _add_wall_with_gates(st: SurfaceTool, a: Vector2, b: Vector2, height: float, ts: Array) -> void:
+static func _add_wall_with_gates(st: SurfaceTool, a: Vector2, b: Vector2, height: float, ts: Array, floor_y: float = 0.0) -> void:
 	var half: float = GATE_WIDTH * 0.5 / a.distance_to(b)
 	var sorted: Array = ts.duplicate()
 	sorted.sort()
 	var cursor: float = 0.0
 	for t: float in sorted:
-		_add_wall_piece(st, a, b, cursor, t - half, 0.0, height)
+		_add_wall_piece(st, a, b, cursor, t - half, floor_y, height)
 		if height > GATE_HEIGHT:
 			_add_wall_piece(st, a, b, t - half, t + half, GATE_HEIGHT, height)
 		cursor = t + half
-	_add_wall_piece(st, a, b, cursor, 1.0, 0.0, height)
+	_add_wall_piece(st, a, b, cursor, 1.0, floor_y, height)
 
 
-static func flat_polygon_mesh(poly: PackedVector2Array, y: float) -> ArrayMesh:
+static func flat_polygon_mesh(poly: PackedVector2Array, y: float, sample_terrain: bool = false) -> ArrayMesh:
 	if Geometry2D.is_polygon_clockwise(poly):
 		poly.reverse()
 	var tris: PackedInt32Array = Geometry2D.triangulate_polygon(poly)
@@ -246,11 +261,12 @@ static func flat_polygon_mesh(poly: PackedVector2Array, y: float) -> ArrayMesh:
 		return null
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	st.set_normal(Vector3.UP)
 	for i: int in range(0, tris.size(), 3):
 		for k: int in [0, 1, 2]:
 			var v: Vector2 = poly[tris[i + k]]
-			st.add_vertex(Vector3(v.x, y, v.y))
+			var vy: float = (TerrainHeight.active_height(v.x, v.y) + y) if sample_terrain else y
+			st.set_normal(TerrainHeight.active_normal(v.x, v.y) if sample_terrain else Vector3.UP)
+			st.add_vertex(Vector3(v.x, vy, v.y))
 	return st.commit()
 
 
@@ -293,6 +309,9 @@ static func data_extent(data: Dictionary) -> Rect2:
 
 
 func _build_ground_rect(rect: Rect2) -> void:
+	if Config.TERRAIN_ENABLED and TerrainHeight.active != null:
+		_build_terrain_ground(rect, TerrainHeight.active)
+		return
 	var c: Vector2 = rect.get_center()
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Ground"
@@ -309,6 +328,70 @@ func _build_ground_rect(rect: Rect2) -> void:
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body.add_child(shape)
 	body.add_child(mesh)
+	add_child(body)
+
+
+func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
+	var step: float = maxf(th.step, 10.0)
+	var x0: float = rect.position.x
+	var z0: float = rect.position.y
+	var nx: int = maxi(2, ceili(rect.size.x / step) + 1)
+	var nz: int = maxi(2, ceili(rect.size.y / step) + 1)
+	var dx: float = rect.size.x / float(nx - 1)
+	var dz: float = rect.size.y / float(nz - 1)
+
+	var verts: PackedVector3Array = PackedVector3Array()
+	var normals: PackedVector3Array = PackedVector3Array()
+	var uvs: PackedVector2Array = PackedVector2Array()
+	verts.resize(nx * nz)
+	normals.resize(nx * nz)
+	uvs.resize(nx * nz)
+
+	for r: int in nz:
+		var z: float = z0 + float(r) * dz
+		for c: int in nx:
+			var x: float = x0 + float(c) * dx
+			var idx: int = r * nx + c
+			verts[idx] = Vector3(x, th.height_at(x, z), z)
+			normals[idx] = th.normal_at(x, z)
+			uvs[idx] = Vector2(x * 0.05, z * 0.05)
+
+	var indices: PackedInt32Array = PackedInt32Array()
+	indices.resize((nx - 1) * (nz - 1) * 6)
+	var k: int = 0
+	for r: int in nz - 1:
+		for c: int in nx - 1:
+			var i00: int = r * nx + c
+			var i10: int = i00 + 1
+			var i01: int = i00 + nx
+			var i11: int = i01 + 1
+			indices[k] = i00
+			indices[k + 1] = i10
+			indices[k + 2] = i11
+			indices[k + 3] = i00
+			indices[k + 4] = i11
+			indices[k + 5] = i01
+			k += 6
+
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var terrain_mesh: ArrayMesh = ArrayMesh.new()
+	terrain_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	terrain_mesh.surface_set_material(0, _grass_material(GROUND_COLOR))
+
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "Ground"
+	var shape: CollisionShape3D = CollisionShape3D.new()
+	shape.shape = terrain_mesh.create_trimesh_shape()
+	var mi: MeshInstance3D = MeshInstance3D.new()
+	mi.mesh = terrain_mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	body.add_child(shape)
+	body.add_child(mi)
 	add_child(body)
 
 
@@ -342,10 +425,14 @@ func _build_building(b: Dictionary) -> void:
 		return
 	# OSM building:min_level: binalar arası havada köprü — altı açık (eskiden yerden yükselip yolu kapatıyordu)
 	var min_h: float = clampf(float(b.get("min_height", 0.0)), 0.0, height - 1.0)
+	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	var ref_y: float = _polygon_avg_height(poly) if has_terrain else 0.0
+	var min_y: float = _polygon_min_height(poly) if has_terrain else 0.0
+	var floor_y: float = -((ref_y - min_y) + BUILDING_FOUNDATION_M) if (has_terrain and min_h <= 0.0) else 0.0
 	# Sadece kutusu binanın kutusuyla kesişen yollar (kampüsün tamamında 300+ yol × 140 bina çok yavaştı).
 	var near_paths: Array[PackedVector2Array] = _paths_near(_poly_box(poly).grow(GATE_TOUCH_DIST + 1.0))
 	var no_paths: Array[PackedVector2Array] = []
-	var mesh: ArrayMesh = extrude_polygon(poly, height - min_h, near_paths if min_h <= 0.0 else no_paths)
+	var mesh: ArrayMesh = extrude_polygon(poly, height - min_h, near_paths if min_h <= 0.0 else no_paths, floor_y)
 	if min_h <= 0.0:
 		gate_count += _count_gates(poly, near_paths)
 	if mesh == null:
@@ -380,7 +467,7 @@ func _build_building(b: Dictionary) -> void:
 	mesh.surface_set_material(0, wall_mat)
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Building%d" % building_count
-	body.position.y = min_h
+	body.position.y = ref_y + min_h
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	mi.mesh = mesh
 	var shape: CollisionShape3D = CollisionShape3D.new()
@@ -388,7 +475,7 @@ func _build_building(b: Dictionary) -> void:
 	trimesh.backface_collision = true
 	shape.shape = trimesh
 	if _batching and not is_kisla and min_h <= 0.0:
-		_batch_mesh(mesh, wall_mat, _poly_box(poly).get_center())  # aynı stil + hücre → tek çizim
+		_batch_mesh(mesh, wall_mat, _poly_box(poly).get_center(), ref_y, true)  # aynı stil + hücre → tek çizim
 		mi.free()
 	else:
 		body.add_child(mi)
@@ -444,8 +531,11 @@ func _build_canopy(poly: PackedVector2Array, height: float) -> void:
 	var slab: ArrayMesh = extrude_polygon(poly, CANOPY_THICK)
 	if slab == null:
 		return
+	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	var base_y: float = _polygon_avg_height(poly) if has_terrain else 0.0
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Canopy%d" % building_count
+	body.position.y = base_y
 	var mat: StandardMaterial3D = _shared_material(CANOPY_COLOR)
 	slab.surface_set_material(0, mat)
 	var mi: MeshInstance3D = MeshInstance3D.new()
@@ -453,8 +543,9 @@ func _build_canopy(poly: PackedVector2Array, height: float) -> void:
 	mi.position.y = height - CANOPY_THICK
 	body.add_child(mi)
 	var step: int = maxi(1, ceili(float(poly.size()) / CANOPY_MAX_POSTS))
+	var post_extra: float = 1.5 if has_terrain else 0.0
 	var post: BoxMesh = BoxMesh.new()
-	post.size = Vector3(CANOPY_POST, height - CANOPY_THICK, CANOPY_POST)
+	post.size = Vector3(CANOPY_POST, height - CANOPY_THICK + post_extra, CANOPY_POST)
 	post.material = mat
 	var post_shape: BoxShape3D = BoxShape3D.new()
 	post_shape.size = post.size
@@ -463,7 +554,7 @@ func _build_canopy(poly: PackedVector2Array, height: float) -> void:
 		var c: Vector2 = poly[i].lerp(_polygon_center(poly), clampf(0.4 / maxf(poly[i].distance_to(_polygon_center(poly)), 0.01), 0.0, 0.5))
 		var p: MeshInstance3D = MeshInstance3D.new()
 		p.mesh = post
-		p.position = Vector3(c.x, post.size.y * 0.5, c.y)
+		p.position = Vector3(c.x, (height - CANOPY_THICK) - post.size.y * 0.5, c.y)
 		body.add_child(p)
 		var cs: CollisionShape3D = CollisionShape3D.new()
 		cs.shape = post_shape
@@ -475,14 +566,22 @@ func _build_canopy(poly: PackedVector2Array, height: float) -> void:
 
 func _build_area(a: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(a.get("points", []))
-	var mesh: ArrayMesh = flat_polygon_mesh(poly, AREA_Y)
+	var is_water: bool = str(a.get("name", "")).to_lower().contains("havuz")
+	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	var mesh: ArrayMesh
+	if has_terrain and is_water:
+		var ctr: Vector2 = _polygon_center(poly)
+		mesh = flat_polygon_mesh(poly, TerrainHeight.active_height(ctr.x, ctr.y) + AREA_Y, false)
+	else:
+		mesh = flat_polygon_mesh(poly, AREA_Y, has_terrain)
 	if mesh == null:
 		return
 	var color: Color = AREA_COLORS.get(str(a.get("kind", "grass")), AREA_COLORS["grass"])
 	var kind: String = str(a.get("kind", "grass"))
-	var mat: Material = _water_material() if str(a.get("name", "")).to_lower().contains("havuz") 		else (_grass_material(color) if GRASS_KINDS.has(kind) else _shared_material(color))
+	var mat: Material = _water_material() if is_water \
+		else (_grass_material(color) if GRASS_KINDS.has(kind) else _shared_material(color))
 	if _batching:
-		_batch_mesh(mesh, mat, _poly_box(poly).get_center())
+		_batch_mesh(mesh, mat, _poly_box(poly).get_center(), 0.0, false)
 		return
 	mesh.surface_set_material(0, mat)
 	var mi: MeshInstance3D = MeshInstance3D.new()
@@ -495,29 +594,49 @@ func _build_path(p: Dictionary) -> void:
 	var pts: PackedVector2Array = to_polygon(p.get("points", []))
 	var kind: String = str(p.get("kind", "footway"))
 	var width: float = PATH_WIDTHS.get(kind, 2.0)
+	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	st.set_normal(Vector3.UP)
 	for i: int in pts.size() - 1:
 		var a: Vector2 = pts[i]
 		var b: Vector2 = pts[i + 1]
-		if a.distance_to(b) < 0.01:
+		var seg_len: float = a.distance_to(b)
+		if seg_len < 0.01:
 			continue
 		var side: Vector2 = (b - a).normalized().orthogonal() * (width * 0.5)
-		var q: Array[Vector3] = [
-			Vector3(a.x + side.x, PATH_Y, a.y + side.y), Vector3(a.x - side.x, PATH_Y, a.y - side.y),
-			Vector3(b.x - side.x, PATH_Y, b.y - side.y), Vector3(b.x + side.x, PATH_Y, b.y + side.y),
-		]
-		# UV.x = yol genişliği boyunca 0..1 (0: sol kenar, 1: sağ kenar)
-		var uvs: Array[Vector2] = [
-			Vector2(0.0, 0.0), Vector2(1.0, 0.0),
-			Vector2(1.0, 1.0), Vector2(0.0, 1.0),
-		]
-		var indices: Array[int] = [0, 2, 1, 0, 3, 2]
-		for idx: int in indices:
-			st.set_uv(uvs[idx])
-			st.set_uv2(Vector2(width, 0.0))  # genişlik (m): tek parke malzemesiyle birleştirme için
-			st.add_vertex(q[idx])
+		var subdiv: int = maxi(1, ceili(seg_len / PATH_SUBDIV_M)) if has_terrain else 1
+		for s: int in subdiv:
+			var t0: float = float(s) / float(subdiv)
+			var t1: float = float(s + 1) / float(subdiv)
+			var sa: Vector2 = a.lerp(b, t0)
+			var sb: Vector2 = a.lerp(b, t1)
+			var p0: Vector2 = sa + side
+			var p1: Vector2 = sa - side
+			var p2: Vector2 = sb - side
+			var p3: Vector2 = sb + side
+			var q: Array[Vector3] = [
+				Vector3(p0.x, (TerrainHeight.active_height(p0.x, p0.y) if has_terrain else 0.0) + PATH_Y, p0.y),
+				Vector3(p1.x, (TerrainHeight.active_height(p1.x, p1.y) if has_terrain else 0.0) + PATH_Y, p1.y),
+				Vector3(p2.x, (TerrainHeight.active_height(p2.x, p2.y) if has_terrain else 0.0) + PATH_Y, p2.y),
+				Vector3(p3.x, (TerrainHeight.active_height(p3.x, p3.y) if has_terrain else 0.0) + PATH_Y, p3.y),
+			]
+			var nrms: Array[Vector3] = [
+				TerrainHeight.active_normal(p0.x, p0.y) if has_terrain else Vector3.UP,
+				TerrainHeight.active_normal(p1.x, p1.y) if has_terrain else Vector3.UP,
+				TerrainHeight.active_normal(p2.x, p2.y) if has_terrain else Vector3.UP,
+				TerrainHeight.active_normal(p3.x, p3.y) if has_terrain else Vector3.UP,
+			]
+			# UV.x = yol genişliği boyunca 0..1 (0: sol kenar, 1: sağ kenar)
+			var uvs: Array[Vector2] = [
+				Vector2(0.0, t0), Vector2(1.0, t0),
+				Vector2(1.0, t1), Vector2(0.0, t1),
+			]
+			var indices: Array[int] = [0, 2, 1, 0, 3, 2]
+			for idx: int in indices:
+				st.set_normal(nrms[idx])
+				st.set_uv(uvs[idx])
+				st.set_uv2(Vector2(width, 0.0))  # genişlik (m): tek parke malzemesiyle birleştirme için
+				st.add_vertex(q[idx])
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
@@ -525,7 +644,7 @@ func _build_path(p: Dictionary) -> void:
 	var mat: Material = _shared_material(SERVICE_PATH_COLOR) if kind == "service" \
 		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE)
 	if _batching:
-		_batch_mesh(mesh, mat, mid)
+		_batch_mesh(mesh, mat, mid, 0.0, false)
 		return
 	mesh.surface_set_material(0, mat)
 	var mi: MeshInstance3D = MeshInstance3D.new()
@@ -578,14 +697,14 @@ func _shared_material(color: Color) -> StandardMaterial3D:
 	return _shared_materials[color]
 
 
-func _batch_mesh(mesh: ArrayMesh, mat: Material, at: Vector2) -> void:
+func _batch_mesh(mesh: ArrayMesh, mat: Material, at: Vector2, y_offset: float = 0.0, cast_shadow: bool = false) -> void:
 	var arr: Array = mesh.surface_get_arrays(0)
 	var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
 	var uvs: Variant = arr[Mesh.ARRAY_TEX_UV]
 	var idx: Variant = arr[Mesh.ARRAY_INDEX]
-	var key: String = "%d|%d|%d" % [mat.get_instance_id(), floori(at.x / BATCH_CELL), floori(at.y / BATCH_CELL)]
+	var key: String = "%d|%d|%d|%d" % [mat.get_instance_id(), floori(at.x / BATCH_CELL), floori(at.y / BATCH_CELL), 1 if cast_shadow else 0]
 	if not _batches.has(key):
-		_batches[key] = {"mat": mat, "verts": PackedVector3Array(), "uvs": PackedVector2Array(), "uv2s": PackedVector2Array(), "normals": PackedVector3Array()}
+		_batches[key] = {"mat": mat, "shadow": cast_shadow, "verts": PackedVector3Array(), "uvs": PackedVector2Array(), "uv2s": PackedVector2Array(), "normals": PackedVector3Array()}
 	var b: Dictionary = _batches[key]
 	var bv: PackedVector3Array = b["verts"]
 	var bu: PackedVector2Array = b["uvs"]
@@ -597,8 +716,9 @@ func _batch_mesh(mesh: ArrayMesh, mat: Material, at: Vector2) -> void:
 	var has_uv: bool = uvs is PackedVector2Array and not (uvs as PackedVector2Array).is_empty()
 	var has_n: bool = nrm is PackedVector3Array and not (nrm as PackedVector3Array).is_empty()
 	var order: PackedInt32Array = idx if idx is PackedInt32Array and not (idx as PackedInt32Array).is_empty() else PackedInt32Array(range(verts.size()))
+	var shift: Vector3 = Vector3(0.0, y_offset, 0.0)
 	for i: int in order:
-		bv.append(verts[i])
+		bv.append(verts[i] + shift)
 		bu.append((uvs as PackedVector2Array)[i] if has_uv else Vector2.ZERO)
 		bn.append((nrm as PackedVector3Array)[i] if has_n else Vector3.UP)
 		b2.append((uv2 as PackedVector2Array)[i] if has_uv2 else Vector2.ZERO)
@@ -627,13 +747,7 @@ func _flush_batches() -> void:
 		var mi: MeshInstance3D = MeshInstance3D.new()
 		mi.name = "Batch"
 		mi.mesh = mesh
-		# Düz yüzeyler (yol/alan) gölge düşürmez; bina birleşimleri düşürür
-		var flat: bool = true
-		for n: Vector3 in normals:
-			if n.y < 0.9:
-				flat = false
-				break
-		if flat:
+		if not bool(b.get("shadow", false)):
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
 	_batches.clear()
@@ -955,3 +1069,21 @@ static func _polygon_center(poly: PackedVector2Array) -> Vector2:
 	for v: Vector2 in poly:
 		sum += v
 	return sum / maxf(1.0, poly.size())
+
+
+static func _polygon_avg_height(poly: PackedVector2Array) -> float:
+	if poly.is_empty():
+		return 0.0
+	var total: float = 0.0
+	for v: Vector2 in poly:
+		total += TerrainHeight.active_height(v.x, v.y)
+	return total / float(poly.size())
+
+
+static func _polygon_min_height(poly: PackedVector2Array) -> float:
+	if poly.is_empty():
+		return 0.0
+	var m: float = TerrainHeight.active_height(poly[0].x, poly[0].y)
+	for i: int in range(1, poly.size()):
+		m = minf(m, TerrainHeight.active_height(poly[i].x, poly[i].y))
+	return m

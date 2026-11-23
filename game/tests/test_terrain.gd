@@ -80,3 +80,72 @@ func test_kampus_terrain_data_valid_and_realistic() -> String:
 	if span < 5.0 or span > 120.0:
 		return "Davutpaşa kot farkı gerçekçi aralıkta (5..120 m) olmalı: %f" % span
 	return ""
+
+
+func test_greybox_terrain_ground_building_and_path() -> String:
+	var Greybox := preload("res://src/world/greybox_builder.gd")
+	var prev_active: TerrainHeight = TerrainHeight.active
+	var prev_enabled: bool = Config.TERRAIN_ENABLED
+	Config.TERRAIN_ENABLED = true
+	TerrainHeight.active = TerrainHeight.from_dict({
+		"min_x": 0.0, "min_z": 0.0, "step": 20.0, "cols": 3, "rows": 3,
+		"heights": [0.0, 5.0, 10.0, 0.0, 5.0, 10.0, 0.0, 5.0, 10.0],
+	})
+
+	var builder: Node3D = Greybox.new()
+	builder.call("_build_ground_rect", Rect2(0.0, 0.0, 40.0, 40.0))
+	var ground: Node = builder.get_node_or_null("Ground")
+	if ground == null:
+		builder.free()
+		TerrainHeight.active = prev_active
+		Config.TERRAIN_ENABLED = prev_enabled
+		return "Terrain Ground düğümü oluşmadı"
+
+	# Zemin mesh köşeleri eğime göre yükselmiş olmalı (0..10 m)
+	var gmi: MeshInstance3D = null
+	for ch: Node in ground.get_children():
+		if ch is MeshInstance3D:
+			gmi = ch as MeshInstance3D
+	var gverts: PackedVector3Array = gmi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var max_gy: float = -1e9
+	for v: Vector3 in gverts:
+		max_gy = maxf(max_gy, v.y)
+	if not is_equal_approx(max_gy, 10.0):
+		builder.free()
+		TerrainHeight.active = prev_active
+		Config.TERRAIN_ENABLED = prev_enabled
+		return "Zemin yüksekliği 10.0 m olmalı, %f bulundu" % max_gy
+
+	# Eğimli yolda segment alt-bölünmeli ve yükseklik takip etmeli
+	builder.call("_build_path", {"kind": "footway", "points": [[0.0, 10.0], [40.0, 10.0]]})
+	var pmi: MeshInstance3D = null
+	for ch: Node in builder.get_children():
+		if ch is MeshInstance3D:
+			pmi = ch as MeshInstance3D
+	var pverts: PackedVector3Array = pmi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	if pverts.size() <= 6:
+		builder.free()
+		TerrainHeight.active = prev_active
+		Config.TERRAIN_ENABLED = prev_enabled
+		return "40 m eğimli yol alt-bölünmeli (köşe sayısı: %d)" % pverts.size()
+	var max_py: float = -1e9
+	for v: Vector3 in pverts:
+		max_py = maxf(max_py, v.y)
+	if max_py < 9.5:
+		builder.free()
+		TerrainHeight.active = prev_active
+		Config.TERRAIN_ENABLED = prev_enabled
+		return "Yol yüksekliği eğimi takip etmiyor: %f" % max_py
+
+	# Eğimli binada temel aşağı uzamalı ve body.position.y > 0 olmalı
+	builder.call("_build_building", {
+		"name": "TestBina",
+		"height": 8.0,
+		"points": [[10.0, 10.0], [30.0, 10.0], [30.0, 30.0], [10.0, 30.0]],
+	})
+	var bnode: Node3D = builder.get_node_or_null("Building0") as Node3D
+	var b_ok: bool = bnode != null and is_equal_approx(bnode.position.y, 5.0)
+	builder.free()
+	TerrainHeight.active = prev_active
+	Config.TERRAIN_ENABLED = prev_enabled
+	return "" if b_ok else "Eğimli bina doğru kotta yerleşmedi"
