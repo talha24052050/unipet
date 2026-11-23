@@ -29,3 +29,12 @@ func test_cat_builds_and_meows() -> String:
 		err = "dokununca oturmalı"
 	c.free()
 	return err
+
+
+func test_love_sign_builds() -> String:
+	var LS: GDScript = load("res://src/world/love_signs.gd")
+	var n: Node3D = LS.call("build_sign")
+	var meshes: int = n.find_children("*", "MeshInstance3D", true, false).size()
+	var bodies: int = n.find_children("*", "StaticBody3D", true, false).size()
+	n.free()
+	return "" if meshes == 4 and bodies == 1 else "I ❤ YTÜ: %d parça, %d çarpışma" % [meshes, bodies]
