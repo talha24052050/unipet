@@ -5,8 +5,8 @@ Kaynak: AWS Open Data Terrain Tiles (Terrarium PNG, zoom 14, ~7 m/piksel, ücret
 Formül: elev_m = (R * 256 + G + B / 256.0) - 32768.0
 Özellikler:
 - 12.5 m ızgara çözünürlüğü (yol, bina ve saha geçişleri pürüzsüz).
-- Ortabahçe avlusu, Stadyum pisti (kampus_greenery.json -> tracks) ve tüm spor sahaları / oyun alanları
-  (kampus_greybox.json -> areas: pitch, playground) yumuşak geçişle tam düzleştirilir.
+- Taşbina (Kışla) dışbükey zarfı + çevre yolu (18 m pay), Stadyum pisti (tracks) ve tüm spor/oyun sahaları
+  (pitch, playground) kendi gerçek çokgen şekillerine göre yumuşak geçişle düzleştirilir.
 
 Kullanım:
     python tools/osm/fetch_elevation.py
@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parents[2]
 GREYBOX_PATH = ROOT / "game" / "data" / "zones" / "kampus_greybox.json"
 GREENERY_PATH = ROOT / "game" / "data" / "zones" / "kampus_greenery.json"
 OUT_PATH = ROOT / "game" / "data" / "zones" / "kampus_terrain.json"
+
+KISLA_NAME = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
 
 M_PER_DEG_LAT = 110_540.0
 M_PER_DEG_LON_EQ = 111_320.0
@@ -100,34 +102,93 @@ def smooth_grid(grid: list[list[float]], passes: int = 3) -> list[list[float]]:
     return cur
 
 
-def flatten_box(
+def convex_hull(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    pts = sorted(set(points))
+    if len(pts) <= 2:
+        return pts
+
+    def cross(o: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> float:
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    lower: list[tuple[float, float]] = []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper: list[tuple[float, float]] = []
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
+
+
+def point_in_poly(x: float, z: float, poly: list[tuple[float, float]]) -> bool:
+    inside = False
+    n = len(poly)
+    j = n - 1
+    for i in range(n):
+        xi, zi = poly[i]
+        xj, zj = poly[j]
+        if ((zi > z) != (zj > z)) and (x < (xj - xi) * (z - zi) / (zj - zi) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
+def dist_point_to_segment(x: float, z: float, a: tuple[float, float], b: tuple[float, float]) -> float:
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    l2 = dx * dx + dz * dz
+    if l2 <= 1e-9:
+        return math.hypot(x - a[0], z - a[1])
+    t = min(max(((x - a[0]) * dx + (z - a[1]) * dz) / l2, 0.0), 1.0)
+    return math.hypot(x - (a[0] + t * dx), z - (a[1] + t * dz))
+
+
+def dist_to_polygon(x: float, z: float, poly: list[tuple[float, float]]) -> float:
+    if point_in_poly(x, z, poly):
+        return 0.0
+    n = len(poly)
+    best = 1e9
+    for i in range(n):
+        d = dist_point_to_segment(x, z, poly[i], poly[(i + 1) % n])
+        if d < best:
+            best = d
+    return best
+
+
+def flatten_polygon(
     grid: list[list[float]],
     min_x: float,
     min_z: float,
     step: float,
-    bx0: float,
-    bx1: float,
-    bz0: float,
-    bz1: float,
+    poly: list[tuple[float, float]],
     pad: float = 10.0,
-    blend: float = 28.0,
+    blend: float = 35.0,
     target_h: float | None = None,
 ) -> float:
-    """Dikdörtgen bir alanı (stadyum, halı saha, kort, avlu) yumuşak geçişle düzleştirir."""
+    """Gerçek çokgen şeklini (döndürülmüş Kışla, oval Stadyum vb.) yumuşak geçişle düzleştirir."""
+    if len(poly) < 3:
+        return 0.0
     rows = len(grid)
     cols = len(grid[0])
-    x0, x1 = bx0 - pad, bx1 + pad
-    z0, z1 = bz0 - pad, bz1 + pad
+    xs = [p[0] for p in poly]
+    zs = [p[1] for p in poly]
+    reach = pad + blend
+    bx0, bx1 = min(xs) - reach, max(xs) + reach
+    bz0, bz1 = min(zs) - reach, max(zs) + reach
 
     if target_h is None:
         samples = []
         for r in range(rows):
             z = min_z + r * step
-            if z < z0 or z > z1:
+            if z < min(zs) - pad or z > max(zs) + pad:
                 continue
             for c in range(cols):
                 x = min_x + c * step
-                if x0 <= x <= x1:
+                if x < min(xs) - pad or x > max(xs) + pad:
+                    continue
+                if dist_to_polygon(x, z, poly) <= pad:
                     samples.append(grid[r][c])
         if not samples:
             return 0.0
@@ -135,19 +196,17 @@ def flatten_box(
 
     for r in range(rows):
         z = min_z + r * step
-        dz = 0.0 if (z0 <= z <= z1) else (z0 - z if z < z0 else z - z1)
-        if dz > blend:
+        if z < bz0 or z > bz1:
             continue
         for c in range(cols):
             x = min_x + c * step
-            dx = 0.0 if (x0 <= x <= x1) else (x0 - x if x < x0 else x - x1)
-            if dx > blend:
+            if x < bx0 or x > bx1:
                 continue
-            dist = math.hypot(dx, dz)
-            if dist <= 0.0:
+            d = dist_to_polygon(x, z, poly)
+            if d <= pad:
                 grid[r][c] = target_h
-            elif dist < blend:
-                t = dist / blend
+            elif d < reach:
+                t = (d - pad) / blend
                 s = t * t * (3.0 - 2.0 * t)
                 grid[r][c] = target_h * (1.0 - s) + grid[r][c] * s
     return target_h
@@ -207,31 +266,32 @@ def main() -> None:
 
     grid = smooth_grid(grid, passes=3)
 
-    # 1) Ortabahçe + Kışla kompleksi (gerçekte düz plato)
-    flatten_box(grid, min_x, min_z, STEP_M, -110.0, 145.0, -90.0, 95.0, pad=12.0, blend=35.0)
-
-    # 2) Stadyum pisti ve iç saha (kampus_greenery.json -> tracks listesi)
+    # 1) Stadyum pisti (oval çokgen) ve spor/oyun sahaları önce düzleştirilir
     if GREENERY_PATH.exists():
         greenery = json.loads(GREENERY_PATH.read_text(encoding="utf-8"))
         for tr in greenery.get("tracks", []):
-            pts = tr.get("outer", [])
-            if pts:
-                txs = [float(p[0]) for p in pts]
-                tzs = [float(p[1]) for p in pts]
-                th = flatten_box(grid, min_x, min_z, STEP_M, min(txs), max(txs), min(tzs), max(tzs), pad=16.0, blend=35.0)
-                print(f"  Stadyum pisti düzleştirildi: X=[{min(txs):.0f}..{max(txs):.0f}] Z=[{min(tzs):.0f}..{max(tzs):.0f}] -> {th:.1f} m")
+            pts = [(float(p[0]), float(p[1])) for p in tr.get("outer", [])]
+            if len(pts) >= 3:
+                th = flatten_polygon(grid, min_x, min_z, STEP_M, convex_hull(pts), pad=10.0, blend=42.0)
+                print(f"  Stadyum pisti düzleştirildi -> {th:.1f} m")
 
-    # 3) Tüm spor sahaları (pitch) ve oyun alanları (playground)
     flat_count = 0
     for a in greybox.get("areas", []):
         if a.get("kind") in ("pitch", "playground"):
-            pts = a.get("points", [])
-            if pts:
-                axs = [float(p[0]) for p in pts]
-                azs = [float(p[1]) for p in pts]
-                flatten_box(grid, min_x, min_z, STEP_M, min(axs), max(axs), min(azs), max(azs), pad=8.0, blend=22.0)
+            pts = [(float(p[0]), float(p[1])) for p in a.get("points", [])]
+            if len(pts) >= 3:
+                flatten_polygon(grid, min_x, min_z, STEP_M, convex_hull(pts), pad=6.0, blend=24.0)
                 flat_count += 1
     print(f"  {flat_count} spor sahası / oyun alanı düzleştirildi")
+
+    # 2) Taşbina (Kışla) + Ortabahçe + dış çevre yolu (path#193 dahil, sahaya bakan batı cephe 18 m pay)
+    for b in greybox.get("buildings", []):
+        if b.get("name") == KISLA_NAME:
+            kpts = [(float(p[0]), float(p[1])) for p in b.get("points", [])]
+            khull = convex_hull(kpts)
+            kh = flatten_polygon(grid, min_x, min_z, STEP_M, khull, pad=20.0, blend=45.0)
+            print(f"  Taşbina (Kışla) + çevre yolu düzleştirildi ({len(khull)} köşe zarf) -> {kh:.1f} m")
+            break
 
     origin_h = sample_bilinear(grid, min_x, min_z, STEP_M, 0.0, 0.0)
     heights: list[float] = []

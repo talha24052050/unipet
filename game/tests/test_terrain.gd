@@ -222,4 +222,18 @@ func test_stadium_is_flat_and_asphalt_shader_valid() -> String:
 	var shader: Shader = load("res://assets/shaders/road_asphalt.gdshader") as Shader
 	if shader == null:
 		return "road_asphalt.gdshader yüklenemedi"
+
+	# Taşbina (Kışla) ve sahaya bakan batı çevre yolu düz platoda olmalı
+	var gb: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/zones/kampus_greybox.json"))
+	if gb is Dictionary:
+		for b: Dictionary in (gb as Dictionary).get("buildings", []):
+			if str(b.get("name", "")) == "Yıldız Teknik Üniversitesi Davutpaşa Kışlası":
+				var klo: float = INF
+				var khi: float = -INF
+				for pt: Array in b.get("points", []):
+					var kh: float = th.height_at(float(pt[0]), float(pt[1]))
+					klo = minf(klo, kh)
+					khi = maxf(khi, kh)
+				if (khi - klo) > 0.25:
+					return "Taşbina (Kışla) tabanı düz olmalı, kot farkı %.2f m" % (khi - klo)
 	return ""
