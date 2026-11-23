@@ -199,4 +199,19 @@ st4 = M.matchLoop(ctx(), logger, nk, dispatcher, 3, st4, [msg(G, 4, { pet: "shar
 var pm = sent.filter(function (m) { return m.op === 4; })[0];
 assert.deepEqual(JSON.parse(JSON.stringify(pm.data.acc)), { face: "glasses" }, "alınmamış dükkan ürünü takılamaz");
 
+// --- mini oyun ödülü
+assert.strictEqual(M.minigameReward("frisbee", 9, 0), 3);
+assert.strictEqual(M.minigameReward("frisbee", 30, 0), 5, "oyun başına en çok 5");
+assert.strictEqual(M.minigameReward("frisbee", 99, 0), 0, "imkânsız skor");
+assert.strictEqual(M.minigameReward("frisbee", 30, 13), 2, "günlük tavan");
+assert.strictEqual(M.minigameReward("yok", 30, 0), 0);
+sent = [];
+var mgDust0 = M.walletLoad(nk, "G", Date.now()).dust;
+st4 = M.matchLoop(ctx(), logger, nk, dispatcher, 10, st4, [msg(G, 9, { game: "frisbee", score: 12 })]).state;
+st4 = M.matchLoop(ctx(), logger, nk, dispatcher, 11, st4, [msg(G, 9, { game: "frisbee", score: 12 })]).state;
+var mgMsgs = sent.filter(function (m) { return m.op === 7; });
+assert.strictEqual(mgMsgs[0].data.reward, 4);
+assert.strictEqual(mgMsgs[1].data.reward, 0, "art arda sonuç ödül almaz");
+assert.strictEqual(M.walletLoad(nk, "G", Date.now()).dust, mgDust0 + 4);
+
 console.log("nakama modül testleri: OK");

@@ -70,6 +70,11 @@ func request_wallet() -> void:
 	pass
 
 
+## Mini oyun bitti: sunucu skora göre yıldız tozu verir → wallet_updated (wallet.reward).
+func send_minigame_result(_game: String, _score: int) -> void:
+	pass
+
+
 ## Dükkandan satın al → purchase_finished + wallet_updated.
 func buy_item(item: String) -> void:
 	purchase_finished.emit.call_deferred(item, false, "bağlantı yok")

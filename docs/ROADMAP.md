@@ -62,6 +62,7 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 5.7 Kampüs keşfi: 47 yere yürüyerek yaklaşınca (22 m) keşif bildirimi, harita "Keşif: n/47" + altın halkalar; ışınlanma sayılmaz (önce 30 m yürümek gerekir). Şimdilik cihazda saklanıyor
 - [x] 5.8 Pet etkileşimi: kendi petine dokun → kalpler + sevinç hareketi; başka pete dokun → dönüp el sallar, "Selam!" der
 - [x] 5.9 Yıldız tozu + dükkan: her gün 40 toplanabilir yıldız (yaya yollarında, sunucu konumla doğrular), sayaç; pet ekranında 3 yeni ücretli aksesuar (Çiçek tacı 15, Yıldız taç 30, Pelerin 40) denenir/satın alınır; alınmamış ürün takılamaz (sunucu da reddeder)
+- [x] 5.10 Mini oyun: Stadyumda Frizbi — 45 sn, ortadan atılan frizbileri halkaya koşup yakala, 5'li seri bonusu, en iyi skor; skor → yıldız tozu (oyun başına ≤5, günde ≤15, sunucu sınırlar)
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test

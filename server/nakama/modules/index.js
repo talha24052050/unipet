@@ -26,6 +26,7 @@ var OP_CARE = 5;     // c→s {act}                                s→c {ok, re
 var OP_UNLOCKS = 6;  // s→c {pets:[...], fresh:[...]}  (sadece o oyuncuya; fresh = bu girişte yeni açılanlar)
 var OP_WALLET = 7;   // s→c {dust, owned:[...], points:[i...], got}  (sadece o oyuncuya; points = bugün kalan yıldız tozları)
 var OP_COLLECT = 8;  // c→s {i}  yıldız tozu topla → OP_WALLET
+var OP_MINIGAME = 9; // c→s {game, score}  mini oyun bitti → OP_WALLET (reward = verilen toz)
 
 // ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
 var CARE_MAX = 100;
@@ -173,7 +174,23 @@ function walletLoad(nk, userId, nowMs) {
   var objs = nk.storageRead([{ collection: WALLET_COLLECTION, key: WALLET_KEY, userId: userId }]);
   var w = (objs && objs.length > 0 && objs[0].value) ? objs[0].value : {};
   var today = dayNumber(nowMs);
-  return { dust: w.dust | 0, owned: (w.owned || []).slice(), day: today, taken: w.day === today ? (w.taken || []).slice() : [] };
+  return { dust: w.dust | 0, owned: (w.owned || []).slice(), day: today, taken: w.day === today ? (w.taken || []).slice() : [],
+    mg: w.day === today ? (w.mg | 0) : 0 };
+}
+
+// ---- mini oyunlar: skor → yıldız tozu (oyun başına en çok MINIGAME_MAX_REWARD, günde en çok MINIGAME_DAILY_CAP).
+// Skoru istemci bildirir; süre ve oyun başına üst sınır + günlük tavan hileyi anlamsız kılar.
+// game/src/minigame/minigame_rules.gd ile AYNI.
+var MINIGAMES = { frisbee: { maxScore: 40, perDust: 3 } };
+var MINIGAME_MAX_REWARD = 5;
+var MINIGAME_DAILY_CAP = 15;
+var MINIGAME_MIN_GAP_S = 30;  // iki oyun sonucu arası en az (oyun ~45 sn)
+
+function minigameReward(game, score, already) {
+  var g = MINIGAMES[game];
+  if (!g || typeof score !== "number" || score !== Math.floor(score) || score < 0 || score > g.maxScore) return 0;
+  var r = Math.min(Math.floor(score / g.perDust), MINIGAME_MAX_REWARD);
+  return Math.max(0, Math.min(r, MINIGAME_DAILY_CAP - already));
 }
 
 function walletSave(nk, userId, w) {
@@ -588,6 +605,18 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         res.state = cur ? careDecay(cur.state, Math.floor(Date.now() / 1000)) : careNew(Math.floor(Date.now() / 1000));
       }
       dispatcher.broadcastMessage(OP_CARE, JSON.stringify(res), [pl.presence], null, true);
+    } else if (m.opCode === OP_MINIGAME) {
+      var nowMg = Date.now();
+      var wg = walletLoad(nk, uid, nowMg);
+      var reward = 0;
+      if (!pl.lastMinigame || nowMg - pl.lastMinigame >= MINIGAME_MIN_GAP_S * 1000) {
+        reward = minigameReward(String(data.game), data.score, wg.mg);
+        pl.lastMinigame = nowMg;
+      }
+      if (reward > 0) { wg.dust += reward; wg.mg += reward; walletSave(nk, uid, wg); }
+      var vg = walletView(wg);
+      vg.reward = reward;
+      dispatcher.broadcastMessage(OP_WALLET, JSON.stringify(vg), [pl.presence], null, true);
     } else if (m.opCode === OP_COLLECT) {
       var wl = walletLoad(nk, uid, Date.now());
       var got = stardustCollect(wl, data.i, pl.p);

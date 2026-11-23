@@ -49,7 +49,8 @@ static func daily_indices(day: int, n: int, count: int) -> PackedInt32Array:
 ## Cüzdanı bugüne göre düzeltir (gün değiştiyse alınanlar sıfırlanır).
 static func normalize(w: Dictionary, day: int) -> Dictionary:
 	return {"dust": int(w.get("dust", 0)), "owned": PackedStringArray(w.get("owned", [])), "day": day,
-		"taken": PackedInt32Array(w.get("taken", [])) if int(w.get("day", -1)) == day else PackedInt32Array()}
+		"taken": PackedInt32Array(w.get("taken", [])) if int(w.get("day", -1)) == day else PackedInt32Array(),
+		"mg": int(w.get("mg", 0)) if int(w.get("day", -1)) == day else 0}
 
 
 static func view(w: Dictionary, n_points: int, got: bool = false) -> Dictionary:

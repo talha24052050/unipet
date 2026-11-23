@@ -12,6 +12,7 @@ const OP_CARE: int = 5
 const OP_UNLOCKS: int = 6
 const OP_WALLET: int = 7
 const OP_COLLECT: int = 8
+const OP_MINIGAME: int = 9
 
 var host: String = "127.0.0.1"
 var port: int = 7350
@@ -135,6 +136,10 @@ func send_care_action(action: String) -> void:
 
 func send_collect(index: int) -> void:
 	_send_match_data(OP_COLLECT, {"i": index})
+
+
+func send_minigame_result(game: String, score: int) -> void:
+	_send_match_data(OP_MINIGAME, {"game": game, "score": score})
 
 
 func request_wallet() -> void:

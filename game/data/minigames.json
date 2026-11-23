@@ -1,0 +1,6 @@
+{
+  "_note": "Mini oyun alanları (kampüs metresi). r: başlatma butonunun çıktığı yarıçap. area: oyun alanı yarıçapı.",
+  "games": [
+    {"id": "frisbee", "name": "Frizbi", "x": -285.5, "z": 49.3, "r": 20.0, "area": 24.0}
+  ]
+}

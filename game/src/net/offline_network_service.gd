@@ -6,6 +6,7 @@ const CareRules := preload("res://src/care/pet_care_rules.gd")
 const CARE_PATH: String = "user://care.cfg"
 const Stardust := preload("res://src/collect/stardust_rules.gd")
 const WALLET_PATH: String = "user://wallet.cfg"
+const MinigameRules := preload("res://src/minigame/minigame_rules.gd")
 
 var _zone: String = ""
 var _player_id: String = "local"
@@ -63,7 +64,8 @@ func _wallet_load() -> Dictionary:
 	var raw: Dictionary = {}
 	if cfg.load(WALLET_PATH) == OK:
 		raw = {"dust": cfg.get_value("w", "dust", 0), "owned": cfg.get_value("w", "owned", PackedStringArray()),
-			"day": cfg.get_value("w", "day", -1), "taken": cfg.get_value("w", "taken", PackedInt32Array())}
+			"day": cfg.get_value("w", "day", -1), "taken": cfg.get_value("w", "taken", PackedInt32Array()),
+			"mg": cfg.get_value("w", "mg", 0)}
 	if _points.is_empty():
 		_points = Stardust.load_points()
 	return Stardust.normalize(raw, Stardust.day_number(_now()))
@@ -71,7 +73,7 @@ func _wallet_load() -> Dictionary:
 
 func _wallet_save(w: Dictionary) -> void:
 	var cfg: ConfigFile = ConfigFile.new()
-	for k: String in ["dust", "owned", "day", "taken"]:
+	for k: String in ["dust", "owned", "day", "taken", "mg"]:
 		cfg.set_value("w", k, w[k])
 	cfg.save(WALLET_PATH)
 
@@ -87,6 +89,18 @@ func send_collect(index: int) -> void:
 	if got:
 		_wallet_save(w)
 	_set_wallet(Stardust.view(w, _points.size(), got))
+
+
+func send_minigame_result(game: String, score: int) -> void:
+	var w: Dictionary = _wallet_load()
+	var r: int = MinigameRules.reward(game, score, int(w["mg"]))
+	if r > 0:
+		w["dust"] = int(w["dust"]) + r
+		w["mg"] = int(w["mg"]) + r
+		_wallet_save(w)
+	var v: Dictionary = Stardust.view(w, _points.size())
+	v["reward"] = r
+	_set_wallet(v)
 
 
 func buy_item(item: String) -> void:
