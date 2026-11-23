@@ -8,9 +8,9 @@ const STORE_P0: Vector2 = Vector2(-104.18, -58.13)  # Doğu (Yemekhane tarafı)
 const STORE_P2: Vector2 = Vector2(-151.50, -77.84)  # Batı (A101 yol tarafı)
 const STORE_P3: Vector2 = Vector2(-113.01, -47.20)  # Güney (Amfi merdiven köşesi)
 
-# Yemekhane (b#39) ön giriş cephesi (meydan tarafı)
-const YEM_FRONT_MID: Vector2 = Vector2(-92.9, -66.1)
-const YEM_CENTER: Vector2 = Vector2(-103.5, -95.2)
+# Yemekhane (b#39) ön cephesinin tam ortasındaki giriş bölümü (edge 27+28: [-85.93,-74.82] -> [-81.23,-80.70])
+const YEM_FRONT_MID: Vector2 = Vector2(-83.58, -77.76)
+const YEM_FRONT_OUT: Vector2 = Vector2(0.781, 0.624)
 
 const COL_PLAZA_LIGHT: Color = Color(0.76, 0.77, 0.75)
 const COL_PLAZA_MID: Color = Color(0.68, 0.69, 0.68)
@@ -124,17 +124,17 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.825, 1.2))
 	col_body.add_child(col)
 
-	# "YTU YILDIZ STORE" cephe tabelası
+	# "YTU YILDIZ STORE" cephe tabelası — merdivenlerin üstünde sol tarafta
 	var lbl: Label3D = Label3D.new()
 	lbl.name = "YildizStoreSign"
 	lbl.text = "★ YTU YILDIZ STORE"
 	lbl.font_size = 72
-	lbl.pixel_size = 0.009
+	lbl.pixel_size = 0.0085
 	lbl.modulate = COL_ANTHRACITE
 	lbl.outline_size = 6
 	lbl.outline_modulate = COL_WHITE
 	lbl.visibility_range_end = 110.0
-	lbl.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 4.35, 0.18))
+	lbl.transform = xf * Transform3D(Basis.IDENTITY, Vector3(-3.1, 4.25, 0.22))
 	add_child(lbl)
 
 
@@ -189,18 +189,19 @@ func _build_a101_facade(st: SurfaceTool, gst: SurfaceTool) -> void:
 ## 3) Yemekhane önü (yemekhane_1.jpg & yemekhane_2.jpg): geniş açık gri meydan, giriş merdiveni,
 ## engelli rampası, cam-metal sundurma ve beyaz çerçeveli cam kapı.
 func _build_yemekhane_front(st: SurfaceTool, gst: SurfaceTool, col_body: StaticBody3D) -> void:
-	var out: Vector2 = (YEM_FRONT_MID - YEM_CENTER).normalized()
+	var out: Vector2 = YEM_FRONT_OUT.normalized()
 	var across: Vector2 = Vector2(out.y, -out.x)
 	var base_y: float = TerrainHeight.active_height(YEM_FRONT_MID.x, YEM_FRONT_MID.y)
 	var xf: Transform3D = _frame_xform(YEM_FRONT_MID, across, out, base_y)
 
-	# Geniş açık gri taş meydan (Yemekhane önü + Yıldız Store tarafına bağlantı)
-	_add_box_xf(st, xf, Vector3(34.0, 0.12, 20.0), Vector3(-2.0, 0.06, 10.2), COL_PLAZA_LIGHT)
+	# Geniş açık gri taş meydan (Yemekhane önü + Yıldız Store tarafına kesintisiz bağlantı)
+	_add_box_xf(st, xf, Vector3(44.0, 0.12, 22.0), Vector3(-4.0, 0.06, 11.2), COL_PLAZA_LIGHT)
 
-	# Giriş cam kapısı + beyaz çerçeve + dikey cam merdiven boşluğu
+	# Giriş cam kapısı + beyaz çerçeve + iki yandaki dikey cam merdiven boşlukları (yemekhane_1/2.jpg)
 	_add_box_xf(st, xf, Vector3(7.4, 3.5, 0.24), Vector3(0.0, 1.15 + 1.75, 0.12), COL_WHITE)
 	_add_box_xf(gst, xf, Vector3(6.8, 3.1, 0.08), Vector3(0.0, 1.15 + 1.55, 0.22), COL_GLASS_DARK)
-	_add_box_xf(gst, xf, Vector3(1.8, 12.5, 0.12), Vector3(-5.2, 6.25, 0.14), COL_GLASS_DARK)
+	for gx: float in [-4.8, 4.8]:
+		_add_box_xf(gst, xf, Vector3(1.6, 12.5, 0.12), Vector3(gx, 6.25, 0.14), COL_GLASS_DARK)
 
 	# 6 basamaklı geniş giriş merdiveni (7.6 m genişlik) + sağda metal korkuluklu engelli rampası
 	var steps: int = 6

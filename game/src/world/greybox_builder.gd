@@ -528,7 +528,7 @@ func _build_building(b: Dictionary) -> void:
 			roof_mi.mesh = roof_mesh
 			body.add_child(roof_mi)
 
-	if show_labels and not name_text.is_empty() and min_h <= 0.0:
+	if show_labels and not name_text.is_empty() and min_h <= 0.0 and name_text != "Yıldız Store":
 		# Havada asılı yazı yerine cepheye tabela: yola en yakın duvara, kapı hizasının üstüne.
 		var sign: Node3D = build_sign(poly, height, near_paths, CampusMap.short_name(name_text), style == BuildingStyle.STYLE_HISTORIC)
 		if sign != null:
