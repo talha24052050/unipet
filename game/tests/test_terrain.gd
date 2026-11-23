@@ -149,3 +149,36 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 	TerrainHeight.active = prev_active
 	Config.TERRAIN_ENABLED = prev_enabled
 	return "" if b_ok else "Eğimli bina doğru kotta yerleşmedi"
+
+
+func test_props_and_lights_follow_terrain_height() -> String:
+	var StreetLights := preload("res://src/world/street_lights.gd")
+	var Greenery := preload("res://src/world/greenery_decor.gd")
+	var prev_active: TerrainHeight = TerrainHeight.active
+	var prev_enabled: bool = Config.TERRAIN_ENABLED
+	Config.TERRAIN_ENABLED = true
+	TerrainHeight.active = TerrainHeight.from_dict({
+		"min_x": 0.0, "min_z": 0.0, "step": 20.0, "cols": 2, "rows": 2,
+		"heights": [7.5, 7.5, 7.5, 7.5],
+	})
+
+	var sl: Node3D = StreetLights.new()
+	sl.call("setup_lamps", {"props": [{"type": "lamp", "pos": [10.0, 10.0]}]})
+	var lamp_pos: Array = sl.get("_lamp_positions")
+	var lamp_y: float = (lamp_pos[0] as Vector3).y if not lamp_pos.is_empty() else -1.0
+	sl.free()
+
+	var gr: Node3D = Greenery.new()
+	gr.call("build", {"kiosks": [[10.0, 10.0, 0.0]]})
+	var kiosk: Node3D = gr.get_node_or_null("Kiosk") as Node3D
+	var kiosk_y: float = kiosk.position.y if kiosk != null else -1.0
+	gr.free()
+
+	TerrainHeight.active = prev_active
+	Config.TERRAIN_ENABLED = prev_enabled
+
+	if not is_equal_approx(lamp_y, 7.5 + StreetLights.LAMP_HEIGHT):
+		return "Sokak lambası arazi yüksekliğini takip etmiyor: %f" % lamp_y
+	if not is_equal_approx(kiosk_y, 7.5):
+		return "Büfe arazi yüksekliğini takip etmiyor: %f" % kiosk_y
+	return ""

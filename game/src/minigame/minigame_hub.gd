@@ -52,7 +52,9 @@ func _build_sign(s: Dictionary) -> void:
 	label.visibility_range_end = 120.0
 	label.visibility_range_begin = 16.0  # yakında ekranı kaplamasın (buton zaten çıkıyor)
 	add_child(label)
-	label.position = Vector3(float(s["x"]), 4.0, float(s["z"]))
+	var sx: float = float(s["x"])
+	var sz: float = float(s["z"])
+	label.position = Vector3(sx, TerrainHeight.active_height(sx, sz) + 4.0, sz)
 
 
 ## Oyuncu hangi alanın içinde (yoksa {}).
@@ -79,7 +81,9 @@ func start() -> void:
 		return
 	Sfx.play(&"ui_click")
 	var g: Node3D = FrisbeeGame.new()
-	g.center = Vector3(float(near["x"]), 0.0, float(near["z"]))
+	var fx: float = float(near["x"])
+	var fz: float = float(near["z"])
+	g.center = Vector3(fx, TerrainHeight.active_height(fx, fz), fz)
 	g.area = float(near.get("area", 24.0))
 	g.player = player
 	g.ui_parent = ui

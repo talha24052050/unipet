@@ -31,7 +31,7 @@ func _try_snap_to_navmesh() -> void:
 	# İlk senkrondan önce sorgu hata basıyor (telefonda log kirliliği): harita hazır olana kadar bekle
 	if NavigationServer3D.map_get_iteration_id(map) == 0:
 		return
-	var probe: Vector3 = Vector3(global_position.x, 0.0, global_position.z)
+	var probe: Vector3 = Vector3(global_position.x, TerrainHeight.active_height(global_position.x, global_position.z), global_position.z)
 	var closest: Vector3 = NavigationServer3D.map_get_closest_point(map, probe)
 	if closest == Vector3.ZERO and probe.length() > 1.0:
 		return  # harita henüz hazır değil
@@ -66,6 +66,7 @@ func _ready() -> void:
 		Services.return_position = Vector3.INF
 		_snap_to_navmesh = true  # yer bina ortası olabilir: harita hazır olunca yürünebilir en yakın noktaya
 		_scatter()
+		position.y = TerrainHeight.active_height(position.x, position.z) + 1.5
 	elif Services.return_position != Vector3.INF:
 		# Haritadan / pet seçiminden dönüş: tam bıraktığı yer ve yön
 		position = Services.return_position
@@ -76,6 +77,7 @@ func _ready() -> void:
 			var sp: Vector2 = Services.zones.get_zone(Services.current_zone)["spawn"]
 			position = Vector3(sp.x, position.y, sp.y)
 		_scatter()
+		position.y = TerrainHeight.active_height(position.x, position.z) + 1.5
 	if character_id != &"":
 		set_character(character_id)
 	else:

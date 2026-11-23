@@ -54,7 +54,9 @@ func build(data: Dictionary) -> void:
 	for t: Variant in data.get("tracks", []):
 		_build_track(t as Dictionary)
 	for k: Variant in data.get("kiosks", []):
-		_build_kiosk(Vector3(float(k[0]), 0.0, float(k[1])), float(k[2]))
+		var kx: float = float(k[0])
+		var kz: float = float(k[1])
+		_build_kiosk(Vector3(kx, TerrainHeight.active_height(kx, kz), kz), float(k[2]))
 
 
 func _build_trees(trees: Array) -> void:
@@ -69,7 +71,9 @@ func _build_trees(trees: Array) -> void:
 		var kind: String = str(a[0])
 		if not TREE_MODELS.has(kind):
 			continue
-		var pos: Vector3 = Vector3(float(a[1]), 0.0, float(a[2]))
+		var tx: float = float(a[1])
+		var tz: float = float(a[2])
+		var pos: Vector3 = Vector3(tx, TerrainHeight.active_height(tx, tz), tz)
 		var s: float = float(a[4]) * float(TREE_SCALES.get(kind, 1.0))
 		var cell: Vector2i = Vector2i(floori(pos.x / CELL_SIZE), floori(pos.z / CELL_SIZE))
 		var kinds: Dictionary = by_cell.get_or_add(cell, {})
@@ -133,7 +137,10 @@ func _build_beds(beds: Array) -> void:
 	cyl.material = mat
 	var xforms: Array = []
 	for b: Variant in beds:
-		xforms.append(Transform3D(Basis(), Vector3(float(b[0]), BED_HEIGHT * 0.5, float(b[1]))))
+		var bx: float = float(b[0])
+		var bz: float = float(b[1])
+		var by: float = TerrainHeight.active_height(bx, bz)
+		xforms.append(Transform3D(Basis(), Vector3(bx, by + BED_HEIGHT * 0.5, bz)))
 	_add_multimesh(cyl, Transform3D.IDENTITY, xforms)
 
 
@@ -149,10 +156,18 @@ func _build_track(t: Dictionary) -> void:
 	var n: int = inner.size()
 	for i: int in n:
 		var j: int = (i + 1) % n
-		var a: Vector3 = Vector3(float(inner[i][0]), TRACK_Y, float(inner[i][1]))
-		var b: Vector3 = Vector3(float(inner[j][0]), TRACK_Y, float(inner[j][1]))
-		var c: Vector3 = Vector3(float(outer[j][0]), TRACK_Y, float(outer[j][1]))
-		var d: Vector3 = Vector3(float(outer[i][0]), TRACK_Y, float(outer[i][1]))
+		var ax: float = float(inner[i][0])
+		var az: float = float(inner[i][1])
+		var bx: float = float(inner[j][0])
+		var bz: float = float(inner[j][1])
+		var cx: float = float(outer[j][0])
+		var cz: float = float(outer[j][1])
+		var dx: float = float(outer[i][0])
+		var dz: float = float(outer[i][1])
+		var a: Vector3 = Vector3(ax, TerrainHeight.active_height(ax, az) + TRACK_Y, az)
+		var b: Vector3 = Vector3(bx, TerrainHeight.active_height(bx, bz) + TRACK_Y, bz)
+		var c: Vector3 = Vector3(cx, TerrainHeight.active_height(cx, cz) + TRACK_Y, cz)
+		var d: Vector3 = Vector3(dx, TerrainHeight.active_height(dx, dz) + TRACK_Y, dz)
 		# Yukarı bakan yüz: sarma yönü çokgen yönüne göre değişir, normali kontrol edip çevir
 		var up: bool = (b - a).cross(c - a).y < 0.0
 		for v: Vector3 in ([a, b, c, a, c, d] if up else [a, c, b, a, d, c]):

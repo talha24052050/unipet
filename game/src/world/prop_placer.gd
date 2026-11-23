@@ -111,22 +111,23 @@ func build_props(data: Dictionary) -> void:
 		by_cell[cell][t].append(item)
 
 		# Çarpışma şekillerini kur (çalılara yok)
+		var py: float = TerrainHeight.active_height(px, pz)
 		var yaw: float = float(item.get("yaw", 0.0))
 		match t:
 			"tree_birch", "tree_pine", "tree_common", "tree_plane", "tree_cypress", "tree_stonepine", "lamp":
 				var col := CollisionShape3D.new()
 				col.shape = cylinder_shape
-				col.position = Vector3(px, CYLINDER_HEIGHT * 0.5, pz)
+				col.position = Vector3(px, py + CYLINDER_HEIGHT * 0.5, pz)
 				static_body.add_child(col)
 			"bench":
 				var col := CollisionShape3D.new()
 				col.shape = bench_shape
-				col.transform = Transform3D(Basis(Vector3.UP, yaw), Vector3(px, BENCH_BOX_SIZE.y * 0.5, pz))
+				col.transform = Transform3D(Basis(Vector3.UP, yaw), Vector3(px, py + BENCH_BOX_SIZE.y * 0.5, pz))
 				static_body.add_child(col)
 			"trashcan":
 				var col := CollisionShape3D.new()
 				col.shape = trashcan_shape
-				col.position = Vector3(px, TRASHCAN_BOX_SIZE.y * 0.5, pz)
+				col.position = Vector3(px, py + TRASHCAN_BOX_SIZE.y * 0.5, pz)
 				static_body.add_child(col)
 			"bush_common", "bush_berries":
 				pass
@@ -191,8 +192,9 @@ func build_props(data: Dictionary) -> void:
 					var s: float = float(item.get("scale", 1.0))
 					var final_scale: float = s * float(TYPE_SCALES.get(type, 1.0))
 
+					var py: float = TerrainHeight.active_height(px, pz)
 					var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * final_scale)
-					var prop_t := Transform3D(basis, Vector3(px, 0.0, pz))
+					var prop_t := Transform3D(basis, Vector3(px, py, pz))
 					var final_mesh_t: Transform3D = prop_t * local_t
 					mm.set_instance_transform(i, final_mesh_t)
 

@@ -77,7 +77,7 @@ func setup_lamps(data: Dictionary) -> void:
 		if pos_arr.size() >= 2:
 			var px: float = float(pos_arr[0])
 			var pz: float = float(pos_arr[1])
-			_lamp_positions.append(Vector3(px, LAMP_HEIGHT, pz))
+			_lamp_positions.append(Vector3(px, TerrainHeight.active_height(px, pz) + LAMP_HEIGHT, pz))
 
 	if _bulb_multimesh != null and is_instance_valid(_bulb_multimesh):
 		_bulb_multimesh.queue_free()

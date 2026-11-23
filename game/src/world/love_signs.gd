@@ -22,7 +22,9 @@ func _ready() -> void:
 	for s: Dictionary in load_signs():
 		var n: Node3D = build_sign(Color.from_string(str(s.get("letters", "")), WHITE))
 		add_child(n)
-		n.position = Vector3(float(s["x"]), float(s.get("y", 0.0)), float(s["z"]))
+		var sx: float = float(s["x"])
+		var sz: float = float(s["z"])
+		n.position = Vector3(sx, TerrainHeight.active_height(sx, sz) + float(s.get("y", 0.0)), sz)
 		n.rotation.y = deg_to_rad(float(s.get("yaw_deg", 0.0)))
 		signs.append(n)
 

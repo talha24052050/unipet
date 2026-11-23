@@ -41,13 +41,17 @@ func _spawn() -> void:
 	var spots: Array = load_spots()
 	if spots.is_empty():
 		return
-	var probe: Vector3 = Vector3(float(spots[0]["x"]), 0, float(spots[0]["z"]))
+	var px0: float = float(spots[0]["x"])
+	var pz0: float = float(spots[0]["z"])
+	var probe: Vector3 = Vector3(px0, TerrainHeight.active_height(px0, pz0), pz0)
 	if Vector2(NavigationServer3D.map_get_closest_point(map, probe).x - probe.x, NavigationServer3D.map_get_closest_point(map, probe).z - probe.z).length() > 15.0:
 		return
 	_spawned = true
 	var k: int = 0
 	for s: Dictionary in spots:
-		var home: Vector3 = Vector3(float(s["x"]), 0, float(s["z"]))
+		var sx: float = float(s["x"])
+		var sz: float = float(s["z"])
+		var home: Vector3 = Vector3(sx, TerrainHeight.active_height(sx, sz), sz)
 		home = NavigationServer3D.map_get_closest_point(map, home)
 		for i: int in int(s.get("count", 1)):
 			var c: Node3D = CampusCat.new()

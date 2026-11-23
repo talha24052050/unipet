@@ -222,7 +222,9 @@ func _build_gate(i: int) -> void:
 	var yaw: float = atan2(float(cps[j][0]) - float(cps[k][0]), float(cps[j][1]) - float(cps[k][1]))
 	var g: Node3D = Node3D.new()
 	add_child(g)
-	g.position = Vector3(float(c[0]), 0.0, float(c[1]))
+	var cx: float = float(c[0])
+	var cz: float = float(c[1])
+	g.position = Vector3(cx, TerrainHeight.active_height(cx, cz), cz)
 	g.rotation.y = yaw
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	mat.albedo_color = GATE_IDLE
