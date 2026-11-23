@@ -26,6 +26,8 @@ Talha'nın verdiği kararlar. Değişiklik = Talha'nın onayı + bu dosyaya tari
 | Okul maili | **Şimdilik zorunlu değil**: her geçerli mail girer. Altyapı hazır, tek ayarla açılır (`Config.REQUIRE_SCHOOL_EMAIL` + sunucu env + Supabase hook) | 2026-11-21 |
 | Multiplayer | Nakama. Geliştirmede lokal Docker (ücretsiz), test için ücretsiz VPS. Ağ kodu arayüz arkasında | 2026-11-21 |
 | Dünya | ~~Bölgeler (zone)~~ → **Tek bölge: tüm kampüs** (Talha, 2026-11-22). Kapasite dolunca yeni kanal (oda) kalır | 2026-11-22 |
+| Arazi yüksekliği | Gerçek Davutpaşa DEM verisi (`tools/osm/fetch_elevation.py` → `kampus_terrain.json`, 12.5 m ızgara). Taşbina + çevre yolu, Stadyum ve spor sahaları gerçek çokgen zarflarıyla düzleştirilir; `Config.TERRAIN_ENABLED` ile kapatılabilir | 2026-11-23 |
+| UI Teması & iOS | Ortak tema (`game/assets/ui/unipet_theme.tres`, varyasyon bazlı); iOS ön hazırlığı (Safe Area, AppLifecycle, şeffaflıksız ikon seti, `tools/ci/export_presets.cfg` `[preset.1]`, `docs/IOS.md`) | 2026-11-23 |
 | Geliştirme | Talha Claude Code ile devam ediyor. Lokal işler Antigravity CLI (`agy`) ile | 2026-11-21 |
 | Repo | github.com/talha24052050/unipet — her task commit, her parça sonunda kontrol | 2026-11-21 |
 

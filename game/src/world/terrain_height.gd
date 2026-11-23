@@ -6,6 +6,7 @@ extends RefCounted
 ## Config.TERRAIN_ENABLED = false yapılırsa tüm sorgular 0.0 döner.
 
 static var active: TerrainHeight = null
+static var enabled: bool = Config.TERRAIN_ENABLED
 
 var min_x: float = 0.0
 var min_z: float = 0.0
@@ -104,12 +105,12 @@ static func load_from_file(path: String) -> TerrainHeight:
 
 ## Aktif araziden yükseklik okur; arazi kapalıysa veya yüklü değilse 0.0 döner.
 static func active_height(x: float, z: float) -> float:
-	if not Config.TERRAIN_ENABLED or active == null:
+	if not enabled or active == null:
 		return 0.0
 	return active.height_at(x, z)
 
 
 static func active_normal(x: float, z: float) -> Vector3:
-	if not Config.TERRAIN_ENABLED or active == null:
+	if not enabled or active == null:
 		return Vector3.UP
 	return active.normal_at(x, z)

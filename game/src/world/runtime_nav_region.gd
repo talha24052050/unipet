@@ -48,11 +48,11 @@ func _zone_def() -> Dictionary:
 
 ## Bölgenin yürünebilirliğini belirleyen verilerin özeti (greybox + prop + yeşil doku + arazi yüksekliği).
 static func source_hash(zone: Dictionary) -> String:
-	var text: String = "terrain=%d\n" % (1 if Config.TERRAIN_ENABLED else 0)
+	var text: String = "terrain=%d\n" % (1 if TerrainHeight.enabled else 0)
 	var files: Array[String] = [str(zone.get("greybox", "")), str(zone.get("props", ""))]
 	# Yeşil doku (ağaç çarpışmaları navmesh'e girer): greybox ile aynı klasörde <ad>_greenery.json
 	files.append(files[0].replace("_greybox.json", "_greenery.json"))
-	if Config.TERRAIN_ENABLED:
+	if TerrainHeight.enabled:
 		files.append(files[0].replace("_greybox.json", "_terrain.json"))
 	for p: String in files:
 		if not p.is_empty() and FileAccess.file_exists(p):

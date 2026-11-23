@@ -186,49 +186,54 @@ func _build_track(t: Dictionary) -> void:
 	_build_stadium_details(inner, outer)
 
 
-## Stadyum içi gerçekçi detaylar: beyaz futbol saha çizgileri (tek çizim), iki kale ve 4 aydınlatma direği.
+## Stadyum içi gerçekçi detaylar: pistin gerçek ~15° yönüne hizalı saha çizgileri (1 çizim),
+## iki kale, 4 aydınlatma direği ve Taşbina tarafında üstü açık tribün (tek birleşik köşe-renkli mesh = 1 çizim).
 func _build_stadium_details(inner: Array, outer: Array) -> void:
-	var min_x: float = INF
-	var max_x: float = -INF
-	var min_z: float = INF
-	var max_z: float = -INF
-	for p: Array in inner:
-		min_x = minf(min_x, float(p[0]))
-		max_x = maxf(max_x, float(p[0]))
-		min_z = minf(min_z, float(p[1]))
-		max_z = maxf(max_z, float(p[1]))
-	var cx: float = (min_x + max_x) * 0.5
-	var cz: float = (min_z + max_z) * 0.5
-	var half_w: float = clampf((max_x - min_x) * 0.36, 18.0, 34.0)
-	var half_l: float = clampf((max_z - min_z) * 0.36, 30.0, 52.0)
-	var y: float = TerrainHeight.active_height(cx, cz) + TRACK_Y + 0.025
+	var frame: Dictionary = _stadium_frame(inner, outer)
+	var center: Vector2 = frame["center"]
+	var axis_w: Vector2 = frame["axis_w"]  # +X: Taşbina'ya bakan doğu yönü
+	var axis_l: Vector2 = frame["axis_l"]  # +Z: sahanın uzun ekseni
+	var in_hw: float = float(frame["in_hw"])
+	var in_hl: float = float(frame["in_hl"])
+	var out_hw: float = float(frame["out_hw"])
+	var out_hl: float = float(frame["out_hl"])
 
-	# 1) Saha çizgileri (tek ArrayMesh)
+	# Dikdörtgen saha ovalin düz orta bölümüne tam sığsın (çizgiler kırmızı piste taşmasın)
+	var half_w: float = clampf(in_hw * 0.84, 16.0, 32.0)
+	var half_l: float = clampf(in_hl * 0.68, 28.0, 48.0)
+	var base_y: float = TerrainHeight.active_height(center.x, center.y)
+	var line_y: float = TRACK_Y + 0.025
+
+	# Yerel (u=doğu, v=uzun eksen) -> sahne XZ dönüşümü: tek ortak kök düğüm
+	var root: Node3D = Node3D.new()
+	root.name = "StadiumDetails"
+	root.basis = Basis(Vector3(axis_w.x, 0.0, axis_w.y), Vector3.UP, Vector3(axis_l.x, 0.0, axis_l.y))
+	root.position = Vector3(center.x, base_y, center.y)
+	add_child(root)
+
+	# 1) Saha çizgileri (yerel eksende, tek ArrayMesh = 1 çizim)
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	st.set_normal(Vector3.UP)
 	var lw: float = 0.22
-	# Dış dikdörtgen + orta çizgi
-	_line_quad(st, Vector2(cx - half_w, cz - half_l), Vector2(cx + half_w, cz - half_l), lw, y)
-	_line_quad(st, Vector2(cx - half_w, cz + half_l), Vector2(cx + half_w, cz + half_l), lw, y)
-	_line_quad(st, Vector2(cx - half_w, cz - half_l), Vector2(cx - half_w, cz + half_l), lw, y)
-	_line_quad(st, Vector2(cx + half_w, cz - half_l), Vector2(cx + half_w, cz + half_l), lw, y)
-	_line_quad(st, Vector2(cx - half_w, cz), Vector2(cx + half_w, cz), lw, y)
-	# Orta daire (r = 9.15 m)
-	var cr: float = 9.15
+	_line_quad(st, Vector2(-half_w, -half_l), Vector2(half_w, -half_l), lw, line_y)
+	_line_quad(st, Vector2(-half_w, half_l), Vector2(half_w, half_l), lw, line_y)
+	_line_quad(st, Vector2(-half_w, -half_l), Vector2(-half_w, half_l), lw, line_y)
+	_line_quad(st, Vector2(half_w, -half_l), Vector2(half_w, half_l), lw, line_y)
+	_line_quad(st, Vector2(-half_w, 0.0), Vector2(half_w, 0.0), lw, line_y)
+	var cr: float = minf(9.15, half_w * 0.35)
 	for i: int in 24:
 		var a0: float = TAU * float(i) / 24.0
 		var a1: float = TAU * float(i + 1) / 24.0
-		_line_quad(st, Vector2(cx + cos(a0) * cr, cz + sin(a0) * cr), Vector2(cx + cos(a1) * cr, cz + sin(a1) * cr), lw, y)
-	# İki ceza sahası (16.5 m derinlik, 36 m genişlik)
+		_line_quad(st, Vector2(cos(a0) * cr, sin(a0) * cr), Vector2(cos(a1) * cr, sin(a1) * cr), lw, line_y)
 	var box_w: float = minf(18.0, half_w * 0.65)
 	var box_d: float = minf(16.5, half_l * 0.32)
 	for side: float in [-1.0, 1.0]:
-		var z_end: float = cz + side * half_l
-		var z_in: float = cz + side * (half_l - box_d)
-		_line_quad(st, Vector2(cx - box_w, z_in), Vector2(cx + box_w, z_in), lw, y)
-		_line_quad(st, Vector2(cx - box_w, z_end), Vector2(cx - box_w, z_in), lw, y)
-		_line_quad(st, Vector2(cx + box_w, z_end), Vector2(cx + box_w, z_in), lw, y)
+		var z_end: float = side * half_l
+		var z_in: float = side * (half_l - box_d)
+		_line_quad(st, Vector2(-box_w, z_in), Vector2(box_w, z_in), lw, line_y)
+		_line_quad(st, Vector2(-box_w, z_end), Vector2(-box_w, z_in), lw, line_y)
+		_line_quad(st, Vector2(box_w, z_end), Vector2(box_w, z_in), lw, line_y)
 
 	var line_mesh: ArrayMesh = st.commit()
 	var white_mat: StandardMaterial3D = StandardMaterial3D.new()
@@ -239,44 +244,162 @@ func _build_stadium_details(inner: Array, outer: Array) -> void:
 	lines_mi.name = "PitchLines"
 	lines_mi.mesh = line_mesh
 	lines_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(lines_mi)
+	root.add_child(lines_mi)
 
-	# 2) İki futbol kalesi (7.32 m x 2.44 m)
-	var goals_root: Node3D = Node3D.new()
-	goals_root.name = "StadiumGoals"
+	# 2) Tüm yapılar (kaleler + 4 projektör direği + doğu tribün) tek köşe-renkli mesh = 1 çizim!
+	var mst: SurfaceTool = SurfaceTool.new()
+	mst.begin(Mesh.PRIMITIVE_TRIANGLES)
+	mst.set_smooth_group(-1)
+
+	# 2a) İki futbol kalesi (7.32 m x 2.44 m)
 	var gw: float = 7.32
 	var gh: float = 2.44
 	var gd: float = 1.6
+	var goal_white: Color = Color(0.96, 0.96, 0.96)
+	var goal_back: Color = Color(0.84, 0.86, 0.88)
 	for side: float in [-1.0, 1.0]:
-		var gz: float = cz + side * half_l
+		var gz: float = side * half_l
 		var back_z: float = gz + side * gd
 		for sx: float in [-1.0, 1.0]:
-			_box(goals_root, Vector3(0.14, gh, 0.14), Vector3(cx + sx * gw * 0.5, y + gh * 0.5, gz), Color(0.96, 0.96, 0.96))
-			_box(goals_root, Vector3(0.1, gh, 0.1), Vector3(cx + sx * gw * 0.5, y + gh * 0.5, back_z), Color(0.85, 0.87, 0.89))
-			_box(goals_root, Vector3(0.1, 0.1, gd), Vector3(cx + sx * gw * 0.5, y + gh, (gz + back_z) * 0.5), Color(0.85, 0.87, 0.89))
-		_box(goals_root, Vector3(gw + 0.14, 0.14, 0.14), Vector3(cx, y + gh, gz), Color(0.96, 0.96, 0.96))
-		_box(goals_root, Vector3(gw, 0.1, 0.1), Vector3(cx, y + gh, back_z), Color(0.85, 0.87, 0.89))
-	add_child(goals_root)
+			_add_colored_box(mst, Vector3(0.14, gh, 0.14), Vector3(sx * gw * 0.5, gh * 0.5, gz), goal_white)
+			_add_colored_box(mst, Vector3(0.1, gh, 0.1), Vector3(sx * gw * 0.5, gh * 0.5, back_z), goal_back)
+			_add_colored_box(mst, Vector3(0.1, 0.1, gd), Vector3(sx * gw * 0.5, gh, (gz + back_z) * 0.5), goal_back)
+		_add_colored_box(mst, Vector3(gw + 0.14, 0.14, 0.14), Vector3(0.0, gh, gz), goal_white)
+		_add_colored_box(mst, Vector3(gw, 0.1, 0.1), Vector3(0.0, gh, back_z), goal_back)
 
-	# 3) 4 köşe stadyum aydınlatma direği (outer track dış köşeleri)
-	var omin_x: float = INF
-	var omax_x: float = -INF
-	var omin_z: float = INF
-	var omax_z: float = -INF
-	for p: Array in outer:
-		omin_x = minf(omin_x, float(p[0]))
-		omax_x = maxf(omax_x, float(p[0]))
-		omin_z = minf(omin_z, float(p[1]))
-		omax_z = maxf(omax_z, float(p[1]))
-	var towers: Node3D = Node3D.new()
-	towers.name = "StadiumTowers"
+	# 2b) 4 köşe stadyum aydınlatma direği (outer pist dış köşeleri)
 	var tower_h: float = 16.0
-	for tx: float in [omin_x - 3.0, omax_x + 3.0]:
-		for tz: float in [omin_z + 18.0, omax_z - 18.0]:
-			var ty: float = TerrainHeight.active_height(tx, tz)
-			_box(towers, Vector3(0.55, tower_h, 0.55), Vector3(tx, ty + tower_h * 0.5, tz), Color(0.45, 0.48, 0.52))
-			_box(towers, Vector3(2.8, 1.1, 0.8), Vector3(tx, ty + tower_h + 0.4, tz), Color(0.92, 0.94, 0.96))
-	add_child(towers)
+	var pole_col: Color = Color(0.45, 0.48, 0.52)
+	var lamp_head_col: Color = Color(0.92, 0.94, 0.96)
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			var lx: float = sx * (out_hw + 3.0)
+			var lz: float = sz * (out_hl * 0.65)
+			var wp: Vector2 = center + axis_w * lx + axis_l * lz
+			var dy: float = TerrainHeight.active_height(wp.x, wp.y) - base_y
+			_add_colored_box(mst, Vector3(0.55, tower_h, 0.55), Vector3(lx, dy + tower_h * 0.5, lz), pole_col)
+			_add_colored_box(mst, Vector3(0.8, 1.1, 2.8), Vector3(lx, dy + tower_h + 0.4, lz), lamp_head_col)
+
+	# 2c) Üstü açık basamaklı tribün — Taşbina'ya bakan doğu kenarı (+axis_w)
+	var trib_len: float = clampf(out_hl * 0.95, 48.0, 76.0)
+	var rows_n: int = 6
+	var step_d: float = 0.95
+	var step_h: float = 0.55
+	var trib_x0: float = out_hw + 2.2
+	var trib_wp: Vector2 = center + axis_w * trib_x0
+	var trib_dy: float = TerrainHeight.active_height(trib_wp.x, trib_wp.y) - base_y
+	var concrete_col: Color = Color(0.76, 0.75, 0.72)
+	var wall_col: Color = Color(0.68, 0.67, 0.64)
+	var seat_col: Color = Color(0.14, 0.22, 0.46)
+	for r: int in rows_n:
+		var rx: float = trib_x0 + float(r) * step_d
+		var rh: float = float(r + 1) * step_h
+		_add_colored_box(mst, Vector3(step_d, rh, trib_len), Vector3(rx + step_d * 0.5, trib_dy + rh * 0.5, 0.0), concrete_col)
+		_add_colored_box(mst, Vector3(0.45, 0.08, trib_len - 1.2), Vector3(rx + step_d * 0.45, trib_dy + rh + 0.04, 0.0), seat_col)
+	var total_d: float = float(rows_n) * step_d
+	var top_h: float = float(rows_n) * step_h
+	_add_colored_box(mst, Vector3(0.35, 1.0, trib_len), Vector3(trib_x0 + total_d + 0.15, trib_dy + top_h + 0.5, 0.0), wall_col)
+	for sz: float in [-1.0, 1.0]:
+		_add_colored_box(mst, Vector3(total_d + 0.35, top_h * 0.5 + 0.4, 0.3), Vector3(trib_x0 + total_d * 0.5, trib_dy + top_h * 0.25 + 0.2, sz * (trib_len * 0.5 + 0.15)), wall_col)
+
+	mst.generate_normals()
+	var struct_mesh: ArrayMesh = mst.commit()
+	var struct_mat: StandardMaterial3D = StandardMaterial3D.new()
+	struct_mat.vertex_color_use_as_albedo = true
+	struct_mat.roughness = 0.85
+	struct_mesh.surface_set_material(0, struct_mat)
+	var struct_mi: MeshInstance3D = MeshInstance3D.new()
+	struct_mi.name = "StadiumStructures"
+	struct_mi.mesh = struct_mesh
+	root.add_child(struct_mi)
+
+	# Tribün çarpışması
+	var bleachers: StaticBody3D = StaticBody3D.new()
+	bleachers.name = "StadiumBleachers"
+	var col: CollisionShape3D = CollisionShape3D.new()
+	var bshape: BoxShape3D = BoxShape3D.new()
+	bshape.size = Vector3(total_d + 0.35, top_h + 1.0, trib_len)
+	col.shape = bshape
+	col.position = Vector3(trib_x0 + total_d * 0.5, trib_dy + (top_h + 1.0) * 0.5, 0.0)
+	bleachers.add_child(col)
+	root.add_child(bleachers)
+
+
+## Stadyum pistinin gerçek merkezini, ana eksenlerini (~15° dönük) ve yarı-boyutlarını hesaplar.
+static func _stadium_frame(inner: Array, outer: Array) -> Dictionary:
+	var center: Vector2 = Vector2.ZERO
+	for p: Array in inner:
+		center += Vector2(float(p[0]), float(p[1]))
+	center /= maxf(1.0, float(inner.size()))
+
+	# En uzak iki nokta çifti = ovalin uzun ekseni
+	var best_d_sq: float = -1.0
+	var axis_l: Vector2 = Vector2(0.0, 1.0)
+	for i: int in inner.size():
+		var pi: Vector2 = Vector2(float(inner[i][0]), float(inner[i][1]))
+		for j: int in range(i + 1, inner.size()):
+			var pj: Vector2 = Vector2(float(inner[j][0]), float(inner[j][1]))
+			var d_sq: float = pi.distance_squared_to(pj)
+			if d_sq > best_d_sq:
+				best_d_sq = d_sq
+				axis_l = (pj - pi).normalized()
+
+	# Sağ el koordinat sistemi: +axis_w doğuya (Taşbina, +X) baksın
+	var axis_w: Vector2 = Vector2(axis_l.y, -axis_l.x)
+	if axis_w.x < 0.0:
+		axis_w = -axis_w
+		axis_l = -axis_l
+
+	var in_hw: float = 0.0
+	var in_hl: float = 0.0
+	for p: Array in inner:
+		var rel: Vector2 = Vector2(float(p[0]), float(p[1])) - center
+		in_hw = maxf(in_hw, absf(rel.dot(axis_w)))
+		in_hl = maxf(in_hl, absf(rel.dot(axis_l)))
+	var out_hw: float = 0.0
+	var out_hl: float = 0.0
+	for p: Array in outer:
+		var rel: Vector2 = Vector2(float(p[0]), float(p[1])) - center
+		out_hw = maxf(out_hw, absf(rel.dot(axis_w)))
+		out_hl = maxf(out_hl, absf(rel.dot(axis_l)))
+
+	return {
+		"center": center,
+		"axis_w": axis_w,
+		"axis_l": axis_l,
+		"in_hw": in_hw,
+		"in_hl": in_hl,
+		"out_hw": out_hw,
+		"out_hl": out_hl,
+	}
+
+
+static func _add_colored_box(st: SurfaceTool, size: Vector3, pos: Vector3, color: Color) -> void:
+	var h: Vector3 = size * 0.5
+	var v000: Vector3 = pos + Vector3(-h.x, -h.y, -h.z)
+	var v100: Vector3 = pos + Vector3(h.x, -h.y, -h.z)
+	var v110: Vector3 = pos + Vector3(h.x, h.y, -h.z)
+	var v010: Vector3 = pos + Vector3(-h.x, h.y, -h.z)
+	var v001: Vector3 = pos + Vector3(-h.x, -h.y, h.z)
+	var v101: Vector3 = pos + Vector3(h.x, -h.y, h.z)
+	var v111: Vector3 = pos + Vector3(h.x, h.y, h.z)
+	var v011: Vector3 = pos + Vector3(-h.x, h.y, h.z)
+	var faces: Array = [
+		[v001, v101, v111, v011],  # +Z
+		[v100, v000, v010, v110],  # -Z
+		[v101, v100, v110, v111],  # +X
+		[v000, v001, v011, v010],  # -X
+		[v011, v111, v110, v010],  # +Y
+		[v000, v100, v101, v001],  # -Y
+	]
+	st.set_color(color)
+	for f: Array in faces:
+		st.add_vertex(f[0])
+		st.add_vertex(f[2])
+		st.add_vertex(f[1])
+		st.add_vertex(f[0])
+		st.add_vertex(f[3])
+		st.add_vertex(f[2])
 
 
 static func _line_quad(st: SurfaceTool, a: Vector2, b: Vector2, width: float, y: float) -> void:

@@ -15,7 +15,7 @@ const ROOM_CAPACITY: int = 40
 const NET_TICK_RATE: int = 10
 
 ## Gerçek kampüs yer şekilleri (DEM yükseklik haritası). false yapılırsa tüm dünya düz y=0 olur.
-var TERRAIN_ENABLED: bool = true
+const TERRAIN_ENABLED: bool = true
 
 ## Serbest chat şimdilik kapalı; altyapı hazır, açmak için true yapılır (+ filtre gerekli).
 const FREE_CHAT_ENABLED: bool = false
@@ -46,7 +46,7 @@ const PLAYER_TURN_SPEED: float = 10.0
 ## Şimdilik koşu yok (hız tek); koşu eklenince run animasyonu bu hızda devreye girer.
 const PLAYER_RUN_SPEED: float = 7.0
 ## Yerden kopmadan inilebilecek basamak/eğim için yere yapışma mesafesi.
-const PLAYER_FLOOR_SNAP: float = 0.3
+const PLAYER_FLOOR_SNAP: float = 0.4
 
 ## Pet görünümü. Seçim ekranı (2.6) gelene kadar bu pet kullanılır.
 const DEFAULT_PET_ID: StringName = &"mushnub"

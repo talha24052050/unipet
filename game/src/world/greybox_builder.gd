@@ -42,8 +42,9 @@ const GROUND_COLOR: Color = Color(0.39, 0.55, 0.26)  # doğal çim; alanlardan b
 const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
 const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
 ## Z-fighting olmasın diye katmanlar arası küçük yükseklik farkı.
-const AREA_Y: float = 0.04
-const PATH_Y: float = 0.08
+const AREA_Y: float = 0.05
+const AREA_SUBDIV_M: float = 12.0
+const PATH_Y: float = 0.10
 const PATH_SUBDIV_M: float = 4.0
 const BUILDING_FOUNDATION_M: float = 2.5
 const GROUND_MARGIN: float = 30.0
@@ -125,7 +126,7 @@ func _ready() -> void:
 
 
 func _load_terrain_for(greybox_path: String) -> void:
-	if not Config.TERRAIN_ENABLED:
+	if not TerrainHeight.enabled:
 		TerrainHeight.active = null
 		return
 	var terrain_path: String = greybox_path.replace("_greybox.json", "_terrain.json")
@@ -263,12 +264,42 @@ static func flat_polygon_mesh(poly: PackedVector2Array, y: float, sample_terrain
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i: int in range(0, tris.size(), 3):
-		for k: int in [0, 1, 2]:
-			var v: Vector2 = poly[tris[i + k]]
-			var vy: float = (TerrainHeight.active_height(v.x, v.y) + y) if sample_terrain else y
-			st.set_normal(TerrainHeight.active_normal(v.x, v.y) if sample_terrain else Vector3.UP)
-			st.add_vertex(Vector3(v.x, vy, v.y))
+		var a: Vector2 = poly[tris[i]]
+		var b: Vector2 = poly[tris[i + 1]]
+		var c: Vector2 = poly[tris[i + 2]]
+		if sample_terrain:
+			_emit_terrain_tri(st, a, b, c, y, 0)
+		else:
+			st.set_normal(Vector3.UP)
+			st.add_vertex(Vector3(a.x, y, a.y))
+			st.add_vertex(Vector3(b.x, y, b.y))
+			st.add_vertex(Vector3(c.x, y, c.y))
 	return st.commit()
+
+
+## Eğimli arazide büyük çim/park üçgenlerini özyinelemeli alt-bölerek zemine oturtur (z-fighting önler, renkleri korur).
+static func _emit_terrain_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, y_off: float, depth: int) -> void:
+	var ab: float = a.distance_squared_to(b)
+	var bc: float = b.distance_squared_to(c)
+	var ca: float = c.distance_squared_to(a)
+	var max_sq: float = maxf(ab, maxf(bc, ca))
+	if depth < 4 and max_sq > AREA_SUBDIV_M * AREA_SUBDIV_M:
+		if ab >= bc and ab >= ca:
+			var m: Vector2 = (a + b) * 0.5
+			_emit_terrain_tri(st, a, m, c, y_off, depth + 1)
+			_emit_terrain_tri(st, m, b, c, y_off, depth + 1)
+		elif bc >= ab and bc >= ca:
+			var m: Vector2 = (b + c) * 0.5
+			_emit_terrain_tri(st, a, b, m, y_off, depth + 1)
+			_emit_terrain_tri(st, a, m, c, y_off, depth + 1)
+		else:
+			var m: Vector2 = (c + a) * 0.5
+			_emit_terrain_tri(st, a, b, m, y_off, depth + 1)
+			_emit_terrain_tri(st, m, b, c, y_off, depth + 1)
+		return
+	for v: Vector2 in [a, b, c]:
+		st.set_normal(TerrainHeight.active_normal(v.x, v.y))
+		st.add_vertex(Vector3(v.x, TerrainHeight.active_height(v.x, v.y) + y_off, v.y))
 
 
 const WATER_COLOR: Color = Color(0.22, 0.47, 0.6)
@@ -310,7 +341,7 @@ static func data_extent(data: Dictionary) -> Rect2:
 
 
 func _build_ground_rect(rect: Rect2) -> void:
-	if Config.TERRAIN_ENABLED and TerrainHeight.active != null:
+	if TerrainHeight.enabled and TerrainHeight.active != null:
 		_build_terrain_ground(rect, TerrainHeight.active)
 		return
 	var c: Vector2 = rect.get_center()
@@ -428,7 +459,7 @@ func _build_building(b: Dictionary) -> void:
 		return
 	# OSM building:min_level: binalar arası havada köprü — altı açık (eskiden yerden yükselip yolu kapatıyordu)
 	var min_h: float = clampf(float(b.get("min_height", 0.0)), 0.0, height - 1.0)
-	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 	var ref_y: float = _polygon_avg_height(poly) if has_terrain else 0.0
 	var min_y: float = _polygon_min_height(poly) if has_terrain else 0.0
 	var floor_y: float = -((ref_y - min_y) + BUILDING_FOUNDATION_M) if (has_terrain and min_h <= 0.0) else 0.0
@@ -534,7 +565,7 @@ func _build_canopy(poly: PackedVector2Array, height: float) -> void:
 	var slab: ArrayMesh = extrude_polygon(poly, CANOPY_THICK)
 	if slab == null:
 		return
-	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 	var base_y: float = _polygon_avg_height(poly) if has_terrain else 0.0
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Canopy%d" % building_count
@@ -571,11 +602,7 @@ func _build_area(a: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(a.get("points", []))
 	var kind: String = str(a.get("kind", "grass"))
 	var is_water: bool = str(a.get("name", "")).to_lower().contains("havuz")
-	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
-	# Eğimli yamaçtaki büyük çim/park çokgenleri zaten çim olan araziyi kesip z-fighting yapmasın.
-	if has_terrain and GRASS_KINDS.has(kind) and not is_water:
-		if _polygon_max_height(poly) - _polygon_min_height(poly) > 0.35:
-			return
+	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 	var mesh: ArrayMesh
 	if has_terrain and (is_water or kind == "pitch" or kind == "playground"):
 		var ctr: Vector2 = _polygon_center(poly)
@@ -601,7 +628,7 @@ func _build_path(p: Dictionary) -> void:
 	var pts: PackedVector2Array = to_polygon(p.get("points", []))
 	var kind: String = str(p.get("kind", "footway"))
 	var width: float = PATH_WIDTHS.get(kind, 2.0)
-	var has_terrain: bool = Config.TERRAIN_ENABLED and TerrainHeight.active != null
+	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i: int in pts.size() - 1:

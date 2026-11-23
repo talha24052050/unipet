@@ -48,24 +48,24 @@ func test_normal_on_slope_and_flat() -> String:
 
 func test_active_height_respects_config_flag() -> String:
 	var prev_active: TerrainHeight = TerrainHeight.active
-	var prev_enabled: bool = Config.TERRAIN_ENABLED
+	var prev_enabled: bool = TerrainHeight.enabled
 	TerrainHeight.active = TerrainHeight.from_dict({
 		"min_x": 0.0, "min_z": 0.0, "step": 10.0, "cols": 2, "rows": 2,
 		"heights": [12.0, 12.0, 12.0, 12.0],
 	})
 
-	Config.TERRAIN_ENABLED = true
+	TerrainHeight.enabled = true
 	var h_on: float = TerrainHeight.active_height(5.0, 5.0)
-	Config.TERRAIN_ENABLED = false
+	TerrainHeight.enabled = false
 	var h_off: float = TerrainHeight.active_height(5.0, 5.0)
 
 	TerrainHeight.active = prev_active
-	Config.TERRAIN_ENABLED = prev_enabled
+	TerrainHeight.enabled = prev_enabled
 
 	if not is_equal_approx(h_on, 12.0):
-		return "TERRAIN_ENABLED=true iken 12.0 dönmeli: %f" % h_on
+		return "TerrainHeight.enabled=true iken 12.0 dönmeli: %f" % h_on
 	if not is_equal_approx(h_off, 0.0):
-		return "TERRAIN_ENABLED=false iken 0.0 dönmeli: %f" % h_off
+		return "TerrainHeight.enabled=false iken 0.0 dönmeli: %f" % h_off
 	return ""
 
 
@@ -85,8 +85,8 @@ func test_kampus_terrain_data_valid_and_realistic() -> String:
 func test_greybox_terrain_ground_building_and_path() -> String:
 	var Greybox := preload("res://src/world/greybox_builder.gd")
 	var prev_active: TerrainHeight = TerrainHeight.active
-	var prev_enabled: bool = Config.TERRAIN_ENABLED
-	Config.TERRAIN_ENABLED = true
+	var prev_enabled: bool = TerrainHeight.enabled
+	TerrainHeight.enabled = true
 	TerrainHeight.active = TerrainHeight.from_dict({
 		"min_x": 0.0, "min_z": 0.0, "step": 20.0, "cols": 3, "rows": 3,
 		"heights": [0.0, 5.0, 10.0, 0.0, 5.0, 10.0, 0.0, 5.0, 10.0],
@@ -98,7 +98,7 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 	if ground == null:
 		builder.free()
 		TerrainHeight.active = prev_active
-		Config.TERRAIN_ENABLED = prev_enabled
+		TerrainHeight.enabled = prev_enabled
 		return "Terrain Ground düğümü oluşmadı"
 
 	# Zemin mesh köşeleri eğime göre yükselmiş olmalı (0..10 m)
@@ -113,7 +113,7 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 	if not is_equal_approx(max_gy, 10.0):
 		builder.free()
 		TerrainHeight.active = prev_active
-		Config.TERRAIN_ENABLED = prev_enabled
+		TerrainHeight.enabled = prev_enabled
 		return "Zemin yüksekliği 10.0 m olmalı, %f bulundu" % max_gy
 
 	# Eğimli yolda segment alt-bölünmeli ve yükseklik takip etmeli
@@ -126,7 +126,7 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 	if pverts.size() <= 6:
 		builder.free()
 		TerrainHeight.active = prev_active
-		Config.TERRAIN_ENABLED = prev_enabled
+		TerrainHeight.enabled = prev_enabled
 		return "40 m eğimli yol alt-bölünmeli (köşe sayısı: %d)" % pverts.size()
 	var max_py: float = -1e9
 	for v: Vector3 in pverts:
@@ -134,8 +134,17 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 	if max_py < 9.5:
 		builder.free()
 		TerrainHeight.active = prev_active
-		Config.TERRAIN_ENABLED = prev_enabled
+		TerrainHeight.enabled = prev_enabled
 		return "Yol yüksekliği eğimi takip etmiyor: %f" % max_py
+
+	# Eğimli çim alanı silinmemeli, alt-bölünerek araziye oturmalı
+	var children_before: int = builder.get_child_count()
+	builder.call("_build_area", {"kind": "park", "points": [[0.0, 0.0], [40.0, 0.0], [40.0, 40.0], [0.0, 40.0]]})
+	if builder.get_child_count() <= children_before:
+		builder.free()
+		TerrainHeight.active = prev_active
+		TerrainHeight.enabled = prev_enabled
+		return "Eğimli park alanı silinmemeli, araziye oturtulmalı"
 
 	# Eğimli binada temel aşağı uzamalı ve body.position.y > 0 olmalı
 	builder.call("_build_building", {
@@ -147,7 +156,7 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 	var b_ok: bool = bnode != null and is_equal_approx(bnode.position.y, 5.0)
 	builder.free()
 	TerrainHeight.active = prev_active
-	Config.TERRAIN_ENABLED = prev_enabled
+	TerrainHeight.enabled = prev_enabled
 	return "" if b_ok else "Eğimli bina doğru kotta yerleşmedi"
 
 
@@ -155,8 +164,8 @@ func test_props_and_lights_follow_terrain_height() -> String:
 	var StreetLights := preload("res://src/world/street_lights.gd")
 	var Greenery := preload("res://src/world/greenery_decor.gd")
 	var prev_active: TerrainHeight = TerrainHeight.active
-	var prev_enabled: bool = Config.TERRAIN_ENABLED
-	Config.TERRAIN_ENABLED = true
+	var prev_enabled: bool = TerrainHeight.enabled
+	TerrainHeight.enabled = true
 	TerrainHeight.active = TerrainHeight.from_dict({
 		"min_x": 0.0, "min_z": 0.0, "step": 20.0, "cols": 2, "rows": 2,
 		"heights": [7.5, 7.5, 7.5, 7.5],
@@ -175,12 +184,49 @@ func test_props_and_lights_follow_terrain_height() -> String:
 	gr.free()
 
 	TerrainHeight.active = prev_active
-	Config.TERRAIN_ENABLED = prev_enabled
+	TerrainHeight.enabled = prev_enabled
 
 	if not is_equal_approx(lamp_y, 7.5 + StreetLights.LAMP_HEIGHT):
 		return "Sokak lambası arazi yüksekliğini takip etmiyor: %f" % lamp_y
 	if not is_equal_approx(kiosk_y, 7.5):
 		return "Büfe arazi yüksekliğini takip etmiyor: %f" % kiosk_y
+
+	# Gerçek dönük (~15°) stadyum pisti: çizgiler pistin içinde kalmalı, yapılar tek birleşik mesh olmalı
+	var gdata: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/zones/kampus_greenery.json"))
+	var tr: Dictionary = ((gdata as Dictionary)["tracks"] as Array)[0]
+	var gr_st: Node3D = Greenery.new()
+	gr_st.call("build", {"tracks": [tr]})
+	var details: Node3D = gr_st.get_node_or_null("StadiumDetails") as Node3D
+	if details == null:
+		gr_st.free()
+		return "StadiumDetails oluşmadı"
+	var has_bleachers: bool = details.get_node_or_null("StadiumBleachers") != null
+	var lines_mi: MeshInstance3D = details.get_node_or_null("PitchLines") as MeshInstance3D
+	var struct_mi: MeshInstance3D = details.get_node_or_null("StadiumStructures") as MeshInstance3D
+	var has_lines: bool = lines_mi != null and lines_mi.mesh != null
+	var has_struct: bool = struct_mi != null and struct_mi.mesh != null
+	var mesh_count: int = 0
+	for ch: Node in details.get_children():
+		if ch is MeshInstance3D:
+			mesh_count += 1
+	# Tüm saha çizgi köşeleri gerçek inner pist çokgeninin içinde olmalı
+	var inner_poly: PackedVector2Array = PackedVector2Array()
+	for pt: Array in tr["inner"]:
+		inner_poly.append(Vector2(float(pt[0]), float(pt[1])))
+	var outside_cnt: int = 0
+	if has_lines:
+		var lv: PackedVector3Array = lines_mi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for v: Vector3 in lv:
+			var w: Vector3 = details.transform * v
+			if not Geometry2D.is_point_in_polygon(Vector2(w.x, w.z), inner_poly):
+				outside_cnt += 1
+	gr_st.free()
+	if not has_bleachers or not has_lines or not has_struct:
+		return "Stadyum tribün/çizgi/yapı düğümleri eksik"
+	if mesh_count != 2:
+		return "Stadyum detayları 2 çizim çağrısı (PitchLines + StadiumStructures) olmalı, %d bulundu" % mesh_count
+	if outside_cnt > 0:
+		return "Stadyum saha çizgileri pistin dışına taşıyor (%d köşe dışarıda)" % outside_cnt
 	return ""
 
 

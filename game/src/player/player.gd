@@ -58,7 +58,7 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	floor_snap_length = maxf(Config.PLAYER_FLOOR_SNAP, 0.4)
+	floor_snap_length = Config.PLAYER_FLOOR_SNAP
 	floor_stop_on_slope = true
 	floor_constant_speed = true
 	floor_max_angle = deg_to_rad(45.0)
