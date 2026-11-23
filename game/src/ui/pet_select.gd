@@ -55,9 +55,12 @@ func _add_shop_ui() -> void:
 	_wallet_label.add_theme_constant_override("outline_size", 8)
 	_wallet_label.anchor_left = 1.0
 	_wallet_label.anchor_right = 1.0
-	_wallet_label.offset_left = -360.0
-	_wallet_label.offset_right = -16.0
-	_wallet_label.offset_top = 40.0
+	var insets: Dictionary = SafeArea.get_viewport_insets(get_viewport())
+	var inset_top: float = float(insets.get("top", 0.0))
+	var inset_right: float = float(insets.get("right", 0.0))
+	_wallet_label.offset_left = -360.0 - inset_right
+	_wallet_label.offset_right = -16.0 - inset_right
+	_wallet_label.offset_top = 40.0 + inset_top
 	_wallet_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_wallet_label)
 	_buy_btn = Button.new()
@@ -144,11 +147,13 @@ func strip_unowned() -> void:
 
 ## Sol üstte "Çıkış": oturumu kapatır, giriş ekranına döner (sunucu adresi/takma ad orada değişir).
 func _add_logout_button() -> void:
+	var insets: Dictionary = SafeArea.get_viewport_insets(get_viewport())
 	var b: Button = Button.new()
 	b.name = "LogoutButton"
 	b.text = "Çıkış"
+	b.theme_type_variation = &"HudButton"
 	b.add_theme_font_size_override("font_size", LOGOUT_FONT_SIZE)
-	b.position = Vector2(16, 16)
+	b.position = Vector2(16.0 + float(insets.get("left", 0.0)), 16.0 + float(insets.get("top", 0.0)))
 	b.custom_minimum_size = Vector2(140, 96)
 	b.pressed.connect(func() -> void:
 		b.disabled = true  # çift basış iki kez çıkış/sahne değişimi yapmasın

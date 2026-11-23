@@ -22,6 +22,8 @@ func _bind_target() -> void:
 		_target = node as Control
 		if not _target.resized.is_connected(sync_position):
 			_target.resized.connect(sync_position)
+		if not _target.item_rect_changed.is_connected(sync_position):
+			_target.item_rect_changed.connect(sync_position)
 		if not _target.visibility_changed.is_connected(sync_position):
 			_target.visibility_changed.connect(sync_position)
 
@@ -30,8 +32,11 @@ func sync_position() -> void:
 	if _target == null or not is_instance_valid(_target):
 		_bind_target()
 	if _target != null and is_instance_valid(_target) and _target.visible:
-		var bottom_y: float = _target.position.y + _target.size.y
+		var bottom_y: float = _target.global_position.y + _target.size.y if _target.is_inside_tree() else _target.position.y + _target.size.y
 		if bottom_y > 0.0:
-			position.y = bottom_y + gap
+			if is_inside_tree():
+				global_position.y = bottom_y + gap
+			else:
+				position.y = bottom_y + gap
 			return
 	position.y = fallback_top

@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://src/ui/login.gd" id="1"]
+[ext_resource type="Script" path="res://src/ui/safe_area_margin.gd" id="2"]
 
 [node name="Login" type="Control"]
 layout_mode = 3
@@ -27,6 +28,7 @@ theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 160
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 80
+script = ExtResource("2")
 
 [node name="VBox" type="VBoxContainer" parent="Margin"]
 layout_mode = 2

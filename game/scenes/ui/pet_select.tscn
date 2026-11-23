@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/pet_select.gd" id="1"]
 [ext_resource type="Script" path="res://src/characters/pet_visual.gd" id="2"]
+[ext_resource type="Script" path="res://src/ui/safe_area_margin.gd" id="3"]
 
 [sub_resource type="Environment" id="env"]
 background_mode = 1
@@ -77,6 +78,8 @@ theme_override_constants/margin_left = 24
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 24
 theme_override_constants/margin_bottom = 24
+script = ExtResource("3")
+apply_top = false
 
 [node name="ControlsBox" type="VBoxContainer" parent="MainLayout/UIControlsMargin"]
 layout_mode = 2

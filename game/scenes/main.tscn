@@ -25,6 +25,7 @@
 [ext_resource type="Script" path="res://src/world/campus_cats.gd" id="23"]
 [ext_resource type="Script" path="res://src/world/love_signs.gd" id="24"]
 [ext_resource type="Script" path="res://src/ui/hud_follow_below.gd" id="25"]
+[ext_resource type="Script" path="res://src/ui/safe_area_hud.gd" id="26"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -277,6 +278,12 @@ script = ExtResource("17")
 [node name="ChatMenu" parent="UI" instance=ExtResource("8")]
 
 [node name="CareHud" parent="UI" instance=ExtResource("11")]
+
+[node name="SafeAreaHud" type="Node" parent="UI"]
+script = ExtResource("26")
+top_nodes = Array[NodePath]([NodePath("../Label"), NodePath("../PetButton"), NodePath("../MapButton"), NodePath("../SettingsButton")])
+bottom_nodes = Array[NodePath]([NodePath("../ConnectionLabel"), NodePath("../PerfLabel")])
+fill_controls = Array[NodePath]([NodePath("../CareHud"), NodePath("../ChatMenu")])
 
 [node name="PlayerController" type="Node" parent="." node_paths=PackedStringArray("player", "joystick", "camera", "agent", "marker", "interaction")]
 script = ExtResource("3")
