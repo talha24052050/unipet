@@ -1,4 +1,14 @@
 {
-  "_note": "\"I ❤ YTÜ\" yazıları. x/z kampüs metresi, yaw_deg: yazının önünün baktığı yön (0 = +Z). Yerler Talha'dan bekleniyor.",
-  "signs": []
+ "_note": "\"I ❤ YTÜ\" yazıları. x/z kampüs metresi, yaw_deg: yazının önünün baktığı yön (0 = +Z). Yerler Talha.dan (Google Maps koordinatı → tools/osm/osm_to_greybox.py project).",
+ "signs": [
+  {
+   "name": "Ortabahçe (doğu)",
+   "lat": 41.025528228918354,
+   "lon": 28.89097199161282,
+   "x": 138.7,
+   "z": 60.3,
+   "yaw_deg": 51.4,
+   "_yon": "arkası en yakın Kışla kanadı (~32 m, fotoğraftaki gibi bina yazının arkasında)"
+  }
+ ]
 }

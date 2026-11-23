@@ -91,7 +91,7 @@ static func build_sign(letters: Color = WHITE) -> Node3D:
 	root.add_child(base)
 	# harfleri yüksekliğe göre ölçekle, kalple birlikte ortalayarak diz (aralık 0.25 m)
 	var parts: Array[MeshInstance3D] = [_text("I", letters), MeshInstance3D.new(), _text("YTU", letters)]
-	parts[1].mesh = heart_mesh(LETTER_H * 1.1, DEPTH * 0.8)
+	parts[1].mesh = heart_mesh(LETTER_H * 1.3, DEPTH * 0.8)
 	parts[1].material_override = _mat(RED)
 	var widths: Array[float] = []
 	for m: MeshInstance3D in parts:
