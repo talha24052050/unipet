@@ -20,6 +20,7 @@ const float PLINTH_HEIGHT = 0.9;
 
 varying vec3 world_pos;
 varying vec3 world_normal;
+varying float local_y;
 
 float hash12(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -30,6 +31,7 @@ const float FLOOR_HEIGHT = 3.5;
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	local_y = VERTEX.y;
 }
 
 void fragment() {
@@ -44,8 +46,8 @@ void fragment() {
 		ROUGHNESS = 0.9;
 		METALLIC = 0.0;
 	} else {
-		// Dikey duvar yüzeyleri: kat yüksekliği 3.5m
-		float floor_y = world_pos.y - FLOOR_HEIGHT * floor(world_pos.y / FLOOR_HEIGHT);
+		// Dikey duvar yüzeyleri: kat yüksekliği 3.5m (arazi kotundan bağımsız yerel yükseklik)
+		float floor_y = local_y - FLOOR_HEIGHT * floor(local_y / FLOOR_HEIGHT);
 
 		// Duvar teğet vektörü boyunca yatay metrik konum (u)
 		vec2 wall_dir = normalize(vec2(-world_normal.z, world_normal.x));
@@ -55,13 +57,13 @@ void fragment() {
 		float roughness = 0.85;
 		float metallic = 0.0;
 
-		// Zemin seviyesi (en alt 0.3m süpürgelik)
-		if (world_pos.y >= 0.3) {
+		// Zemin/kat süpürgeliği: her katta alttan 0.3m (arazi kotu negatif olan doğu binalarında da pencereler çalışır)
+		if (floor_y >= 0.3) {
 			if (style == 0) {
 				// 0: Modern kompozit panel cephe (Alucobond derz ızgarası + yatay cam pencere şeridi)
 				float p_u = fract(wall_u / 1.8);
 				float p_y = fract(floor_y / 1.15);
-				float panel_tone = 0.97 + 0.04 * hash12(vec2(floor(wall_u / 1.8), floor(world_pos.y / 1.15)));
+				float panel_tone = 0.97 + 0.04 * hash12(vec2(floor(wall_u / 1.8), floor(local_y / 1.15)));
 				col = wall_color.rgb * panel_tone;
 				if (p_u < 0.025 || p_y < 0.025) {
 					col *= 0.88;  // ince alüminyum panel derzi
@@ -101,12 +103,12 @@ void fragment() {
 				bool under_band = floor_y > FLOOR_HEIGHT - 0.38 && !on_band;
 				if (outer) {
 					// Kaba moloz taş örgü: düzensiz bloklar + koyu gölgeli derz
-					float row = floor(world_pos.y / 0.38);
+					float row = floor(local_y / 0.38);
 					float row_w = 0.55 + 0.45 * hash12(vec2(row, 3.1));
 					float bu = wall_u / row_w + hash12(vec2(row, 7.3)) * 3.0;
 					vec2 cell = vec2(floor(bu), row);
 					float fu = fract(bu);
-					float fy = fract(world_pos.y / 0.38);
+					float fy = fract(local_y / 0.38);
 					float tone = 0.78 + 0.34 * hash12(cell);
 					float warm = hash12(cell + vec2(11.0, 5.0));
 					vec3 stone_tint = mix(rubble_color.rgb, rubble_color.rgb * vec3(1.06, 0.98, 0.88), warm);
@@ -117,11 +119,11 @@ void fragment() {
 					roughness = 0.98;
 				} else {
 					// İç avlu: eskitilmiş kireçtaşı sıva dokusu (hafif ton çeşitliliği)
-					float grain = 0.96 + 0.08 * hash12(vec2(floor(wall_u * 1.4), floor(world_pos.y * 1.4)));
-					float blotch = 0.97 + 0.06 * hash12(vec2(floor(wall_u * 0.35), floor(world_pos.y * 0.4)));
+					float grain = 0.96 + 0.08 * hash12(vec2(floor(wall_u * 1.4), floor(local_y * 1.4)));
+					float blotch = 0.97 + 0.06 * hash12(vec2(floor(wall_u * 0.35), floor(local_y * 0.4)));
 					col = wall_color.rgb * grain * blotch;
 					roughness = 0.93;
-					if (world_pos.y < PLINTH_HEIGHT) {
+					if (local_y >= 0.0 && local_y < PLINTH_HEIGHT) {
 						col = wall_color.rgb * 0.80;  // taş subasman
 					} else if (on_band) {
 						col = wall_color.rgb * 0.58;  // koyu taş kat silmesi (tasbina_stone.jpg)
@@ -172,25 +174,25 @@ void fragment() {
 			}
 		}
 
-		if (style == 4 && world_pos.y >= 0.3) {
+		if (style == 4 && floor_y >= 0.3) {
 			// 4: Dükkân cephesi: 0.4–3.1 m tavana kadar cam, 1.6 m'de bir siyah kayıt, üstte siyah bant
 			float u4 = mod(wall_u, 1.6);
-			if (world_pos.y < 3.1) {
-				bool mull = u4 < 0.1 || world_pos.y < 0.45 || world_pos.y > 3.0;
+			if (floor_y < 3.1) {
+				bool mull = u4 < 0.1 || floor_y < 0.45 || floor_y > 3.0;
 				col = mull ? frame_color.rgb : window_color.rgb;
 				roughness = mull ? 0.6 : 0.15;
 				metallic = mull ? 0.3 : 0.2;
-			} else if (world_pos.y < 3.5) {
+			} else {
 				col = frame_color.rgb;  // tabela/saçak bandı
 			}
 		}
-		if (style == 3 && world_pos.y >= 0.3) {
+		if (style == 3 && floor_y >= 0.3) {
 			// 3: Kırmızı tuğla + kat döşemesi hizasında beyaz beton bant + beyaz çerçeveli pencereler (Yemekhane)
-			float brow = floor(world_pos.y / 0.075);
+			float brow = floor(local_y / 0.075);
 			float bu2 = wall_u / 0.22 + mod(brow, 2.0) * 0.5;
 			float tone2 = 0.9 + 0.16 * hash12(vec2(floor(bu2), brow));
 			col = wall_color.rgb * tone2;
-			if (fract(world_pos.y / 0.075) < 0.12 || fract(bu2) < 0.05) {
+			if (fract(local_y / 0.075) < 0.12 || fract(bu2) < 0.05) {
 				col = wall_color.rgb * 1.25;
 			}
 			roughness = 0.95;
