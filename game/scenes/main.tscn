@@ -22,6 +22,7 @@
 [ext_resource type="Script" path="res://src/collect/stardust_field.gd" id="20"]
 [ext_resource type="Script" path="res://src/minigame/minigame_hub.gd" id="21"]
 [ext_resource type="Script" path="res://src/minigame/race_client.gd" id="22"]
+[ext_resource type="Script" path="res://src/world/campus_cats.gd" id="23"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -282,3 +283,7 @@ script = ExtResource("22")
 player = NodePath("../Player")
 controller = NodePath("../PlayerController")
 ui = NodePath("../UI")
+
+[node name="CampusCats" type="Node3D" parent="." node_paths=PackedStringArray("player")]
+script = ExtResource("23")
+player = NodePath("../Player")

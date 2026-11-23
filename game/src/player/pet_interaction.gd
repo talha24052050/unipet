@@ -45,6 +45,9 @@ func try_tap(screen_pos: Vector2, camera: Camera3D) -> bool:
 	var best: Node3D = cands[idx]
 	if best == player:
 		pet_own()
+	elif best.is_in_group(&"cats"):
+		best.call("pet")
+		spawn_hearts(best, 3)
 	else:
 		greet(best)
 	return true
@@ -71,6 +74,10 @@ func _candidates() -> Array[Node3D]:
 	if remotes != null:
 		for c: Node in remotes.get_children():
 			if c is Node3D and c.has_method("push_state") and (c as Node3D).visible:
+				out.append(c)
+	if is_inside_tree():
+		for c: Node in get_tree().get_nodes_in_group(&"cats"):
+			if (c as Node3D).visible and player != null and (c as Node3D).global_position.distance_to(player.global_position) < GREET_MAX_DIST:
 				out.append(c)
 	return out
 

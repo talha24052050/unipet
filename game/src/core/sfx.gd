@@ -11,6 +11,7 @@ const SOUNDS: Dictionary = {
 	&"care_fail": "res://assets/sfx/care_fail.ogg",
 	&"teleport": "res://assets/sfx/teleport.ogg",
 	&"step": "res://assets/sfx/step.ogg",
+	&"meow": "res://assets/sfx/meow.wav",
 }
 
 const POOL_SIZE: int = 6

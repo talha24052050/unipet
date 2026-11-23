@@ -1,0 +1,61 @@
+{
+ "_note": "Davutpaşa kedileri: her yerde count kedi, home çevresinde (r metre) gezer. Kampüs metresi.",
+ "spots": [
+  {
+   "name": "Yemekhane önü",
+   "x": -82.0,
+   "z": -86.0,
+   "r": 14.0,
+   "count": 3
+  },
+  {
+   "name": "Hokka",
+   "x": -75.0,
+   "z": -108.0,
+   "r": 8.0,
+   "count": 1
+  },
+  {
+   "name": "Ortabahçe",
+   "x": 4.0,
+   "z": 12.0,
+   "r": 18.0,
+   "count": 3
+  },
+  {
+   "name": "Kütüphane",
+   "x": 404.0,
+   "z": 440.0,
+   "r": 10.0,
+   "count": 2
+  },
+  {
+   "name": "Büyük Ev",
+   "x": -15.5,
+   "z": -66.0,
+   "r": 8.0,
+   "count": 1
+  },
+  {
+   "name": "Kız yurdu",
+   "x": -179.8,
+   "z": -188.0,
+   "r": 10.0,
+   "count": 2
+  },
+  {
+   "name": "Eskafe",
+   "x": 133.6,
+   "z": 332.0,
+   "r": 8.0,
+   "count": 1
+  },
+  {
+   "name": "B Girişi",
+   "x": -70.0,
+   "z": -462.0,
+   "r": 8.0,
+   "count": 1
+  }
+ ]
+}
