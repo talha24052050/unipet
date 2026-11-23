@@ -119,7 +119,7 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	_add_box_xf(st, xf, Vector3(6.2, 0.35, 4.0), Vector3(-3.8, 0.45, 2.4 + stair_len + 8.2), COL_GREEN_BED)
 	_add_box_xf(st, xf, Vector3(2.4, 0.28, 2.2), Vector3(-5.2, 0.20, 2.4 + stair_len + 3.2), COL_GREEN_BED)
 
-	# Amfi çarpışması (yürünebilir rampa/kutu yerine kenar engeli olmadan merdiven basamak kütlesi)
+	# Amfi + teras + yeşil ada çarpışmaları (merdivenden yukarı yürünüp oturulabilir, içine girilmez)
 	var col: CollisionShape3D = CollisionShape3D.new()
 	col.name = "YildizStoreStairs"
 	var shape: BoxShape3D = BoxShape3D.new()
@@ -127,6 +127,29 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	col.shape = shape
 	col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.825, 1.2))
 	col_body.add_child(col)
+
+	var ramp_col: CollisionShape3D = CollisionShape3D.new()
+	ramp_col.name = "YildizStoreStairRamp"
+	ramp_col.shape = _wedge_shape(w, 1.65, stair_len)
+	ramp_col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 2.4))
+	col_body.add_child(ramp_col)
+
+	# Yeşil peyzaj adaları çarpışması (içine girilmesin)
+	var bed1_col: CollisionShape3D = CollisionShape3D.new()
+	bed1_col.name = "StorePlanter1"
+	var b1s: BoxShape3D = BoxShape3D.new()
+	b1s.size = Vector3(6.8, 0.65, 4.6)
+	bed1_col.shape = b1s
+	bed1_col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(-3.8, 0.325, 2.4 + stair_len + 8.2))
+	col_body.add_child(bed1_col)
+
+	var bed2_col: CollisionShape3D = CollisionShape3D.new()
+	bed2_col.name = "StorePlanter2"
+	var b2s: BoxShape3D = BoxShape3D.new()
+	b2s.size = Vector3(2.4, 0.40, 2.2)
+	bed2_col.shape = b2s
+	bed2_col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(-5.2, 0.20, 2.4 + stair_len + 3.2))
+	col_body.add_child(bed2_col)
 
 	# 3D "★ YTU YILDIZ STORE" cephe tabelası (fotoğraftaki birebir tasarım: solda altın 8 köşeli YTÜ yıldızı,
 	# ortada kalın beyaz YTU, sağda üstte altın YILDIZ + altta lacivert STORE, yatay metal raylar üstünde)
@@ -289,6 +312,24 @@ func _build_yemekhane_front(st: SurfaceTool, gst: SurfaceTool, col_body: StaticB
 	col.shape = shape
 	col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.575, 0.45))
 	col_body.add_child(col)
+
+	var yem_ramp: CollisionShape3D = CollisionShape3D.new()
+	yem_ramp.name = "YemekhaneStairRamp"
+	yem_ramp.shape = _wedge_shape(7.6, 1.15, float(steps) * step_d)
+	yem_ramp.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.9))
+	col_body.add_child(yem_ramp)
+
+
+## Yerel Z=0'da height yüksekliğinde, Z=depth'te Y=0'a inen yürünebilir merdiven rampası çarpışması.
+static func _wedge_shape(width: float, height: float, depth: float) -> ConvexPolygonShape3D:
+	var hw: float = width * 0.5
+	var s: ConvexPolygonShape3D = ConvexPolygonShape3D.new()
+	s.points = PackedVector3Array([
+		Vector3(-hw, 0.0, 0.0), Vector3(hw, 0.0, 0.0),
+		Vector3(-hw, height, 0.0), Vector3(hw, height, 0.0),
+		Vector3(-hw, 0.0, depth), Vector3(hw, 0.0, depth),
+	])
+	return s
 
 
 static func _frame_xform(origin_xz: Vector2, axis_x: Vector2, axis_z: Vector2, y: float) -> Transform3D:

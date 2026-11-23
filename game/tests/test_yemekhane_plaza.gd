@@ -26,7 +26,10 @@ func test_yemekhane_plaza_builds_with_low_draw_calls() -> String:
 		and a101_sign != null and a101_sign.text.contains("A•101")
 		and col_body != null
 		and col_body.get_node_or_null("YildizStoreStairs") != null
+		and col_body.get_node_or_null("YildizStoreStairRamp") != null
+		and col_body.get_node_or_null("StorePlanter1") != null
 		and col_body.get_node_or_null("YemekhaneEntrance") != null
+		and col_body.get_node_or_null("YemekhaneStairRamp") != null
 	)
 	p.free()
 	if not ok:
