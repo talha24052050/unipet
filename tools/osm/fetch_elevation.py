@@ -284,14 +284,25 @@ def main() -> None:
                 flat_count += 1
     print(f"  {flat_count} spor sahası / oyun alanı düzleştirildi")
 
-    # 2) Taşbina (Kışla) + Ortabahçe + dış çevre yolu (path#193 dahil, sahaya bakan batı cephe 18 m pay)
+    # 2) Taşbina (Kışla) + Ortabahçe + dış çevre yolu
+    kisla_h: float | None = None
     for b in greybox.get("buildings", []):
         if b.get("name") == KISLA_NAME:
             kpts = [(float(p[0]), float(p[1])) for p in b.get("points", [])]
             khull = convex_hull(kpts)
-            kh = flatten_polygon(grid, min_x, min_z, STEP_M, khull, pad=20.0, blend=45.0)
-            print(f"  Taşbina (Kışla) + çevre yolu düzleştirildi ({len(khull)} köşe zarf) -> {kh:.1f} m")
+            kisla_h = flatten_polygon(grid, min_x, min_z, STEP_M, khull, pad=20.0, blend=45.0)
+            print(f"  Taşbina (Kışla) + çevre yolu düzleştirildi ({len(khull)} köşe zarf) -> {kisla_h:.1f} m")
             break
+
+    # 3) Yemekhane + Yıldız Store + Hokka + Kayıntı meydanı (Taşbina platosuyla kesintisiz düz bağlantı)
+    yem_pts: list[tuple[float, float]] = []
+    for b in greybox.get("buildings", []):
+        bn = str(b.get("name", ""))
+        if bn in ("Yemekhane", "Yıldız Store", "Hokka", "KAYINTI KAFE"):
+            yem_pts.extend((float(p[0]), float(p[1])) for p in b.get("points", []))
+    if len(yem_pts) >= 3:
+        yh = flatten_polygon(grid, min_x, min_z, STEP_M, convex_hull(yem_pts), pad=16.0, blend=30.0, target_h=kisla_h)
+        print(f"  Yemekhane & Yıldız Store meydanı düzleştirildi -> {yh:.1f} m")
 
     origin_h = sample_bilinear(grid, min_x, min_z, STEP_M, 0.0, 0.0)
     heights: list[float] = []

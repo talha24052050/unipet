@@ -26,6 +26,7 @@
 [ext_resource type="Script" path="res://src/world/love_signs.gd" id="24"]
 [ext_resource type="Script" path="res://src/ui/hud_follow_below.gd" id="25"]
 [ext_resource type="Script" path="res://src/ui/safe_area_hud.gd" id="26"]
+[ext_resource type="Script" path="res://src/world/yemekhane_plaza.gd" id="27"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -330,3 +331,6 @@ player = NodePath("../Player")
 
 [node name="LoveSigns" type="Node3D" parent="."]
 script = ExtResource("24")
+
+[node name="YemekhanePlaza" type="Node3D" parent="."]
+script = ExtResource("27")
