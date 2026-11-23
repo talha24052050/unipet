@@ -1,10 +1,11 @@
 extends Node3D
-## Kampüsteki "I ❤ YTÜ" yazıları (data/love_signs.json): 3D harfler (TextMesh) + kırmızı kalp + alçak kaide.
+## Kampüsteki "I ❤ YTU" yazıları (data/love_signs.json). Talha'nın fotoğrafına göre (2026-11-23): beyaz kalın harfler
+## doğrudan çimde durur, arasında büyük kırmızı kalp; kaide yok.
 ## Fotoğraf çekilecek yer: çarpışma kutusu var, petler içinden geçmez.
 
 const DATA: String = "res://data/love_signs.json"
-const LETTER_H: float = 1.3
-const DEPTH: float = 0.35
+const LETTER_H: float = 1.4
+const DEPTH: float = 0.4
 const WHITE: Color = Color(0.97, 0.97, 0.97)
 const NAVY: Color = Color(0.12, 0.18, 0.42)
 const RED: Color = Color(0.86, 0.12, 0.17)
@@ -19,7 +20,7 @@ static func load_signs() -> Array:
 
 func _ready() -> void:
 	for s: Dictionary in load_signs():
-		var n: Node3D = build_sign(Color.from_string(str(s.get("letters", "")), NAVY))
+		var n: Node3D = build_sign(Color.from_string(str(s.get("letters", "")), WHITE))
 		add_child(n)
 		n.position = Vector3(float(s["x"]), float(s.get("y", 0.0)), float(s["z"]))
 		n.rotation.y = deg_to_rad(float(s.get("yaw_deg", 0.0)))
@@ -78,7 +79,7 @@ static func heart_mesh(size: float, depth: float) -> ArrayMesh:
 
 
 ## "I ❤ YTÜ": tabelanın önü +Z. Toplam genişlik ~5 m.
-static func build_sign(letters: Color = NAVY) -> Node3D:
+static func build_sign(letters: Color = WHITE) -> Node3D:
 	var root: Node3D = Node3D.new()
 	root.name = "ILoveYTU"
 	var base: MeshInstance3D = MeshInstance3D.new()
@@ -89,8 +90,8 @@ static func build_sign(letters: Color = NAVY) -> Node3D:
 	base.position.y = 0.15
 	root.add_child(base)
 	# harfleri yüksekliğe göre ölçekle, kalple birlikte ortalayarak diz (aralık 0.25 m)
-	var parts: Array[MeshInstance3D] = [_text("I", letters), MeshInstance3D.new(), _text("YTÜ", letters)]
-	parts[1].mesh = heart_mesh(LETTER_H * 1.05, DEPTH * 1.2)
+	var parts: Array[MeshInstance3D] = [_text("I", letters), MeshInstance3D.new(), _text("YTU", letters)]
+	parts[1].mesh = heart_mesh(LETTER_H * 1.1, DEPTH * 0.8)
 	parts[1].material_override = _mat(RED)
 	var widths: Array[float] = []
 	for m: MeshInstance3D in parts:
@@ -98,17 +99,18 @@ static func build_sign(letters: Color = NAVY) -> Node3D:
 		if m != parts[1]:
 			m.scale = Vector3.ONE * (LETTER_H / bb.size.y)
 		widths.append(bb.size.x * m.scale.x)
-	var gap: float = 0.25
+	var gap: float = 0.1
 	var total: float = widths[0] + widths[1] + widths[2] + gap * 2.0
 	var x: float = -total * 0.5
 	for k: int in parts.size():
 		var m: MeshInstance3D = parts[k]
 		var bb: AABB = m.mesh.get_aabb()
 		# AABB'nin sol-alt köşesini (x, taban) noktasına getir
-		m.position = Vector3(x - bb.position.x * m.scale.x, 0.3 - bb.position.y * m.scale.y, 0.0)
+		m.position = Vector3(x - bb.position.x * m.scale.x, -bb.position.y * m.scale.y, 0.0)
 		x += widths[k] + gap
 		root.add_child(m)
-	bm.size.x = total + 0.6
+	bm.size.x = total + 0.2
+	base.visible = false  # gerçeğinde kaide yok; kutu sadece çarpışma ölçüsü
 	for n: Node in root.get_children():
 		(n as GeometryInstance3D).visibility_range_end = 220.0
 	var body: StaticBody3D = StaticBody3D.new()
