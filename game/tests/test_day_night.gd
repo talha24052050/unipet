@@ -13,6 +13,9 @@ func test_noon_bright_night_dark() -> String:
 		return "gece loş olmalı: %s" % night
 	if (dusk["light_color"] as Color).g >= (noon["light_color"] as Color).g:
 		return "günbatımı ışığı daha sıcak (turuncu) olmalı"
+	var dawn: Dictionary = DayNight.sample(7.0)
+	if float(dawn["azimuth_deg"]) <= 30.0 or float(dusk["azimuth_deg"]) >= -40.0:
+		return "güneş doğudan (+azimut) doğup batı-güneybatıdan (-azimut, Stadyum yönü) batmalı: dawn=%f dusk=%f" % [float(dawn["azimuth_deg"]), float(dusk["azimuth_deg"])]
 	return ""
 
 
