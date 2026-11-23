@@ -182,3 +182,20 @@ func test_props_and_lights_follow_terrain_height() -> String:
 	if not is_equal_approx(kiosk_y, 7.5):
 		return "Büfe arazi yüksekliğini takip etmiyor: %f" % kiosk_y
 	return ""
+
+
+func test_prebaked_kampus_navmesh_has_elevation() -> String:
+	var nm: NavigationMesh = load("res://data/zones/kampus_navmesh.res") as NavigationMesh
+	if nm == null or nm.get_polygon_count() == 0:
+		return "kampus_navmesh.res yüklenemedi veya boş"
+	var verts: PackedVector3Array = nm.get_vertices()
+	if verts.is_empty():
+		return "kampus_navmesh.res köşesiz"
+	var min_y: float = INF
+	var max_y: float = -INF
+	for v: Vector3 in verts:
+		min_y = minf(min_y, v.y)
+		max_y = maxf(max_y, v.y)
+	if (max_y - min_y) < 5.0:
+		return "kampus_navmesh.res hâlâ düz görünüyor (Y aralığı: %.2f..%.2f)" % [min_y, max_y]
+	return ""

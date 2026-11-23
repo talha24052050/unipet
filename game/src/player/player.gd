@@ -58,7 +58,10 @@ func _exit_tree() -> void:
 
 
 func _ready() -> void:
-	floor_snap_length = Config.PLAYER_FLOOR_SNAP
+	floor_snap_length = maxf(Config.PLAYER_FLOOR_SNAP, 0.4)
+	floor_stop_on_slope = true
+	floor_constant_speed = true
+	floor_max_angle = deg_to_rad(45.0)
 	# Bölgenin doğuş noktası (harita ekranından gelindiyse farklı bölge).
 	if Services.pending_teleport != Vector2.INF:
 		position = Vector3(Services.pending_teleport.x, position.y, Services.pending_teleport.y)
