@@ -35,6 +35,10 @@ func build() -> void:
 	_build_ilhan_varank_library(st, col_body)
 	_build_merkez_library(st, col_body)
 	_build_fen_edebiyat(st, col_body)
+	_build_egitim_fakultesi(st, col_body)
+	_build_yabanci_diller(st, col_body)
+	_build_ring_bus_stop(st, col_body)
+	_build_metro_gate_b(st, col_body)
 
 	st.generate_normals()
 	var mesh: ArrayMesh = st.commit()
@@ -160,6 +164,88 @@ func _build_fen_edebiyat(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	_add_box_xf(st, xf, Vector3(6.2, 0.08, 0.15), Vector3(0.0, 2.15, 0.22), COL_WHITE)
 	_add_3d_sign(xf, Vector3(0.0, 3.48, 0.34), "FenEdebiyatSign", "FEN-EDEBİYAT FAKÜLTESİ", 0.34, COL_ANTHRACITE)
 	_build_ytu_totem(st, col_body, mid + out * 8.5 + right_dir * 5.2, right_dir, out, "FenEdebiyatTotem", "FEN-EDEBİYAT\nFAKÜLTESİ\n\n• Matematik • Fizik\n• Kimya • İstatistik\n• Moleküler Biyoloji")
+
+
+## 5) Eğitim Fakültesi (b#94): giriş cephesi, çift cam kapı, 3D tabela ve YTÜ fakülte totemi.
+func _build_egitim_fakultesi(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(-239.0, -269.9)
+	var out: Vector2 = Vector2(0.38, 0.92).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_box_xf(st, xf, Vector3(11.5, 0.10, 6.0), Vector3(0.0, 0.05, 3.0), COL_PAVER)
+	_add_box_xf(st, xf, Vector3(10.2, 1.05, 0.30), Vector3(0.0, 3.45, 0.16), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(7.0, 2.85, 0.20), Vector3(0.0, 1.425, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.4, 2.65, 0.10), Vector3(0.0, 1.40, 0.20), COL_GLASS)
+	for mx: float in [-1.8, 0.0, 1.8]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.65, 0.15), Vector3(mx, 1.40, 0.22), COL_WHITE)
+	_add_box_xf(st, xf, Vector3(6.4, 0.08, 0.15), Vector3(0.0, 2.15, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.48, 0.34), "EgitimFakSign", "EĞİTİM FAKÜLTESİ", 0.36, COL_ANTHRACITE)
+	_build_ytu_totem(st, col_body, mid + out * 9.0 + right_dir * 5.4, right_dir, out, "EgitimFakTotem", "EĞİTİM FAKÜLTESİ\n\n• Bilgisayar ve Öğretim\n• Matematik ve Fen\n• Yabancı Diller Eğitimi")
+	_add_bench(st, col_body, mid + out * 5.2 - right_dir * 4.5, right_dir, out)
+
+
+## 6) Yabancı Diller Yüksekokulu (b#80): giriş kanopisi, 3D tabela ve YTÜ totemi.
+func _build_yabanci_diller(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(177.3, 470.2)
+	var out: Vector2 = Vector2(-0.78, -0.63).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_box_xf(st, xf, Vector3(12.0, 0.12, 6.5), Vector3(0.0, 0.06, 3.3), COL_PAVER)
+	_add_box_xf(st, xf, Vector3(11.0, 1.05, 0.32), Vector3(0.0, 3.65, 0.18), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(8.8, 0.18, 2.8), Vector3(0.0, 3.25, 1.45), COL_ANTHRACITE)
+	for sx: float in [-3.8, 3.8]:
+		_add_box_xf(st, xf, Vector3(0.22, 3.25, 0.22), Vector3(sx, 1.625, 2.65), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(7.0, 2.95, 0.20), Vector3(0.0, 1.475, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.4, 2.75, 0.10), Vector3(0.0, 1.45, 0.20), COL_GLASS)
+	for mx: float in [-1.8, 0.0, 1.8]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.75, 0.15), Vector3(mx, 1.45, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.68, 0.36), "YabanciDillerSign", "YABANCI DİLLER YÜKSEKOKULU", 0.32, COL_ANTHRACITE)
+	_build_ytu_totem(st, col_body, mid + out * 9.5 + right_dir * 5.2, right_dir, out, "YabanciDillerTotem", "YABANCI DİLLER\nYÜKSEKOKULU\n\n• İngilizce Hazırlık\n• Modern Diller")
+
+
+## 7) Ring ve Otobüs Peronu (210.0, -95.0): modern cam-çelik durak kabini, bekleme bankı ve ring tabelası.
+func _build_ring_bus_stop(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var wp: Vector2 = Vector2(210.0, -95.0)
+	var out: Vector2 = Vector2(-0.70, 0.71).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var by: float = TerrainHeight.active_height(wp.x, wp.y)
+	var xf: Transform3D = _frame_xform(wp, right_dir, out, by)
+
+	# Beton peron tabanı + modern koyu çelik durak çatısı + arka cam panel
+	_add_box_xf(st, xf, Vector3(8.5, 0.16, 3.4), Vector3(0.0, 0.08, 0.0), COL_PAVER)
+	_add_box_xf(st, xf, Vector3(6.6, 0.14, 2.2), Vector3(0.0, 2.75, 0.0), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.4, 2.35, 0.10), Vector3(0.0, 1.38, -0.95), COL_GLASS)
+	for px: float in [-3.1, 0.0, 3.1]:
+		_add_box_xf(st, xf, Vector3(0.14, 2.65, 0.14), Vector3(px, 1.42, -0.95), COL_ANTHRACITE)
+	# Durak içi uzun ahşap bekleme bankı
+	_add_box_xf(st, xf, Vector3(4.8, 0.10, 0.50), Vector3(0.0, 0.56, -0.55), COL_WOOD)
+	for lx: float in [-1.8, 0.0, 1.8]:
+		_add_box_xf(st, xf, Vector3(0.10, 0.42, 0.42), Vector3(lx, 0.34, -0.55), COL_ANTHRACITE)
+	# Sarı-mavi Ring Durağı direği + levha
+	_add_box_xf(st, xf, Vector3(0.12, 3.1, 0.12), Vector3(3.8, 1.65, 0.6), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(0.95, 1.15, 0.14), Vector3(3.8, 2.55, 0.6), COL_YTU_BLUE)
+	_add_box_xf(st, xf, Vector3(0.95, 0.28, 0.16), Vector3(3.8, 3.18, 0.6), COL_GOLD)
+	_add_label(xf, Vector3(3.8, 2.58, 0.69), "RingStopSign", "RİNG DURAĞI\nDavutpaşa\nMetro ↔ Kampüs", 26, 0.0028, COL_WHITE, Color(0.05, 0.10, 0.25))
+
+	var col: CollisionShape3D = CollisionShape3D.new()
+	col.name = "RingStopCollider"
+	var sh: BoxShape3D = BoxShape3D.new()
+	sh.size = Vector3(6.6, 2.8, 1.1)
+	col.shape = sh
+	col.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.4, -0.6))
+	col_body.add_child(col)
+
+
+## 8) B Girişi — Metro Kapısı karşılama totemi (mevcut kapı takının sağ yanında, çakışmadan konumlanır).
+func _build_metro_gate_b(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var wp: Vector2 = Vector2(-58.5, -458.0)
+	var out: Vector2 = Vector2(-0.35, 0.94).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	_build_ytu_totem(st, col_body, wp, right_dir, out, "MetroGateBSign", "DAVUTPAŞA KAMPÜSÜ\nB KAPISI (METRO)\n\nHoş Geldiniz")
 
 
 func _build_ytu_totem(st: SurfaceTool, col_body: StaticBody3D, wp: Vector2, right_dir: Vector2, out: Vector2, node_name: String, body_text: String) -> void:
