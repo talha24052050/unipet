@@ -12,9 +12,11 @@ const STORE_P3: Vector2 = Vector2(-113.01, -47.20)  # Güney (Amfi merdiven kö�
 const YEM_FRONT_MID: Vector2 = Vector2(-83.58, -77.76)
 const YEM_FRONT_OUT: Vector2 = Vector2(0.781, 0.624)
 
-const COL_PLAZA_LIGHT: Color = Color(0.50, 0.52, 0.53)
-const COL_PLAZA_MID: Color = Color(0.42, 0.44, 0.46)
-const COL_CONCRETE: Color = Color(0.66, 0.66, 0.64)
+const COL_PLAZA_LIGHT: Color = Color(0.38, 0.40, 0.42)
+const COL_PLAZA_MID: Color = Color(0.32, 0.34, 0.36)
+const COL_PLAZA_STRIPE: Color = Color(0.22, 0.24, 0.27)
+const COL_WOOD_SLAT: Color = Color(0.54, 0.36, 0.21)
+const COL_CONCRETE: Color = Color(0.62, 0.62, 0.60)
 const COL_SEAT_STEP: Color = Color(0.46, 0.47, 0.48)
 const COL_ANTHRACITE: Color = Color(0.14, 0.16, 0.19)
 const COL_OPENING_DARK: Color = Color(0.10, 0.12, 0.15)
@@ -87,8 +89,9 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, across, out, base_y)
 
-	# Ön cephe temiz beyaz sıvalı alınlık (üstteki pencere bandını kapatır) + 3 koyu giriş açıklığı
+	# Ön cephe temiz beyaz sıvalı alınlık + üstte ince koyu gri harpuşta şeridi
 	_add_box_xf(st, xf, Vector3(w + 0.1, 3.65, 0.14), Vector3(0.0, 1.65 + 1.825, 0.04), COL_WHITE)
+	_add_box_xf(st, xf, Vector3(w + 0.22, 0.14, 0.26), Vector3(0.0, 5.28, 0.06), COL_ANTHRACITE)
 	# Üst beyaz giriş terası (14.1 m x 2.4 m x 1.65 m yükseklik)
 	_add_box_xf(st, xf, Vector3(w, 1.65, 2.4), Vector3(0.0, 0.825, 1.2), COL_CONCRETE)
 	# 3 giriş açıklığı: y = 1.65..3.85 (tabelanın altında 0.45 m temiz beyaz boşluk kalır!)
@@ -96,7 +99,7 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 		var ow: float = 4.2 if ox == 0.0 else 3.0
 		_add_box_xf(st, xf, Vector3(ow, 2.20, 0.18), Vector3(ox, 1.65 + 1.10, 0.10), COL_OPENING_DARK)
 
-	# 8 basamaklı geniş amfi-oturma merdiveni (öğrencilerin oturduğu alan)
+	# 8 basamaklı geniş amfi-oturma merdiveni (oturma sıralarında sıcak ahşap kaplama şeritleri)
 	var steps: int = 8
 	var step_d: float = 0.65
 	var step_h: float = 1.65 / float(steps)
@@ -105,6 +108,10 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 		var z_c: float = 2.4 + float(i) * step_d + step_d * 0.5
 		var col: Color = COL_SEAT_STEP if (i % 2 == 1) else COL_CONCRETE
 		_add_box_xf(st, xf, Vector3(w, h, step_d), Vector3(0.0, h * 0.5, z_c), col)
+		if i % 2 == 0:
+			# Öğrencilerin oturduğu ahşap amfi basamak kaplaması (sağ ve sol oturma kanatları, orta geçiş boş)
+			for sx_wood: float in [-4.4, 4.4]:
+				_add_box_xf(st, xf, Vector3(4.6, 0.04, step_d * 0.84), Vector3(sx_wood, h + 0.02, z_c), COL_WOOD_SLAT)
 	# İki yanda metal korkuluk
 	var stair_len: float = float(steps) * step_d
 	for sx: float in [-1.0, 1.0]:
@@ -271,8 +278,39 @@ func _build_yemekhane_front(st: SurfaceTool, gst: SurfaceTool, col_body: StaticB
 	var base_y: float = TerrainHeight.active_height(YEM_FRONT_MID.x, YEM_FRONT_MID.y)
 	var xf: Transform3D = _frame_xform(YEM_FRONT_MID, across, out, base_y)
 
-	# Geniş açık gri taş meydan (Yemekhane önü + Yıldız Store tarafına kesintisiz bağlantı)
+	# Geniş gri taş meydan + koyu antrasit mimari taş şerit ızgarası + giriş ekseni bordürü
 	_add_box_xf(st, xf, Vector3(44.0, 0.12, 22.0), Vector3(-4.0, 0.06, 11.2), COL_PLAZA_LIGHT)
+	for sz: float in [4.5, 9.5, 14.5, 19.5]:
+		_add_box_xf(st, xf, Vector3(44.0, 0.02, 0.35), Vector3(-4.0, 0.13, sz), COL_PLAZA_STRIPE)
+	for sx: float in [-22.0, -14.0, -6.0, 6.0, 14.0]:
+		_add_box_xf(st, xf, Vector3(0.35, 0.02, 22.0), Vector3(sx, 0.13, 11.2), COL_PLAZA_STRIPE)
+	# Giriş ekseni vurgulu taş yürüyüş halısı
+	_add_box_xf(st, xf, Vector3(7.8, 0.025, 18.0), Vector3(0.0, 0.132, 12.8), COL_PLAZA_MID)
+	for bx_edge: float in [-4.05, 4.05]:
+		_add_box_xf(st, xf, Vector3(0.28, 0.03, 18.0), Vector3(bx_edge, 0.135, 12.8), COL_PLAZA_STRIPE)
+
+	# Meydanda modern ahşap-çelik kampüs bankları (giriş yolunun iki yanında, oturma/dinlenme alanı)
+	for bx_bench: float in [-7.5, -13.5, 7.5]:
+		for bz_bench: float in [7.2, 13.8]:
+			_add_box_xf(st, xf, Vector3(2.2, 0.10, 0.55), Vector3(bx_bench, 0.52, bz_bench), COL_WOOD_SLAT)
+			_add_box_xf(st, xf, Vector3(2.2, 0.42, 0.08), Vector3(bx_bench, 0.78, bz_bench - 0.24), COL_WOOD_SLAT)
+			for lx: float in [-0.85, 0.85]:
+				_add_box_xf(st, xf, Vector3(0.08, 0.46, 0.48), Vector3(bx_bench + lx, 0.28, bz_bench), COL_ANTHRACITE)
+			var bcol: CollisionShape3D = CollisionShape3D.new()
+			var bsh: BoxShape3D = BoxShape3D.new()
+			bsh.size = Vector3(2.2, 0.9, 0.65)
+			bcol.shape = bsh
+			bcol.transform = xf * Transform3D(Basis.IDENTITY, Vector3(bx_bench, 0.45, bz_bench))
+			col_body.add_child(bcol)
+
+	# Giriş sundurması üstünde temiz 3D "YEMEKHANE" tabelası
+	_add_box_xf(st, xf, Vector3(6.8, 0.82, 0.16), Vector3(0.0, 5.55, 0.12), COL_WHITE)
+	var yem_sign_root: Node3D = Node3D.new()
+	yem_sign_root.name = "YemekhaneSign"
+	yem_sign_root.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 5.55, 0.22))
+	add_child(yem_sign_root)
+	var yem_sign: MeshInstance3D = _make_3d_text("YEMEKHANE", 0.44, 0.10, COL_ANTHRACITE, 0.4)
+	yem_sign_root.add_child(yem_sign)
 
 	# Giriş cam kapısı + beyaz çerçeve + alüminyum dikey kayıtlar + iki yandaki dikey cam merdiven boşlukları
 	_add_box_xf(st, xf, Vector3(7.4, 3.5, 0.24), Vector3(0.0, 1.15 + 1.75, 0.12), COL_WHITE)
