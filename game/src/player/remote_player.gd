@@ -7,8 +7,8 @@ const PetVisual := preload("res://src/characters/pet_visual.gd")
 const INTERPOLATION_DELAY: float = 0.1  # 100 ms geriden oynatma
 const TELEPORT_DISTANCE: float = 5.0    # 5 metreden büyük sıçramalarda ışınlanma
 const MAX_BUFFER_SIZE: int = 32
-const NAME_LABEL_OFFSET_Y: float = 0.15
-const CHAT_BUBBLE_OFFSET_Y: float = 0.35
+const NAME_LABEL_OFFSET_Y: float = 0.16
+const CHAT_BUBBLE_OFFSET_Y: float = 0.52
 
 @export var player_id: String = ""
 var character_id: StringName = &""

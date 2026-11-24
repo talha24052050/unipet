@@ -8,9 +8,17 @@ const Stardust := preload("res://src/collect/stardust_rules.gd")
 const WALLET_PATH: String = "user://wallet.cfg"
 const MinigameRules := preload("res://src/minigame/minigame_rules.gd")
 const RaceRules := preload("res://src/minigame/race_rules.gd")
+const ChatFilter := preload("res://src/net/chat_filter.gd")
+const LocalProfile := preload("res://src/core/local_profile.gd")
+const SOCIAL_PATH: String = "user://social.cfg"
 
 var _zone: String = ""
 var _player_id: String = "local"
+var _display_name: String = ""
+var _pet_id: String = "mushnub"
+var _active_cafe: String = ""
+var _groups: Array = []
+var _next_gid: int = 1
 var _last_pos: Vector3 = Vector3.ZERO
 ## Tek oyunculu bakım: cihazda saklanır, aynı kurallar.
 var _care: Dictionary = {}
@@ -23,10 +31,15 @@ func connect_to_server(_session_token: String) -> void:
 
 func join_zone(zone_id: String) -> void:
 	_zone = "%s-1" % zone_id
+	var prof: RefCounted = LocalProfile.load_or_default()
+	_display_name = str(prof.get("display_name"))
+	_pet_id = str(prof.get("pet_id"))
+	_social_load()
 	room_joined.emit.call_deferred(_zone)
 	_care_load()
 	care_updated.emit.call_deferred(CareRules.decay(_care, _now()), true, "")
 	request_wallet()
+	_emit_full_social.call_deferred()
 
 
 func leave_zone() -> void:
@@ -183,11 +196,184 @@ func _care_save() -> void:
 	cfg.save(CARE_PATH)
 
 
+func send_profile(pet_id: StringName, _accessories: Dictionary, display_name: String = "") -> void:
+	_pet_id = str(pet_id)
+	if not display_name.is_empty():
+		_display_name = display_name
+
+
 func send_chat(message: ChatMessage) -> void:
-	if message.kind == ChatMessage.Kind.FREE and not Config.FREE_CHAT_ENABLED:
-		return
+	if message.kind == ChatMessage.Kind.FREE:
+		if not Config.FREE_CHAT_ENABLED:
+			return
+		var check: Dictionary = ChatFilter.sanitize_free_text(message.payload)
+		if not bool(check.get("ok", false)):
+			social_updated.emit({"type": "toast", "ok": false, "text": str(check.get("reason", "Mesaj gönderilemedi."))})
+			return
+		message.payload = str(check["text"])
+	if message.channel.begins_with("dm:"):
+		var target_id: String = message.channel.trim_prefix("dm:")
+		if not _is_friend_offline(target_id):
+			social_updated.emit({"type": "toast", "ok": false, "text": "Özel mesaj göndermek için önce arkadaş olmalısınız."})
+			return
 	message.sender_id = _player_id
+	if message.sender_name.is_empty():
+		message.sender_name = _display_name if not _display_name.is_empty() else "Sen"
 	chat_received.emit(message)
+
+
+func send_social(payload: Dictionary) -> void:
+	_social_load()
+	var act: String = str(payload.get("act", ""))
+	var my_name: String = _display_name if not _display_name.is_empty() else "Sen"
+	match act:
+		"sync":
+			_emit_full_social()
+		"enter_cafe":
+			_active_cafe = str(payload.get("cafe", "")).strip_edges()
+			_emit_full_social()
+		"leave_cafe":
+			_active_cafe = ""
+			_emit_full_social()
+		"create_group":
+			var chk: Dictionary = ChatFilter.sanitize_free_text(str(payload.get("title", "")), ChatFilter.MAX_GROUP_NAME_LEN)
+			if not bool(chk.get("ok", false)):
+				social_updated.emit({"type": "toast", "ok": false, "text": str(chk.get("reason", "Geçersiz grup adı."))})
+				return
+			var gid: String = "g%d" % _next_gid
+			_next_gid += 1
+			_remove_from_all_groups(_player_id)
+			_groups.append({
+				"id": gid,
+				"title": str(chk["text"]),
+				"owner": _player_id,
+				"owner_name": my_name,
+				"x": snappedf(_last_pos.x, 0.1),
+				"z": snappedf(_last_pos.z, 0.1),
+				"members": [{"id": _player_id, "name": my_name}],
+			})
+			_emit_full_social({"joined_group": gid})
+		"join_group":
+			var jid: String = str(payload.get("id", ""))
+			_remove_from_all_groups(_player_id)
+			for g: Dictionary in _groups:
+				if str(g.get("id", "")) == jid:
+					var mems: Array = g.get("members", [])
+					mems.append({"id": _player_id, "name": my_name})
+					g["members"] = mems
+					_emit_full_social({"joined_group": jid})
+					return
+			_emit_full_social()
+		"leave_group":
+			_remove_from_all_groups(_player_id)
+			_emit_full_social({"left_group": true})
+		"friend_req":
+			var tid: String = str(payload.get("to", "")).strip_edges()
+			var tname: String = str(payload.get("name", tid)).strip_edges()
+			if tid.is_empty() or tid == _player_id:
+				return
+			if _is_friend_offline(tid):
+				return
+			var out_list: Array = social_state.get("outgoing", [])
+			for item: Dictionary in out_list:
+				if str(item.get("id", "")) == tid:
+					return
+			out_list.append({"id": tid, "name": tname if not tname.is_empty() else tid})
+			social_state["outgoing"] = out_list
+			_social_save()
+			_emit_full_social({"toast": "Arkadaşlık isteği gönderildi!"})
+		"friend_accept":
+			var aid: String = str(payload.get("from", "")).strip_edges()
+			var inc: Array = social_state.get("incoming", [])
+			var found_name: String = aid
+			var next_inc: Array = []
+			for item: Dictionary in inc:
+				if str(item.get("id", "")) == aid:
+					found_name = str(item.get("name", aid))
+				else:
+					next_inc.append(item)
+			social_state["incoming"] = next_inc
+			if not _is_friend_offline(aid):
+				var fr: Array = social_state.get("friends", [])
+				fr.append({"id": aid, "name": found_name})
+				social_state["friends"] = fr
+			_social_save()
+			_emit_full_social({"toast": "%s ile arkadaş oldunuz!" % found_name})
+		"friend_decline":
+			var did: String = str(payload.get("from", "")).strip_edges()
+			var d_next: Array = []
+			for item: Dictionary in social_state.get("incoming", []):
+				if str(item.get("id", "")) != did:
+					d_next.append(item)
+			social_state["incoming"] = d_next
+			_social_save()
+			_emit_full_social()
+		"friend_remove":
+			var rid: String = str(payload.get("id", "")).strip_edges()
+			var r_next: Array = []
+			for item: Dictionary in social_state.get("friends", []):
+				if str(item.get("id", "")) != rid:
+					r_next.append(item)
+			social_state["friends"] = r_next
+			_social_save()
+			_emit_full_social()
+
+
+func _is_friend_offline(uid: String) -> bool:
+	for item: Dictionary in social_state.get("friends", []):
+		if str(item.get("id", "")) == uid:
+			return true
+	return false
+
+
+func _remove_from_all_groups(uid: String) -> void:
+	var kept: Array = []
+	for g: Dictionary in _groups:
+		var mems: Array = []
+		for m: Dictionary in g.get("members", []):
+			if str(m.get("id", "")) != uid:
+				mems.append(m)
+		if not mems.is_empty():
+			g["members"] = mems
+			kept.append(g)
+	_groups = kept
+
+
+func _social_load() -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	if cfg.load(SOCIAL_PATH) == OK:
+		social_state["friends"] = cfg.get_value("social", "friends", [])
+		social_state["incoming"] = cfg.get_value("social", "incoming", [])
+		social_state["outgoing"] = cfg.get_value("social", "outgoing", [])
+
+
+func _social_save() -> void:
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("social", "friends", social_state.get("friends", []))
+	cfg.set_value("social", "incoming", social_state.get("incoming", []))
+	cfg.set_value("social", "outgoing", social_state.get("outgoing", []))
+	cfg.save(SOCIAL_PATH)
+
+
+func _emit_full_social(extra: Dictionary = {}) -> void:
+	var cafes_map: Dictionary = {}
+	if not _active_cafe.is_empty():
+		var my_name: String = _display_name if not _display_name.is_empty() else "Sen"
+		cafes_map[_active_cafe] = [{"id": _player_id, "name": my_name, "pet": _pet_id}]
+	var pkt: Dictionary = {
+		"type": "social_state",
+		"friends": social_state.get("friends", []),
+		"incoming": social_state.get("incoming", []),
+		"outgoing": social_state.get("outgoing", []),
+		"cafes": cafes_map,
+		"groups": _groups.duplicate(true),
+	}
+	for k: Variant in extra:
+		pkt[k] = extra[k]
+	if extra.has("toast"):
+		pkt["ok"] = true
+		pkt["text"] = extra["toast"]
+	_apply_social_packet(pkt)
 
 
 func local_player_id() -> String:

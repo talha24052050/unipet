@@ -67,4 +67,4 @@ func _update_height() -> void:
 	var p: Node = get_parent()
 	if p != null and "visual" in p and p.visual != null and p.visual.has_method("footprint"):
 		var fp: Vector2 = p.visual.footprint()
-		position.y = fp.y + 0.35
+		position.y = fp.y + 0.52

@@ -14,6 +14,7 @@ const OP_WALLET: int = 7
 const OP_COLLECT: int = 8
 const OP_MINIGAME: int = 9
 const OP_RACE: int = 10
+const OP_SOCIAL: int = 11
 
 var host: String = "127.0.0.1"
 var port: int = 7350
@@ -121,7 +122,16 @@ func send_state(state: Dictionary) -> void:
 func send_chat(message: ChatMessage) -> void:
 	if message.kind == ChatMessage.Kind.FREE and not Config.FREE_CHAT_ENABLED:
 		return
-	_send_match_data(OP_CHAT, {"k": int(message.kind), "p": message.payload})
+	var pkt: Dictionary = {
+		"k": int(message.kind),
+		"p": message.payload,
+		"ch": message.channel if not message.channel.is_empty() else "campus",
+	}
+	if message.has_pin:
+		pkt["pl"] = message.pin_place
+		pkt["px"] = snappedf(message.pin_pos.x, 0.1)
+		pkt["pz"] = snappedf(message.pin_pos.y, 0.1)
+	_send_match_data(OP_CHAT, pkt)
 
 
 func send_profile(pet_id: StringName, accessories: Dictionary, display_name: String = "") -> void:
@@ -145,6 +155,10 @@ func send_minigame_result(game: String, score: int) -> void:
 
 func send_race(act: String, i: int = 0) -> void:
 	_send_match_data(OP_RACE, {"act": act, "i": i})
+
+
+func send_social(payload: Dictionary) -> void:
+	_send_match_data(OP_SOCIAL, payload)
 
 
 func request_wallet() -> void:
@@ -234,7 +248,21 @@ func _handle_match_data(md: Dictionary) -> void:
 			var k: int = int(d.get("k", -1))
 			if k < 0 or k > ChatMessage.Kind.FREE:
 				return
-			chat_received.emit(ChatMessage.from_dict({"kind": k, "payload": str(d.get("p", "")), "sender_id": str(d.get("s", ""))}))
+			var cm: Dictionary = {
+				"kind": k,
+				"payload": str(d.get("p", "")),
+				"sender_id": str(d.get("s", "")),
+				"sender_name": str(d.get("sn", "")),
+				"channel": str(d.get("ch", "campus")),
+			}
+			if d.has("px") and d.has("pz"):
+				cm["has_pin"] = true
+				cm["pin_place"] = str(d.get("pl", "Kampüs"))
+				cm["pin_x"] = float(d.get("px", 0.0))
+				cm["pin_z"] = float(d.get("pz", 0.0))
+			chat_received.emit(ChatMessage.from_dict(cm))
+		OP_SOCIAL:
+			_apply_social_packet(d)
 		OP_PROFILE:
 			player_profile.emit(str(d.get("id", "")), decode_profile(d))
 		OP_WALLET:

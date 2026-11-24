@@ -18,6 +18,16 @@ shape = SubResource("shape")
 [node name="PetVisual" type="Node3D" parent="."]
 script = ExtResource("2")
 
+[node name="NameLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+billboard = 1
+double_sided = false
+modulate = Color(0.96, 0.98, 1, 1)
+outline_modulate = Color(0.06, 0.09, 0.16, 0.94)
+font_size = 28
+outline_size = 6
+text = ""
+
 [node name="NavAgent" type="NavigationAgent3D" parent="."]
 path_desired_distance = 0.4
 target_desired_distance = 0.3

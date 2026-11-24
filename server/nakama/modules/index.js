@@ -28,6 +28,7 @@ var OP_WALLET = 7;   // s→c {dust, owned:[...], points:[i...], got}  (sadece o
 var OP_COLLECT = 8;  // c→s {i}  yıldız tozu topla → OP_WALLET
 var OP_MINIGAME = 9; // c→s {game, score}  mini oyun bitti → OP_WALLET (reward = verilen toz)
 var OP_RACE = 10;    // c→s {act:"join"|"leave"|"cp", i}   s→c yarış görünümü (odadaki herkese; raceView)
+var OP_SOCIAL = 11;  // c→s/s→c kafe salonları, kalabalık gruplar, arkadaşlık & istek kutusu
 
 // ---- bakım kuralları (pet_care_rules.gd ile aynı; test_care.gd / module.test.js aynı örnekler)
 var CARE_MAX = 100;
@@ -448,6 +449,125 @@ function cleanName(raw) {
   return NAME_PATTERN.test(n) && !isOffensive(n) ? n : "";
 }
 
+function cleanFreeChat(raw, maxLen) {
+  var lim = maxLen || 80;
+  var s = String(raw || "").replace(/[\x00-\x1F\x7F]/g, "").replace(/\s+/g, " ").trim().substring(0, lim);
+  if (!s || isOffensive(s)) return "";
+  if (/(.)\1{7,}/.test(s.replace(/\s/g, ""))) return "";
+  return s;
+}
+
+var VALID_CAFES = ["hokka", "kayinti_kafe", "buyuk_ev", "yemekhane", "yildiz_cafe", "eskafe", "academic_lounge"];
+var SOCIAL_COLLECTION = "social";
+var SOCIAL_KEY = "social_friends";
+
+function socialLoad(nk, userId) {
+  var objs = nk.storageRead([{ collection: SOCIAL_COLLECTION, key: SOCIAL_KEY, userId: userId }]);
+  var v = (objs && objs.length > 0 && objs[0].value) ? objs[0].value : {};
+  return {
+    name: String(v.name || ""),
+    friends: (v.friends || []).slice(),
+    incoming: (v.incoming || []).slice(),
+    outgoing: (v.outgoing || []).slice()
+  };
+}
+
+function socialSave(nk, userId, doc) {
+  nk.storageWrite([{
+    collection: SOCIAL_COLLECTION,
+    key: SOCIAL_KEY,
+    userId: userId,
+    value: doc,
+    permissionRead: 1,
+    permissionWrite: 0
+  }]);
+}
+
+function hasUserEntry(arr, uid) {
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] && arr[i].id === uid) return true;
+  }
+  return false;
+}
+
+function removeUserEntry(arr, uid) {
+  var out = [];
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] && arr[i].id !== uid) out.push(arr[i]);
+  }
+  return out;
+}
+
+function areFriends(nk, uidA, uidB) {
+  if (!uidA || !uidB || uidA === uidB) return false;
+  var doc = socialLoad(nk, uidA);
+  return hasUserEntry(doc.friends, uidB);
+}
+
+function cafeMap(state) {
+  var out = {};
+  for (var id in state.players) {
+    var p = state.players[id];
+    if (p.cafe) {
+      out[p.cafe] = out[p.cafe] || [];
+      out[p.cafe].push({ id: id, name: p.name || id.substring(0, 6), pet: p.pet || "mushnub" });
+    }
+  }
+  return out;
+}
+
+function groupList(state) {
+  var list = [];
+  var gs = state.groups || {};
+  for (var gid in gs) {
+    var g = gs[gid];
+    var mems = [];
+    for (var i = 0; i < g.members.length; i++) {
+      var mid = g.members[i];
+      var mp = state.players[mid];
+      if (mp) mems.push({ id: mid, name: mp.name || mid.substring(0, 6) });
+    }
+    if (mems.length > 0) {
+      list.push({ id: g.id, title: g.title, owner: g.owner, owner_name: g.ownerName, x: g.x, z: g.z, members: mems });
+    }
+  }
+  return list;
+}
+
+function groupLeaveAll(state, uid) {
+  var gs = state.groups || {};
+  var changed = false;
+  for (var gid in gs) {
+    var g = gs[gid];
+    var idx = g.members.indexOf(uid);
+    if (idx >= 0) {
+      g.members.splice(idx, 1);
+      changed = true;
+      if (g.members.length === 0) delete gs[gid];
+      else if (g.owner === uid) g.owner = g.members[0];
+    }
+  }
+  return changed;
+}
+
+function sendSocialStateTo(nk, dispatcher, state, uid, extra) {
+  var pl = state.players[uid];
+  if (!pl || !pl.presence) return;
+  var doc = socialLoad(nk, uid);
+  var pkt = {
+    type: "social_state",
+    friends: doc.friends,
+    incoming: doc.incoming,
+    outgoing: doc.outgoing,
+    cafes: cafeMap(state),
+    groups: groupList(state)
+  };
+  if (extra) {
+    for (var k in extra) pkt[k] = extra[k];
+  }
+  dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify(pkt), [pl.presence], null, true);
+}
+
 function env(ctx, key, fallback) {
   var v = ctx.env && ctx.env[key];
   return v === undefined || v === "" ? fallback : v;
@@ -566,7 +686,16 @@ function matchInit(ctx, logger, nk, params) {
   var zone = params.zone;
   var label = JSON.stringify({ zone: zone });
   return {
-    state: { zone: zone, players: {}, emptyTicks: 0, cap: capacity(ctx), freeChat: env(ctx, "UNIPET_FREE_CHAT", "false") === "true", race: raceNew() },
+    state: {
+      zone: zone,
+      players: {},
+      emptyTicks: 0,
+      cap: capacity(ctx),
+      freeChat: env(ctx, "UNIPET_FREE_CHAT", "true") !== "false",
+      race: raceNew(),
+      groups: {},
+      nextGroupId: 1
+    },
     tickRate: TICK_RATE,
     label: label
   };
@@ -586,7 +715,7 @@ function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, me
 function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
   for (var i = 0; i < presences.length; i++) {
     var p = presences[i];
-    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", lastChat: 0 };
+    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", cafe: "", lastChat: 0 };
     state.players[p.userId].presence = p;
     // Efsanevi pet kilitleri: kapalı testte Kutbi hediye; oyuncuya güncel liste
     var fresh = env(ctx, "UNIPET_CLOSED_TEST", "false") === "true" ? unlocksGrant(nk, p.userId, ["kutbi"]) : [];
@@ -607,15 +736,25 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     var careState = rec ? careDecay(rec.state, nowS) : careNew(nowS);
     if (!rec) careSave(nk, p.userId, { state: careState, last: {} });
     dispatcher.broadcastMessage(OP_CARE, JSON.stringify({ ok: true, reason: "", state: careState }), [p], null, true);
+    sendSocialStateTo(nk, dispatcher, state, p.userId);
   }
   state.emptyTicks = 0;
   return { state: state };
 }
 
 function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
+  var cafeChanged = false;
+  var grpChanged = false;
   for (var i = 0; i < presences.length; i++) {
-    delete state.players[presences[i].userId];
-    if (state.race) raceLeave(state.race, presences[i].userId);
+    var uid = presences[i].userId;
+    if (state.players[uid] && state.players[uid].cafe) cafeChanged = true;
+    if (groupLeaveAll(state, uid)) grpChanged = true;
+    delete state.players[uid];
+    if (state.race) raceLeave(state.race, uid);
+  }
+  var rem = everyone(state);
+  if (rem.length > 0 && (cafeChanged || grpChanged)) {
+    dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "rooms", cafes: cafeMap(state), groups: groupList(state) }), rem, null, true);
   }
   return { state: state };
 }
@@ -684,15 +823,166 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       var k = data.k, payload = String(data.p || "");
       var ok = (k === CHAT_PRESET || k === CHAT_EMOTE) && ID_PATTERN.test(payload);
       if (k === CHAT_FREE && state.freeChat) {
-        payload = payload.substring(0, 80);
+        payload = cleanFreeChat(payload, 80);
         ok = payload.length > 0;
       }
       if (!ok) continue;
+
+      var ch = String(data.ch || "campus");
+      var recipients = null;
+      if (ch === "campus") {
+        recipients = everyone(state);
+      } else if (ch.indexOf("cafe:") === 0) {
+        var cid = ch.substring(5);
+        if (VALID_CAFES.indexOf(cid) < 0) continue;
+        recipients = [];
+        for (var pidC in state.players) {
+          if (pidC === uid || state.players[pidC].cafe === cid) recipients.push(state.players[pidC].presence);
+        }
+      } else if (ch.indexOf("group:") === 0) {
+        var gid = ch.substring(6);
+        var grp = state.groups && state.groups[gid];
+        if (!grp || grp.members.indexOf(uid) < 0) continue;
+        recipients = [];
+        for (var gm = 0; gm < grp.members.length; gm++) {
+          var gpl = state.players[grp.members[gm]];
+          if (gpl) recipients.push(gpl.presence);
+        }
+      } else if (ch.indexOf("dm:") === 0) {
+        var targetUid = ch.substring(3);
+        if (!areFriends(nk, uid, targetUid)) {
+          dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "toast", ok: false, text: "Özel mesaj için önce arkadaş olmalısınız." }), [pl.presence], null, true);
+          continue;
+        }
+        recipients = [pl.presence];
+        if (state.players[targetUid] && state.players[targetUid].presence) {
+          recipients.push(state.players[targetUid].presence);
+        }
+      } else {
+        continue;
+      }
+
       pl.lastChat = now;
-      dispatcher.broadcastMessage(OP_CHAT, JSON.stringify({ s: uid, k: k, p: payload }), everyone(state), null, true);
+      var outChat = { s: uid, sn: pl.name || uid.substring(0, 6), k: k, p: payload, ch: ch };
+      if (finiteIn(data.px, WORLD_LIMIT) && finiteIn(data.pz, WORLD_LIMIT)) {
+        outChat.px = Math.round(data.px * 10) / 10;
+        outChat.pz = Math.round(data.pz * 10) / 10;
+        outChat.pl = cleanFreeChat(data.pl || "Kampüs", 36) || "Kampüs";
+      }
+      if (recipients && recipients.length > 0) {
+        dispatcher.broadcastMessage(OP_CHAT, JSON.stringify(outChat), recipients, null, true);
+      }
       if (othersOf(state, uid).length > 0) {
         var soc = careAct(nk, uid, "social", Math.floor(now / 1000));
         if (soc.ok) dispatcher.broadcastMessage(OP_CARE, JSON.stringify(soc), [pl.presence], null, true);
+      }
+    } else if (m.opCode === OP_SOCIAL) {
+      var sAct = String(data.act || "");
+      var myNick = pl.name || uid.substring(0, 6);
+      state.groups = state.groups || {};
+      if (sAct === "sync") {
+        sendSocialStateTo(nk, dispatcher, state, uid);
+      } else if (sAct === "enter_cafe") {
+        var newCafe = String(data.cafe || "");
+        if (VALID_CAFES.indexOf(newCafe) >= 0 && pl.cafe !== newCafe) {
+          pl.cafe = newCafe;
+          dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "cafes", cafes: cafeMap(state) }), everyone(state), null, true);
+        }
+      } else if (sAct === "leave_cafe") {
+        if (pl.cafe) {
+          pl.cafe = "";
+          dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "cafes", cafes: cafeMap(state) }), everyone(state), null, true);
+        }
+      } else if (sAct === "create_group") {
+        var gTitle = cleanFreeChat(data.title || "", 24);
+        if (!gTitle) {
+          dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "toast", ok: false, text: "Geçerli bir grup adı girin." }), [pl.presence], null, true);
+          continue;
+        }
+        if (Object.keys(state.groups).length >= 12) continue;
+        groupLeaveAll(state, uid);
+        state.nextGroupId = (state.nextGroupId || 1) + 1;
+        var newGid = "g" + state.nextGroupId;
+        state.groups[newGid] = { id: newGid, title: gTitle, owner: uid, ownerName: myNick, x: Math.round(pl.p[0]), z: Math.round(pl.p[2]), members: [uid] };
+        dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "groups", groups: groupList(state) }), everyone(state), null, true);
+        dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "group_joined", joined_group: newGid, groups: groupList(state) }), [pl.presence], null, true);
+      } else if (sAct === "join_group") {
+        var jGid = String(data.id || "");
+        var targetG = state.groups[jGid];
+        if (!targetG) continue;
+        groupLeaveAll(state, uid);
+        if (targetG.members.indexOf(uid) < 0) targetG.members.push(uid);
+        dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "groups", groups: groupList(state) }), everyone(state), null, true);
+        dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "group_joined", joined_group: jGid, groups: groupList(state) }), [pl.presence], null, true);
+      } else if (sAct === "leave_group") {
+        if (groupLeaveAll(state, uid)) {
+          dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "groups", groups: groupList(state) }), everyone(state), null, true);
+        }
+        dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "group_left", left_group: true, groups: groupList(state) }), [pl.presence], null, true);
+      } else if (sAct === "friend_req") {
+        var toId = String(data.to || "");
+        if (!toId || toId === uid || toId.length > 64) continue;
+        var myDoc = socialLoad(nk, uid);
+        var theirDoc = socialLoad(nk, toId);
+        var theirNick = (state.players[toId] && state.players[toId].name) || theirDoc.name || cleanName(data.name) || toId.substring(0, 6);
+        if (hasUserEntry(myDoc.friends, toId)) continue;
+        // Karşı taraf zaten bize istek göndermişse doğrudan arkadaş yap!
+        if (hasUserEntry(myDoc.incoming, toId)) {
+          myDoc.incoming = removeUserEntry(myDoc.incoming, toId);
+          theirDoc.outgoing = removeUserEntry(theirDoc.outgoing, uid);
+          myDoc.friends.push({ id: toId, name: theirNick });
+          theirDoc.friends.push({ id: uid, name: myNick });
+          socialSave(nk, uid, myDoc);
+          socialSave(nk, toId, theirDoc);
+          sendSocialStateTo(nk, dispatcher, state, uid, { ok: true, text: theirNick + " ile artık arkadaşsınız!" });
+          sendSocialStateTo(nk, dispatcher, state, toId, { ok: true, text: myNick + " arkadaşlık isteğini kabul etti!" });
+          continue;
+        }
+        if (!hasUserEntry(myDoc.outgoing, toId)) myDoc.outgoing.push({ id: toId, name: theirNick });
+        if (!hasUserEntry(theirDoc.incoming, uid)) theirDoc.incoming.push({ id: uid, name: myNick, t: Math.floor(Date.now() / 1000) });
+        socialSave(nk, uid, myDoc);
+        socialSave(nk, toId, theirDoc);
+        sendSocialStateTo(nk, dispatcher, state, uid, { ok: true, text: "Arkadaşlık isteği gönderildi!" });
+        sendSocialStateTo(nk, dispatcher, state, toId, { ok: true, text: myNick + " arkadaşlık isteği gönderdi!" });
+      } else if (sAct === "friend_accept") {
+        var fromId = String(data.from || "");
+        if (!fromId || fromId === uid) continue;
+        var aDoc = socialLoad(nk, uid);
+        if (!hasUserEntry(aDoc.incoming, fromId)) continue;
+        var bDoc = socialLoad(nk, fromId);
+        var bNick = (state.players[fromId] && state.players[fromId].name) || bDoc.name || fromId.substring(0, 6);
+        aDoc.incoming = removeUserEntry(aDoc.incoming, fromId);
+        aDoc.outgoing = removeUserEntry(aDoc.outgoing, fromId);
+        bDoc.outgoing = removeUserEntry(bDoc.outgoing, uid);
+        bDoc.incoming = removeUserEntry(bDoc.incoming, uid);
+        if (!hasUserEntry(aDoc.friends, fromId)) aDoc.friends.push({ id: fromId, name: bNick });
+        if (!hasUserEntry(bDoc.friends, uid)) bDoc.friends.push({ id: uid, name: myNick });
+        socialSave(nk, uid, aDoc);
+        socialSave(nk, fromId, bDoc);
+        sendSocialStateTo(nk, dispatcher, state, uid, { ok: true, text: bNick + " ile artık arkadaşsınız!" });
+        sendSocialStateTo(nk, dispatcher, state, fromId, { ok: true, text: myNick + " arkadaşlık isteğini kabul etti!" });
+      } else if (sAct === "friend_decline") {
+        var decId = String(data.from || "");
+        if (!decId) continue;
+        var dMy = socialLoad(nk, uid);
+        var dTh = socialLoad(nk, decId);
+        dMy.incoming = removeUserEntry(dMy.incoming, decId);
+        dTh.outgoing = removeUserEntry(dTh.outgoing, uid);
+        socialSave(nk, uid, dMy);
+        socialSave(nk, decId, dTh);
+        sendSocialStateTo(nk, dispatcher, state, uid);
+        sendSocialStateTo(nk, dispatcher, state, decId);
+      } else if (sAct === "friend_remove") {
+        var remId = String(data.id || "");
+        if (!remId) continue;
+        var rMy = socialLoad(nk, uid);
+        var rTh = socialLoad(nk, remId);
+        rMy.friends = removeUserEntry(rMy.friends, remId);
+        rTh.friends = removeUserEntry(rTh.friends, uid);
+        socialSave(nk, uid, rMy);
+        socialSave(nk, remId, rTh);
+        sendSocialStateTo(nk, dispatcher, state, uid);
+        sendSocialStateTo(nk, dispatcher, state, remId);
       }
     } else if (m.opCode === OP_CARE) {
       var act = String(data.act || "");
@@ -765,6 +1055,10 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         acc[slots[s]] = String(a);
       }
       pl.pet = String(data.pet); pl.acc = acc; pl.name = cleanName(data.name);
+      if (pl.name) {
+        var sDoc = socialLoad(nk, uid);
+        if (sDoc.name !== pl.name) { sDoc.name = pl.name; socialSave(nk, uid, sDoc); }
+      }
       var rest = othersOf(state, uid);
       if (rest.length > 0) {
         dispatcher.broadcastMessage(OP_PROFILE, JSON.stringify({ id: uid, pet: pl.pet, acc: acc, name: pl.name }), rest, null, true);

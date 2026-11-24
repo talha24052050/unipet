@@ -60,7 +60,7 @@ assert.strictEqual(JSON.parse(M.rpcFindRoom(ctx({}, "u-1"), logger, nk, '{"zone"
 // --- oda
 var sent = [];
 var dispatcher = { broadcastMessage: function (op, data, to) { sent.push({ op: op, data: JSON.parse(data), to: (to || []).map(function (p) { return p.userId; }) }); } };
-var st = M.matchInit(ctx({ UNIPET_ROOM_CAPACITY: "2" }), logger, nk, { zone: "kampus" }).state;
+var st = M.matchInit(ctx({ UNIPET_ROOM_CAPACITY: "2", UNIPET_FREE_CHAT: "false" }), logger, nk, { zone: "kampus" }).state;
 var A = { userId: "A" }, B = { userId: "B" }, C = { userId: "C" };
 st = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st, [A]).state;
 st = M.matchJoin(ctx(), logger, nk, dispatcher, 0, st, [B]).state;
@@ -253,5 +253,81 @@ var rv = sent.filter(function (m) { return m.op === 10; })[0];
 assert.ok(rv && rv.data.phase === "lobby" && rv.data.racers.length === 1 && rv.to.length === 0, "lobi herkese yayınlanır");
 st5 = M.matchLeave(ctx(), logger, nk, dispatcher, 2, st5, [K]).state;
 assert.strictEqual(st5.race.phase, "idle", "tek koşucu çıkınca lobi kapanır");
+
+// --- sosyal sistem: serbest chat filtresi, kafe salonu, kalabalık grubu, arkadaşlık isteği & özel DM
+sent = [];
+var stSoc = M.matchInit(ctx({}), logger, nk, { zone: "kampus" }).state;
+assert.strictEqual(stSoc.freeChat, true, "serbest chat varsayılan açık");
+var S1 = { userId: "S1" }, S2 = { userId: "S2" }, S3 = { userId: "S3" };
+stSoc = M.matchJoin(ctx(), logger, nk, dispatcher, 0, stSoc, [S1, S2, S3]).state;
+stSoc.players.S1.name = "Talha";
+stSoc.players.S2.name = "Zeynep";
+stSoc.players.S3.name = "Mert";
+sent = [];
+// Küfürlü serbest mesaj engellenmeli, temiz mesaj + konum pini geçmeli
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 1, stSoc, [
+  msg(S1, 2, { k: 2, p: "selam amk", ch: "campus" }),
+  msg(S1, 2, { k: 2, p: "Hokka'da buluşalım!", ch: "campus", px: -69.0, pz: -114.5, pl: "Hokka" })
+]).state;
+var socChats = sent.filter(function (m) { return m.op === 2; });
+assert.strictEqual(socChats.length, 1, "küfürlü mesaj atılmalı, temiz mesaj geçmeli");
+assert.strictEqual(socChats[0].data.sn, "Talha");
+assert.strictEqual(socChats[0].data.pl, "Hokka");
+
+// Kafe salonu: sadece o kafede olanlara gitmeli
+stSoc.players.S1.lastChat = 0;
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 2, stSoc, [
+  msg(S1, 11, { act: "enter_cafe", cafe: "hokka" }),
+  msg(S2, 11, { act: "enter_cafe", cafe: "hokka" })
+]).state;
+sent = [];
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 3, stSoc, [
+  msg(S1, 2, { k: 2, p: "Kahveler benden!", ch: "cafe:hokka" })
+]).state;
+var cafeChats = sent.filter(function (m) { return m.op === 2; });
+assert.deepEqual(cafeChats[0].to.sort(), ["S1", "S2"], "kafe mesajı dışarıdaki S3'e gitmemeli");
+
+// Arkadaş olmadan DM atılamaz; arkadaşlık isteği -> kabul -> sadece ikisi arasında DM
+stSoc.players.S1.lastChat = 0;
+sent = [];
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 4, stSoc, [
+  msg(S1, 2, { k: 2, p: "Gizli mesaj", ch: "dm:S2" })
+]).state;
+assert.strictEqual(sent.filter(function (m) { return m.op === 2; }).length, 0, "arkadaş olmadan DM reddedilmeli");
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 5, stSoc, [
+  msg(S1, 11, { act: "friend_req", to: "S2" })
+]).state;
+assert.strictEqual(M.socialLoad(nk, "S2").incoming.length, 1, "S2 istek kutusuna düşmeli");
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 6, stSoc, [
+  msg(S2, 11, { act: "friend_accept", from: "S1" })
+]).state;
+assert.ok(M.areFriends(nk, "S1", "S2") && M.areFriends(nk, "S2", "S1"), "iki taraf da arkadaş olmalı");
+sent = [];
+stSoc.players.S1.lastChat = 0;
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 7, stSoc, [
+  msg(S1, 2, { k: 2, p: "Selam Zeynep!", ch: "dm:S2" })
+]).state;
+var dmChats = sent.filter(function (m) { return m.op === 2; });
+assert.strictEqual(dmChats.length, 1);
+assert.deepEqual(dmChats[0].to.sort(), ["S1", "S2"], "özel DM üçüncü kişiye (S3) sızmamalı");
+
+// Kalabalık grup odası: oluştur -> katıl -> grup içi sohbet
+sent = [];
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 8, stSoc, [
+  msg(S3, 11, { act: "create_group", title: "Ortabahçe Tayfa" })
+]).state;
+var gJoinMsg = sent.filter(function (m) { return m.op === 11 && m.data.type === "group_joined"; })[0];
+assert.ok(gJoinMsg && gJoinMsg.data.joined_group, "grup kurulmalı");
+var gidTest = gJoinMsg.data.joined_group;
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 9, stSoc, [
+  msg(S1, 11, { act: "join_group", id: gidTest })
+]).state;
+sent = [];
+stSoc.players.S3.lastChat = 0;
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 10, stSoc, [
+  msg(S3, 2, { k: 2, p: "Grup içi merhaba", ch: "group:" + gidTest })
+]).state;
+var grpChats = sent.filter(function (m) { return m.op === 2; });
+assert.deepEqual(grpChats[0].to.sort(), ["S1", "S3"], "grup mesajı sadece grup üyelerine gitmeli");
 
 console.log("nakama modül testleri: OK");

@@ -30,6 +30,7 @@
 [ext_resource type="Script" path="res://src/world/eef_plaza.gd" id="28"]
 [ext_resource type="Script" path="res://src/world/campus_landmarks.gd" id="29"]
 [ext_resource type="Script" path="res://src/ui/pet_button.gd" id="30"]
+[ext_resource type="Script" path="res://src/world/cafe_social_zones.gd" id="31"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -100,6 +101,8 @@ func _on_chat_received(msg: ChatMessage) -> void:
 
 		ChatMessage.Kind.FREE:
 			if not Config.FREE_CHAT_ENABLED:
+				return
+			if msg.channel.begins_with(\"dm:\"):
 				return
 			if msg.payload.is_empty():
 				return
@@ -270,9 +273,9 @@ theme_override_font_sizes/font_size = 28
 text = "Ayarlar"
 script = ExtResource("17")
 
-[node name="ChatMenu" parent="UI" instance=ExtResource("8")]
-
 [node name="CareHud" parent="UI" instance=ExtResource("11")]
+
+[node name="ChatMenu" parent="UI" instance=ExtResource("8")]
 
 [node name="SafeAreaHud" type="Node" parent="UI"]
 script = ExtResource("26")
@@ -333,3 +336,8 @@ script = ExtResource("28")
 
 [node name="CampusLandmarks" type="Node3D" parent="."]
 script = ExtResource("29")
+
+[node name="CafeSocialZones" type="Node3D" parent="." node_paths=PackedStringArray("player", "chat_menu")]
+script = ExtResource("31")
+player = NodePath("../Player")
+chat_menu = NodePath("../UI/ChatMenu")

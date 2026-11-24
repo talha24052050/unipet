@@ -283,9 +283,22 @@ func test_main_scene_integration() -> String:
 		main_inst.free()
 		return "Bilinmeyen preset id baloncukta gösterilmemeliydi"
 
-	# Config.FREE_CHAT_ENABLED == false iken FREE chat mesajının gösterilmemesi testi
-	Services.net.send_chat(ChatMessage.free_text("Serbest chat deneme"))
-	if bubble.call("current_text") == "Serbest chat deneme":
+	# Config.FREE_CHAT_ENABLED açıkken temiz serbest mesaj gösterilmeli, küfürlü mesaj engellenmeli
+	Services.net.send_chat(ChatMessage.free_text("Selam kampüs!"))
+	if bubble.call("current_text") != "Selam kampüs!":
+		main_inst.free()
+		return "FREE_CHAT_ENABLED true iken temiz serbest mesaj gösterilmeliydi: %s" % bubble.call("current_text")
+
+	Services.net.send_chat(ChatMessage.free_text("selam amk"))
+	if bubble.call("current_text") == "selam amk":
+		main_inst.free()
+		return "Küfürlü serbest mesaj filtrelenmeliydi"
+
+	# Özel (DM) mesaj 3B genel konuşma balonunda çıkmamalı (gizli kalmalı)
+	Config.FREE_CHAT_ENABLED = false
+	Services.net.send_chat(ChatMessage.free_text("Kapalı deneme"))
+	Config.FREE_CHAT_ENABLED = true
+	if bubble.call("current_text") == "Kapalı deneme":
 		main_inst.free()
 		return "FREE_CHAT_ENABLED false iken free text gösterilmemeliydi"
 

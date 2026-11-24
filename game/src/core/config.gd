@@ -17,8 +17,8 @@ const NET_TICK_RATE: int = 10
 ## Gerçek kampüs yer şekilleri (DEM yükseklik haritası). false yapılırsa tüm dünya düz y=0 olur.
 const TERRAIN_ENABLED: bool = true
 
-## Serbest chat şimdilik kapalı; altyapı hazır, açmak için true yapılır (+ filtre gerekli).
-const FREE_CHAT_ENABLED: bool = false
+## Serbest yazılı sohbet (80 karakter sınırı + Türkçe argo/spam filtresi ile açık).
+var FREE_CHAT_ENABLED: bool = true
 
 ## Aktif servis implementasyonları. Değiştirmek = bu satırı değiştirmek.
 ## Yayın derlemesi (export preset'inde custom feature "unipet_release"): gerçek giriş + sunucu.

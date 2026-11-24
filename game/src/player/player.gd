@@ -17,9 +17,11 @@ const STEP_INTERVAL: float = 0.38
 var _step_accum: float = 0.0
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+var display_name: String = ""
 
 @onready var visual: PetVisual = $PetVisual
 @onready var _collision: CollisionShape3D = $Collision
+@onready var name_label: Label3D = get_node_or_null("NameLabel") as Label3D
 
 
 var _snap_to_navmesh: bool = false
@@ -223,9 +225,10 @@ func _ready() -> void:
 		apply_profile(LocalProfile.load_or_default())
 
 
-## Kayıtlı seçimi (pet + aksesuarlar) uygular; çıkarılmış slotları da temizler.
+## Kayıtlı seçimi (pet + aksesuarlar + nick) uygular; çıkarılmış slotları da temizler.
 func apply_profile(profile: LocalProfile) -> void:
 	set_character(profile.pet_id)
+	set_display_name(profile.display_name)
 	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
 		var acc_id: StringName = profile.accessories.get(slot, &"")
 		if acc_id != &"":
@@ -236,6 +239,22 @@ func apply_profile(profile: LocalProfile) -> void:
 				visual.unequip(slot)
 		else:
 			visual.unequip(slot)
+	_update_name_label()
+
+
+func set_display_name(raw_name: String) -> void:
+	display_name = raw_name.strip_edges()
+	_update_name_label()
+
+
+func _update_name_label() -> void:
+	if name_label == null:
+		name_label = get_node_or_null("NameLabel") as Label3D
+	if name_label == null:
+		return
+	name_label.text = display_name if not display_name.is_empty() else "Oyuncu"
+	if visual != null and visual.has_method("footprint"):
+		name_label.position.y = visual.footprint().y + 0.16
 
 
 ## Peti değiştirir (seçim ekranı, ağdan gelen profil). Bilinmeyen id → ilk seçilebilir pet.
@@ -251,6 +270,7 @@ func set_character(id: StringName) -> void:
 	character_id = def.id
 	visual.set_character(def)
 	_fit_collision(visual.footprint())
+	_update_name_label()
 
 
 func _fit_collision(size: Vector2) -> void:

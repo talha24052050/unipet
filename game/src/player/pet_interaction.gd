@@ -14,6 +14,7 @@ const HEART_COLOR: Color = Color(1.0, 0.36, 0.5)
 
 signal pet_petted
 signal player_greeted(player_id: String)
+signal profile_requested(player_id: String, display_name: String, pet_id: String)
 
 @export var player: Node3D
 ## Uzak oyuncuların ebeveyni (NetworkSync); çocukları RemotePlayer.
@@ -37,8 +38,15 @@ func try_tap(screen_pos: Vector2, camera: Camera3D) -> bool:
 	var cands: Array[Node3D] = _candidates()
 	var pts: Array[Vector2] = []
 	for n: Node3D in cands:
-		var w: Vector3 = n.global_position + Vector3.UP * PICK_HEIGHT
-		pts.append(Vector2.INF if camera.is_position_behind(w) else camera.unproject_position(w))
+		var w_body: Vector3 = n.global_position + Vector3.UP * PICK_HEIGHT
+		var p_body: Vector2 = Vector2.INF if camera.is_position_behind(w_body) else camera.unproject_position(w_body)
+		# Başka oyuncuların kafa üstü nick yazısına dokunulduğunda da profilin kolayca açılmasını sağla
+		if n != player and not n.is_in_group(&"cats"):
+			var w_lbl: Vector3 = n.global_position + Vector3.UP * 1.32
+			var p_lbl: Vector2 = Vector2.INF if camera.is_position_behind(w_lbl) else camera.unproject_position(w_lbl)
+			if p_lbl != Vector2.INF and (p_body == Vector2.INF or p_lbl.distance_to(screen_pos) < p_body.distance_to(screen_pos)):
+				p_body = p_lbl
+		pts.append(p_body)
 	var idx: int = nearest(screen_pos, pts, PICK_RADIUS_PX)
 	if idx < 0:
 		return false
@@ -49,6 +57,12 @@ func try_tap(screen_pos: Vector2, camera: Camera3D) -> bool:
 		best.call("pet")
 		spawn_hearts(best, 3)
 	else:
+		var pid: String = str(best.get("player_id"))
+		var dname: String = str(best.get("display_name"))
+		var c_id: String = str(best.get("character_id"))
+		if dname.is_empty():
+			dname = pid.substr(0, 6)
+		profile_requested.emit(pid, dname, c_id)
 		greet(best)
 	return true
 

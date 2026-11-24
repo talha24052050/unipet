@@ -14,6 +14,7 @@ var leave_zone_calls: int = 0
 var sent_states: Array[Dictionary] = []
 var sent_profiles: Array[Dictionary] = []
 var sent_chats: Array[ChatMessage] = []
+var sent_socials: Array[Dictionary] = []
 
 
 func connect_to_server(session_token: String) -> void:
@@ -41,6 +42,10 @@ func send_profile(pet_id: StringName, accessories: Dictionary, display_name: Str
 
 func send_chat(message: ChatMessage) -> void:
 	sent_chats.append(message)
+
+
+func send_social(payload: Dictionary) -> void:
+	sent_socials.append(payload.duplicate(true))
 
 
 func local_player_id() -> String:
@@ -84,10 +89,15 @@ func simulate_chat(message: ChatMessage) -> void:
 	chat_received.emit(message)
 
 
+func simulate_social(data: Dictionary) -> void:
+	_apply_social_packet(data)
+
+
 func clear_history() -> void:
 	sent_states.clear()
 	sent_profiles.clear()
 	sent_chats.clear()
+	sent_socials.clear()
 	joined_zones.clear()
 	connect_calls = 0
 	leave_zone_calls = 0

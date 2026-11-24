@@ -22,9 +22,13 @@ signal wallet_updated(wallet: Dictionary)
 signal purchase_finished(item: String, ok: bool, reason: String)
 ## Koşu yarışı durumu (RaceRules.view) ya da {"error": neden}.
 signal race_updated(view: Dictionary)
+## Sosyal durum (arkadaşlar, istek kutusu, kafe salonları, gruplar, bildirimler).
+signal social_updated(data: Dictionary)
 
 ## Son bilinen cüzdan (ekranlar hemen okuyabilsin).
 var wallet: Dictionary = {}
+## Son bilinen sosyal durum: {friends:[], incoming:[], outgoing:[], cafes:{}, groups:[]}
+var social_state: Dictionary = {"friends": [], "incoming": [], "outgoing": [], "cafes": {}, "groups": []}
 
 
 func connect_to_server(_session_token: String) -> void:
@@ -80,6 +84,25 @@ func send_minigame_result(_game: String, _score: int) -> void:
 ## Yarış: act = "join" | "leave" | "cp" (i = geçilen kontrol noktası).
 func send_race(_act: String, _i: int = 0) -> void:
 	pass
+
+
+## Sosyal eylem gönder: enter_cafe, leave_cafe, create_group, join_group, leave_group, friend_req, friend_accept, friend_decline, friend_remove, sync.
+func send_social(_payload: Dictionary) -> void:
+	pass
+
+
+func _apply_social_packet(d: Dictionary) -> void:
+	if d.has("friends") and d["friends"] is Array:
+		social_state["friends"] = d["friends"]
+	if d.has("incoming") and d["incoming"] is Array:
+		social_state["incoming"] = d["incoming"]
+	if d.has("outgoing") and d["outgoing"] is Array:
+		social_state["outgoing"] = d["outgoing"]
+	if d.has("cafes") and d["cafes"] is Dictionary:
+		social_state["cafes"] = d["cafes"]
+	if d.has("groups") and d["groups"] is Array:
+		social_state["groups"] = d["groups"]
+	social_updated.emit(d)
 
 
 ## Dükkandan satın al → purchase_finished + wallet_updated.
