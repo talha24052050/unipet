@@ -469,25 +469,47 @@ def pavilion(b, poly, i, pt, h, wall_color, trim_color, roof_color):
 
 
 def recipe_mosque(b, poly, h, spec, rng):
-    """Davutpaşa Kışlası Mescidi (gerçek fotoğraf referansı): kubbesiz alçak taş yapı,
-    sol köşede kalın kare kesme taş minare kaidesi + kısa silindirik taş petek + konik kurşun külah + alem,
-    ön cephe sol tarafında küçük kahverengi camlı kabin ve gri kutu."""
+    """Davutpaşa Kışlası Mescidi (gerçek fotoğraf & saha yönelimi):
+    - Minare: Yemekhane (-103,-95) ve Büyük Ev (-15,-75) yönüne bakan kuzey köşesinde (v2: [-67.20, -24.20]).
+    - Güvenlik kulübesi (korten kabin + beyaz çerçeveli camlar + gri beton kutu): Yıldız Store (-127.8, -68.0)
+      yönüne bakan kuzeybatı cephesinin (v2 -> v3) önünde."""
     # Çatı saçağında ince taş korniş
     b.ring(offset(poly, 0.26), offset(poly, -0.05), h - 0.24, h + 0.04, "mescit_stone_dark")
 
-    # Uzun ön cephe (bulvara bakan kenar 1: [-53.99,-13.84] -> [-67.2,-24.2]; genel olarak en uzun dış kenar)
     n = len(poly)
     ccw = signed_area(poly) > 0
-    edge_i = 1 if n >= 4 else max(range(n), key=lambda k: math.dist(poly[k], poly[(k + 1) % n]))
-    p1, p2 = poly[edge_i], poly[(edge_i + 1) % n]
-    L_ = math.dist(p1, p2) or 1.0
-    ux, uz = (p2[0] - p1[0]) / L_, (p2[1] - p1[1]) / L_
-    nx, nz = edge_normal(p1, p2, ccw)
+    # Yıldız Store'a (-127.8, -68.0) en çok bakan kenarı bul (edge 2: v2[-67.2,-24.2] -> v3[-75.0,-14.6])
+    store_pt = (-127.84, -67.99)
+    yem_bev_pt = (-60.0, -85.0)  # Yemekhane & Büyük Ev orta bulvar yönü
+
+    best_edge = 0
+    best_dot = -1e9
+    for i in range(n):
+        a, c_pt = poly[i], poly[(i + 1) % n]
+        mid = ((a[0] + c_pt[0]) * 0.5, (a[1] + c_pt[1]) * 0.5)
+        nx_i, nz_i = edge_normal(a, c_pt, ccw)
+        to_store = norm((store_pt[0] - mid[0], 0.0, store_pt[1] - mid[1]))
+        d = nx_i * to_store[0] + nz_i * to_store[2]
+        if d > best_dot:
+            best_dot = d
+            best_edge = i
+
+    ea, eb = poly[best_edge], poly[(best_edge + 1) % n]
+    nx, nz = edge_normal(ea, eb, ccw)  # Yıldız Store'a bakan birim dış normal!
+    # Bu kenarın iki ucundan Yemekhane + Büyük Ev yönüne daha yakın olan köşe minare köşesidir (v2)
+    if math.dist(ea, yem_bev_pt) <= math.dist(eb, yem_bev_pt):
+        p_min, p_far = ea, eb
+        L_ = math.dist(p_min, p_far) or 1.0
+        ux, uz = (p_far[0] - p_min[0]) / L_, (p_far[1] - p_min[1]) / L_
+    else:
+        p_min, p_far = eb, ea
+        L_ = math.dist(p_min, p_far) or 1.0
+        ux, uz = (p_far[0] - p_min[0]) / L_, (p_far[1] - p_min[1]) / L_
     yaw = math.atan2(uz, ux)
 
-    # 1) Kalın kare kesme taş minare kulesi (p1 köşesine bitişik, hafif dışa taşan)
-    mx = p1[0] - ux * 0.70 + nx * 0.55
-    mz = p1[1] - uz * 0.70 + nz * 0.55
+    # 1) Kalın kare kesme taş minare kulesi: Yemekhane ve Büyük Ev'e bakan p_min (v2) köşesinde!
+    mx = p_min[0] - ux * 1.10 - nx * 0.55
+    mz = p_min[1] - uz * 1.10 - nz * 0.55
     b.box(mx, mz, 3.20, 3.20, -1.2, 1.35, "mescit_stone_dark", yaw)   # alt taş kaide
     b.box(mx, mz, 2.85, 2.85, 1.35, 8.35, "mescit_stone", yaw)        # ana kare taş gövde
     # Üst gövdede küçük dikey mazgal delikleri
@@ -506,19 +528,33 @@ def recipe_mosque(b, poly, h, spec, rng):
     b.cylinder(mx, mz, 0.14, 13.72, 13.88, "dark", seg=8)
     b.cylinder(mx, mz, 0.11, 14.08, 14.20, "dark", seg=8)
 
-    # 2) Minarenin hemen sağında küçük kahverengi camlı kabin + önünde alçak gri kutu (fotoğraftaki gibi)
-    cx_cab = p1[0] + ux * 3.1 + nx * 1.45
-    cz_cab = p1[1] + uz * 3.1 + nz * 1.45
-    b.box(cx_cab, cz_cab, 3.5, 1.8, -0.4, 2.35, "corten", yaw)
-    b.box(cx_cab + nx * 0.91, cz_cab + nz * 0.91, 3.1, 0.06, 1.25, 2.08, "glass_dark", yaw)
-    b.box(cx_cab - ux * 1.76, cz_cab - uz * 1.76, 0.06, 1.35, 1.25, 2.08, "glass_dark", yaw)
-    # Alçak gri beton/tesisat kutusu
-    bx_box = p1[0] + ux * 4.5 + nx * 2.55
-    bz_box = p1[1] + uz * 4.5 + nz * 2.55
+    # 2) Güvenlik kulübesi (kahverengi korten kabin + beyaz çerçeveli camlar):
+    #    Yıldız Store'a bakan cephenin (nx, nz) önünde, minarenin hemen yanında!
+    cx_cab = p_min[0] + ux * 2.85 + nx * 1.35
+    cz_cab = p_min[1] + uz * 2.85 + nz * 1.35
+    b.box(cx_cab, cz_cab, 3.50, 2.00, -0.4, 2.40, "corten", yaw)
+    # Üst ince çatı silmesi
+    b.box(cx_cab, cz_cab, 3.62, 2.12, 2.36, 2.46, "mescit_stone_dark", yaw)
+    # Yıldız Store'a doğrudan bakan (+nx, +nz) ön cephede beyaz çerçeveli 2 güvenlik penceresi
+    for s_win in (-0.82, 0.82):
+        wx = cx_cab + ux * s_win + nx * 1.01
+        wz = cz_cab + uz * s_win + nz * 1.01
+        b.box(wx, wz, 1.38, 0.06, 1.12, 2.10, "white", yaw)
+        b.box(wx + nx * 0.02, wz + nz * 0.02, 1.22, 0.06, 1.20, 2.02, "glass_dark", yaw)
+    # Yan cephelerde (Yemekhane/bulvar tarafı -u ve sağ taraf +u) beyaz çerçeveli gözetleme camları
+    for s_side in (-1.0, 1.0):
+        sx_w = cx_cab + ux * (s_side * 1.76)
+        sz_w = cz_cab + uz * (s_side * 1.76)
+        b.box(sx_w, sz_w, 0.06, 1.48, 1.12, 2.10, "white", yaw)
+        b.box(sx_w + ux * (s_side * 0.02), sz_w + uz * (s_side * 0.02), 0.06, 1.32, 1.20, 2.02, "glass_dark", yaw)
+
+    # Kulübe önünde alçak gri beton pano/kutu
+    bx_box = p_min[0] + ux * 4.25 + nx * 2.65
+    bz_box = p_min[1] + uz * 4.25 + nz * 2.65
     b.box(bx_box, bz_box, 1.55, 0.95, -0.4, 1.15, "concrete", yaw)
 
-    # 3) Sağ köşede ince yağmur iniş borusu
-    b.cylinder(p2[0] + nx * 0.08, p2[1] + nz * 0.08, 0.06, 0.0, h, "mescit_stone_dark", seg=6)
+    # 3) Karşı köşede (p_far) ince yağmur iniş borusu
+    b.cylinder(p_far[0] + nx * 0.08, p_far[1] + nz * 0.08, 0.06, 0.0, h, "mescit_stone_dark", seg=6)
 
 
 def recipe_kiosk(b, poly, h, spec, rng):
