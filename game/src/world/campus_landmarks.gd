@@ -137,34 +137,49 @@ func _build_ilhan_varank_library(st: SurfaceTool, col_body: StaticBody3D) -> voi
 
 
 ## 3) Yeni Merkez Kütüphanesi (b#139 — TEB Mimarlık 2024, yildiz.edu.tr & mimarizm.com referansları):
-##    - İç avlu açık gri taş döşeme + koyu drenaj kanal çerçevesi (lib_ytu_2.jpg & lib_gal_11.jpg)
-##    - Tarihi Hamam yönüne bakan yarı siyah bazalt basamak / yarı sıcak ahşap oturma amfisi (lib_gal_18.jpg)
-##    - Siyah cam küp önünde koyu mermer bordürlü siyah metal korkuluklu gezinti terası (lib_gal_19.jpg)
-##    - Avlu ekseninde modern siyah YTÜ lale lambaları + antrasit dikdörtgen defne saksıları (lib_gal_11.jpg)
-##    - Yemekhane/meydan yönünde geniş taş giriş meydanı + minimalist "YTÜ MERKEZ KÜTÜPHANESİ" giriş monoliti
+## 3) Yeni Merkez Kütüphanesi (b#139 — TEB Mimarlık 2024, yildiz.edu.tr & mimarizm.com referansları):
+##    - Ana kütüphane girişi yerin tam 1 kat altında (-3.50 m çökük avlu / -1. kat — lib_ytu_1.jpg & lib_ytu_4.jpg):
+##      çift beyaz saçaklı siyah çerçeveli cam rüzgarlık kapıları + iç turnike parıltısı + "MERKEZ KÜTÜPHANESİ" tabelası.
+##    - Kampüs kotundan (-0.42 m) 1 kat aşağı (-3.92 m) inerken:
+##      • SOLDA (v = 24.95..31.25): 6 kademeli geniş sıcak ahşap amfi oturma basamakları (lib_gal_18.jpg & lib_ytu_2.jpg!)
+##      • SAĞDA (v = 18.12..24.95): 20 basamaklı koyu bazalt taş yürüyüş merdiveni (lib_gal_11.jpg & lib_gal_18.jpg!)
+##    - Siyah cam küp önünde üst gezinti terası + mermer bordürlü siyah metal korkuluk + -1. kat cam bağlantı galerisi.
 func _build_merkez_library(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var lo: Vector2 = Vector2(-74.33, -236.71)
-	var lu: Vector2 = Vector2(0.8099, 0.5866)
-	var lv: Vector2 = Vector2(-0.5866, 0.8099)
+	var lu: Vector2 = Vector2(0.809885, 0.586589)
+	var lv: Vector2 = Vector2(-0.586589, 0.809885)
+	var y_top: float = -0.42
+	var y_sunk: float = -3.92  # Yerin tam 1 kat (3.50 m) altı!
+	var lxf: Transform3D = _frame_xform(lo, lu, lv, 0.0)
+
 	var col_stone_plaza: Color = Color(0.78, 0.77, 0.74).srgb_to_linear()
-	var col_drain: Color = Color(0.24, 0.24, 0.25).srgb_to_linear()
-	var col_basalt: Color = Color(0.28, 0.30, 0.33).srgb_to_linear()
-	var col_amphi_wood: Color = Color(0.56, 0.38, 0.24).srgb_to_linear()
-	var col_marble_curb: Color = Color(0.26, 0.28, 0.31).srgb_to_linear()
-	var col_black_metal: Color = Color(0.11, 0.12, 0.14).srgb_to_linear()
+	var col_stone_edge: Color = Color(0.68, 0.67, 0.64).srgb_to_linear()
+	var col_drain: Color = Color(0.22, 0.23, 0.24).srgb_to_linear()
+	var col_basalt: Color = Color(0.27, 0.29, 0.32).srgb_to_linear()
+	var col_step_nosing: Color = Color(0.56, 0.58, 0.60).srgb_to_linear()
+	var col_amphi_wood: Color = Color(0.58, 0.39, 0.23).srgb_to_linear()
+	var col_amphi_wood_dk: Color = Color(0.42, 0.27, 0.15).srgb_to_linear()
+	var col_marble_curb: Color = Color(0.24, 0.26, 0.29).srgb_to_linear()
+	var col_black_metal: Color = Color(0.10, 0.11, 0.13).srgb_to_linear()
+	var col_gallery_glass: Color = Color(0.14, 0.21, 0.28).srgb_to_linear()
+	var col_lobby_glow: Color = Color(0.76, 0.68, 0.52).srgb_to_linear()
+	var col_turnstile: Color = Color(0.70, 0.74, 0.78).srgb_to_linear()
 	var col_planter_leaf: Color = Color(0.18, 0.36, 0.16).srgb_to_linear()
 	var col_planter_hi: Color = Color(0.25, 0.46, 0.21).srgb_to_linear()
 	var col_lamp_glow: Color = Color(0.95, 0.96, 0.92).srgb_to_linear()
 	var col_white_lin: Color = Color(0.94, 0.94, 0.93).srgb_to_linear()
 
-	# 3a) İç avlu + Tarihi Hamam önü ve cam küp önü arazi eğimini birebir izleyen pürüzsüz taş meydan (0 çim sızması!)
-	var tile_zones: Array = [
-		[18.6, 51.0, 18.2, 35.4, 9, 5],
-		[50.6, 69.2, 18.2, 71.2, 6, 15],
-		[18.5, 62.0, 70.0, 81.5, 12, 4],
-		[18.4, 25.5, 35.2, 56.2, 2, 6],
+	# 3a) Üst zemin kotu gezinti terası (siyah cam küp önü: u=18.42..58.20, v=31.25..35.60) + merdiven başı sahanlığı
+	_add_box_xf(st, lxf, Vector3(39.78, 0.90, 4.35), Vector3(38.31, y_top - 0.45, 33.425), col_stone_plaza)
+	_add_box_xf(st, lxf, Vector3(4.40, 0.90, 17.48), Vector3(60.40, y_top - 0.45, 26.86), col_stone_plaza)
+	# Dış taş meydan bölgeleri: iç sınırda y_top (-0.42) ile sıfır basamaklı birleşir, dış kenarda doğal araziye iner
+	var outer_zones: Array = [
+		[62.60, 69.20, 18.12, 71.20, 4, 14],
+		[50.25, 62.60, 35.60, 71.20, 4, 10],
+		[18.42, 62.60, 70.00, 81.50, 11, 4],
+		[18.42, 25.45, 35.60, 56.20, 2, 6],
 	]
-	for tz: Array in tile_zones:
+	for tz: Array in outer_zones:
 		var u0: float = float(tz[0])
 		var u1: float = float(tz[1])
 		var v0: float = float(tz[2])
@@ -179,99 +194,150 @@ func _build_merkez_library(st: SurfaceTool, col_body: StaticBody3D) -> void:
 				var ub: float = ua + du
 				var va: float = v0 + float(iv) * dv
 				var vb: float = va + dv
-				_add_terrain_quad(st, lo + lu * ua + lv * va, lo + lu * ub + lv * va, lo + lu * ub + lv * vb, lo + lu * ua + lv * vb, 0.128, col_stone_plaza)
+				_add_merkez_plaza_quad(st, lo, lu, lv, y_top, Vector2(ua, va), Vector2(ub, va), Vector2(ub, vb), Vector2(ua, vb), col_stone_plaza)
+	# Merdiven başı sahanlığının KD dış kenarında ince taş etek (v=18.12, u=58.20..67.53 zaten Arm A duvarı; u=62.6..69.2 ince bordür)
+	_add_box_xf(st, lxf, Vector3(6.60, 0.45, 0.28), Vector3(65.90, y_top - 0.35, 18.18), col_stone_edge)
 
-	# Avlu içi araziye yapışık koyu drenaj ızgara dikdörtgeni (lib_ytu_2.jpg & lib_gal_11.jpg!)
-	var dr_u0: float = 21.8
-	var dr_u1: float = 47.8
-	var dr_v0: float = 20.1
-	var dr_v1: float = 33.7
-	for k: int in 6:
-		var fa: float = lerpf(dr_u0, dr_u1, float(k) / 6.0)
-		var fb: float = lerpf(dr_u0, dr_u1, float(k + 1) / 6.0)
-		for vv: float in [dr_v0, dr_v1]:
-			_add_terrain_quad(st, lo + lu * fa + lv * (vv - 0.12), lo + lu * fb + lv * (vv - 0.12), lo + lu * fb + lv * (vv + 0.12), lo + lu * fa + lv * (vv + 0.12), 0.138, col_drain)
-	for k: int in 4:
-		var fa: float = lerpf(dr_v0, dr_v1, float(k) / 4.0)
-		var fb: float = lerpf(dr_v0, dr_v1, float(k + 1) / 4.0)
-		for uu: float in [dr_u0, dr_u1]:
-			_add_terrain_quad(st, lo + lu * (uu - 0.12) + lv * fa, lo + lu * (uu + 0.12) + lv * fa, lo + lu * (uu + 0.12) + lv * fb, lo + lu * (uu - 0.12) + lv * fb, 0.138, col_drain)
+	# 3b) -1. KAT ÇÖKÜK AVLU TABANI (yerin 3.50 m altında: u = 18.42..50.20, v = 18.12..31.25)
+	_add_box_xf(st, lxf, Vector3(31.82, 0.50, 13.16), Vector3(34.31, y_sunk - 0.25, 24.685), col_stone_plaza)
+	# Çökük avlu dikdörtgen drenaj ızgara kanalı (lib_ytu_2.jpg & lib_gal_11.jpg!)
+	_add_box_xf(st, lxf, Vector3(25.80, 0.02, 0.22), Vector3(34.80, y_sunk + 0.012, 19.75), col_drain)
+	_add_box_xf(st, lxf, Vector3(25.80, 0.02, 0.22), Vector3(34.80, y_sunk + 0.012, 29.65), col_drain)
+	_add_box_xf(st, lxf, Vector3(0.22, 0.02, 10.12), Vector3(21.90, y_sunk + 0.012, 24.70), col_drain)
+	_add_box_xf(st, lxf, Vector3(0.22, 0.02, 10.12), Vector3(47.70, y_sunk + 0.012, 24.70), col_drain)
 
-	# 3b) İkonik geniş açık hava merdiven & ahşap oturma amfisi (u = 50.5..57.5, v = 19.0..34.6 — lib_gal_11/18.jpg!)
-	#     Sol yarı (v = 19.0..26.8): 8 koyu bazalt taş basamak; Sağ yarı (v = 26.8..34.6): 5 sıcak ahşap amfi oturma basamağı
-	var amp_wp: Vector2 = lo + lu * 54.0 + lv * 26.8
-	var amp_y: float = TerrainHeight.active_height(amp_wp.x, amp_wp.y)
-	var axf: Transform3D = _frame_xform(amp_wp, lu, lv, amp_y)
-	for si: int in 8:
-		var sx: float = -3.2 + float(si) * 0.82
-		var sh: float = 0.20 + float(si) * 0.14
-		# Bazalt yürüyüş merdivenleri (L-kanat tarafı)
-		_add_box_xf(st, axf, Vector3(0.84, sh + 0.55, 7.8), Vector3(sx, (sh - 0.55) * 0.5, -3.9), col_basalt)
-	for wi: int in 5:
-		var wx: float = -2.8 + float(wi) * 1.32
-		var wh: float = 0.28 + float(wi) * 0.24
-		# Ahşap kaplı geniş oturma amfi basamakları (cam küp tarafı — lib_gal_18.jpg!)
-		_add_box_xf(st, axf, Vector3(1.34, wh + 0.50, 7.6), Vector3(wx, (wh - 0.50) * 0.5, 3.8), col_basalt)
-		_add_box_xf(st, axf, Vector3(1.26, 0.07, 7.45), Vector3(wx, wh + 0.035, 3.8), col_amphi_wood)
+	# 3c) 1 KAT AŞAĞI İNİŞ (u = 58.20 -> 50.20, y_top = -0.42 -> y_sunk = -3.92):
+	#     • SAĞ TARAF (aşağı inerken sağda: v = 18.12..24.95): 20 koyu bazalt yürüyüş basamağı!
+	var n_steps: int = 20
+	var step_du: float = 8.0 / float(n_steps)
+	for si: int in n_steps:
+		var su: float = 58.20 - (float(si) + 0.5) * step_du
+		var sy_top: float = y_top - float(si + 1) * (3.50 / float(n_steps + 1))
+		var sh: float = sy_top - (y_sunk - 0.25)
+		_add_box_xf(st, lxf, Vector3(step_du + 0.02, sh, 6.83), Vector3(su, sy_top - sh * 0.5, 21.535), col_basalt)
+		# Basamak burunlarında ince açık granit çizgi (lib_gal_18.jpg net basamak okunurluğu!)
+		_add_box_xf(st, lxf, Vector3(0.06, 0.035, 6.81), Vector3(su - step_du * 0.5 + 0.03, sy_top - 0.012, 21.535), col_step_nosing)
 
-	# 3c) Siyah cam küp önünde koyu mermer bordür + siyah metal korkuluk bandı (lib_gal_18/19.jpg!)
-	#     Avlunun v = 34.8 kenarı boyunca (u = 24.5..51.0)
-	for ri: int in 9:
-		var ru: float = 26.0 + float(ri) * 2.95
-		var rwp: Vector2 = lo + lu * ru + lv * 34.4
-		var ry: float = TerrainHeight.active_height(rwp.x, rwp.y)
-		var rxf: Transform3D = _frame_xform(rwp, lu, lv, ry)
-		_add_box_xf(st, rxf, Vector3(2.98, 0.34, 0.36), Vector3(0.0, 0.17, 0.0), col_marble_curb)
-		_add_box_xf(st, rxf, Vector3(2.98, 0.055, 0.055), Vector3(0.0, 1.18, 0.0), col_black_metal)
-		_add_box_xf(st, rxf, Vector3(2.98, 0.035, 0.035), Vector3(0.0, 0.86, 0.0), col_black_metal)
-		_add_box_xf(st, rxf, Vector3(2.98, 0.035, 0.035), Vector3(0.0, 0.56, 0.0), col_black_metal)
-		_add_box_xf(st, rxf, Vector3(0.07, 0.90, 0.07), Vector3(-1.45, 0.76, 0.0), col_black_metal)
+	#     • SOL TARAF (1 kat aşağı inerken TAM SOLDA kalan yerler: v = 24.95..31.25):
+	#       6 kademeli geniş sıcak AHŞAP OTURMA AMFİSİ (lib_gal_18.jpg & lib_ytu_2.jpg!)
+	var n_tiers: int = 6
+	var tier_du: float = 8.0 / float(n_tiers)
+	for ti: int in n_tiers:
+		var tu: float = 58.20 - (float(ti) + 0.5) * tier_du
+		var ty_seat: float = y_top - float(ti + 1) * 0.50  # Her kademe ergonomik 50 cm oturma yüksekliğinde!
+		var th_seat: float = ty_seat - (y_sunk - 0.25)
+		_add_box_xf(st, lxf, Vector3(tier_du + 0.02, th_seat, 6.30), Vector3(tu, ty_seat - th_seat * 0.5, 28.10), col_basalt)
+		# Üst ahşap oturma kaplaması (3 yatay latalı sıcak ahşap bank — lib_gal_18.jpg & lib_ytu_2.jpg!)
+		_add_box_xf(st, lxf, Vector3(tier_du - 0.08, 0.065, 6.18), Vector3(tu - 0.02, ty_seat + 0.032, 28.10), col_amphi_wood_dk)
+		for sl: int in 3:
+			var sl_u: float = tu - 0.42 + float(sl) * 0.40
+			_add_box_xf(st, lxf, Vector3(0.34, 0.082, 6.14), Vector3(sl_u, ty_seat + 0.041, 28.10), col_amphi_wood)
 
-	# 3d) Avlu ekseninde ve üst terasta siyah modern YTÜ lale lambaları (lib_ytu_2.jpg & lib_gal_11.jpg!)
-	var lamp_uvs: Array = [
-		[23.5, 26.8], [32.5, 26.8], [41.5, 26.8], [49.0, 26.8],
-		[53.5, 36.2], [53.5, 48.0], [53.5, 60.0],
-	]
-	for luv: Array in lamp_uvs:
-		var lwp: Vector2 = lo + lu * float(luv[0]) + lv * float(luv[1])
-		var ly: float = TerrainHeight.active_height(lwp.x, lwp.y)
-		var lxf: Transform3D = _frame_xform(lwp, lu, lv, ly)
-		_add_cyl_xf(st, lxf, 0.075, 3.6, Vector3(0.0, 1.8, 0.0), 6, col_black_metal)
+	# 3d) Sol kenar istinat duvarı + -1. kat yeraltı cam bağlantı galerisi (v = 31.25, u = 18.42..58.20 — lib_gal_11.jpg sağ!)
+	#     Amfi yan duvarı (u = 50.20..58.20): üst terası taşıyan temiz beyaz prekast yan duvar
+	_add_box_xf(st, lxf, Vector3(8.02, 3.70, 0.32), Vector3(54.20, y_sunk + 1.65, 31.25), col_white_lin)
+	#     Avlu boyunca (u = 18.42..50.20): üst beyaz kiriş + 6 beyaz dikey kolon + siyah kayıtlı -1. kat cam cephe!
+	_add_box_xf(st, lxf, Vector3(31.80, 0.42, 0.34), Vector3(34.31, y_top - 0.21, 31.25), col_white_lin)
+	_add_box_xf(st, lxf, Vector3(31.76, 3.10, 0.16), Vector3(34.31, y_sunk + 1.54, 31.28), col_gallery_glass)
+	for gi: int in 6:
+		var gu: float = 18.70 + float(gi) * 6.28
+		_add_box_xf(st, lxf, Vector3(0.62, 3.52, 0.34), Vector3(gu, y_sunk + 1.75, 31.25), col_white_lin)
+	for mi_g: int in 19:
+		var mu_g: float = 19.80 + float(mi_g) * 1.62
+		_add_box_xf(st, lxf, Vector3(0.07, 3.08, 0.22), Vector3(mu_g, y_sunk + 1.54, 31.24), col_black_metal)
+	_add_box_xf(st, lxf, Vector3(31.76, 0.07, 0.22), Vector3(34.31, y_sunk + 1.62, 31.24), col_black_metal)
+
+	# Üst teras kenarı boyunca (u = 18.45..58.20, v = 31.25, y = y_top) KESİNTİSİZ YATAY koyu mermer bordür + siyah korkuluk (lib_gal_18/19.jpg!)
+	_add_box_xf(st, lxf, Vector3(39.80, 0.34, 0.38), Vector3(38.32, y_top + 0.17, 31.25), col_marble_curb)
+	_add_box_xf(st, lxf, Vector3(39.80, 0.055, 0.055), Vector3(38.32, y_top + 1.16, 31.25), col_black_metal)
+	_add_box_xf(st, lxf, Vector3(39.80, 0.035, 0.035), Vector3(38.32, y_top + 0.85, 31.25), col_black_metal)
+	_add_box_xf(st, lxf, Vector3(39.80, 0.035, 0.035), Vector3(38.32, y_top + 0.56, 31.25), col_black_metal)
+	for ri: int in 15:
+		var ru_p: float = 18.60 + float(ri) * 2.82
+		_add_box_xf(st, lxf, Vector3(0.065, 0.86, 0.065), Vector3(ru_p, y_top + 0.75, 31.25), col_black_metal)
+
+	# 3e) YERİN 1 KAT ALTINDAKİ ANA KÜTÜPHANE GİRİŞİ (u = 18.42, v = 18.12..31.25, y = y_sunk — lib_ytu_1.jpg & lib_ytu_4.jpg!)
+	#     Ortada beyaz taşıyıcı kolon (v = 24.68) + iki yanda beyaz düz saçaklı, siyah çerçeveli cam rüzgarlık giriş kapıları!
+	_add_box_xf(st, lxf, Vector3(0.42, 3.92, 0.96), Vector3(18.55, y_sunk + 1.96, 24.68), col_white_lin)
+	for vc_door: float in [21.55, 27.80]:
+		# Beyaz düz rüzgarlık tavan tablası (lib_ytu_1.jpg alt orta & lib_ytu_4.jpg!)
+		_add_box_xf(st, lxf, Vector3(1.38, 0.24, 4.45), Vector3(19.08, y_sunk + 2.62, vc_door), col_white_lin)
+		# Sıcak aydınlatmalı iç giriş holü arka düzlemi + gümüş turnike kanatları ipucu
+		_add_box_xf(st, lxf, Vector3(0.10, 2.48, 4.10), Vector3(18.50, y_sunk + 1.25, vc_door), col_lobby_glow)
+		for ts_z: float in [-1.10, 0.0, 1.10]:
+			_add_box_xf(st, lxf, Vector3(0.45, 0.96, 0.09), Vector3(18.78, y_sunk + 0.48, vc_door + ts_z), col_turnstile)
+		# Siyah alüminyum çerçeveli cam rüzgarlık yan + ön yüzeyleri ve kayar kapı kayıtları
+		_add_box_xf(st, lxf, Vector3(1.22, 2.50, 4.26), Vector3(19.04, y_sunk + 1.25, vc_door), col_gallery_glass)
+		for dz_f: float in [-2.14, -0.92, 0.0, 0.92, 2.14]:
+			_add_box_xf(st, lxf, Vector3(0.10, 2.52, 0.09), Vector3(19.66, y_sunk + 1.26, vc_door + dz_f), col_black_metal)
+		_add_box_xf(st, lxf, Vector3(0.10, 0.09, 4.34), Vector3(19.66, y_sunk + 2.18, vc_door), col_black_metal)
+		_add_box_xf(st, lxf, Vector3(0.10, 0.10, 4.36), Vector3(19.66, y_sunk + 2.48, vc_door), col_black_metal)
+		for side_z: float in [-2.14, 2.14]:
+			_add_box_xf(st, lxf, Vector3(1.26, 2.52, 0.08), Vector3(19.04, y_sunk + 1.26, vc_door + side_z), col_black_metal)
+
+	# -1. kat giriş kapılarının tam üstündeki beyaz alınlık bandında "MERKEZ KÜTÜPHANESİ" ana giriş tabelası (+lu merdivene bakar!)
+	var ent_xf: Transform3D = _frame_xform(lo + lu * 18.68 + lv * 24.68, -lv, lu, y_top)
+	_add_box_xf(st, ent_xf, Vector3(7.60, 0.86, 0.12), Vector3(0.0, 0.02, 0.02), col_black_metal)
+	_add_3d_sign(ent_xf, Vector3(0.0, 0.16, 0.10), "MerkezKutuphaneSign", "MERKEZ KÜTÜPHANESİ", 0.34, COL_WHITE)
+	_add_label(ent_xf, Vector3(0.0, -0.22, 0.11), "MerkezKutuphaneGirisBadge", "ANA GİRİŞ  •  -1. KAT", 32, 0.0052, Color(0.85, 0.90, 0.96), Color(0.04, 0.06, 0.10))
+
+	# 3f) Çökük avlu ekseninde (-3.92 m) ve üst terasta (-0.42 m) siyah modern YTÜ lale lambaları (lib_ytu_2.jpg & lib_gal_11.jpg!)
+	var sunk_lamp_us: Array = [24.0, 31.5, 39.0, 46.5]
+	for lu_l: float in sunk_lamp_us:
+		var sl_xf: Transform3D = _frame_xform(lo + lu * lu_l + lv * 24.70, lu, lv, y_sunk)
+		_add_cyl_xf(st, sl_xf, 0.075, 3.6, Vector3(0.0, 1.8, 0.0), 6, col_black_metal)
 		for fork: float in [-1.0, 1.0]:
-			_add_box_xf(st, lxf, Vector3(0.055, 0.72, 0.055), Vector3(fork * 0.22, 3.85, 0.0), col_black_metal)
-		_add_cyl_xf(st, lxf, 0.34, 0.08, Vector3(0.0, 4.24, 0.0), 10, col_black_metal)
-		_add_cyl_xf(st, lxf, 0.26, 0.04, Vector3(0.0, 4.19, 0.0), 10, col_lamp_glow)
+			_add_box_xf(st, sl_xf, Vector3(0.055, 0.72, 0.055), Vector3(fork * 0.22, 3.85, 0.0), col_black_metal)
+		_add_cyl_xf(st, sl_xf, 0.34, 0.08, Vector3(0.0, 4.24, 0.0), 10, col_black_metal)
+		_add_cyl_xf(st, sl_xf, 0.26, 0.04, Vector3(0.0, 4.19, 0.0), 10, col_lamp_glow)
+	for ul_uv: Array in [[36.0, 33.4], [52.5, 33.4], [59.8, 33.4]]:
+		var ul_xf: Transform3D = _frame_xform(lo + lu * float(ul_uv[0]) + lv * float(ul_uv[1]), lu, lv, y_top)
+		_add_cyl_xf(st, ul_xf, 0.075, 3.6, Vector3(0.0, 1.8, 0.0), 6, col_black_metal)
+		for fork: float in [-1.0, 1.0]:
+			_add_box_xf(st, ul_xf, Vector3(0.055, 0.72, 0.055), Vector3(fork * 0.22, 3.85, 0.0), col_black_metal)
+		_add_cyl_xf(st, ul_xf, 0.34, 0.08, Vector3(0.0, 4.24, 0.0), 10, col_black_metal)
+		_add_cyl_xf(st, ul_xf, 0.26, 0.04, Vector3(0.0, 4.19, 0.0), 10, col_lamp_glow)
 
-	# 3e) L-kanat avlu cephesi boyunca antrasit dikdörtgen saksılarda defne/çalı dizisi (lib_gal_11.jpg!)
-	for pi: int in 7:
-		var pu: float = 22.0 + float(pi) * 4.4
-		var pwp: Vector2 = lo + lu * pu + lv * 19.6
-		var py: float = TerrainHeight.active_height(pwp.x, pwp.y)
-		var pxf: Transform3D = _frame_xform(pwp, lu, lv, py)
+	# 3g) Çökük avlu bitkilendirmesi: sağda L-kanat boyunca 6 dikdörtgen defne saksısı + solda galeri camı önünde 3 yuvarlak palmiye saksısı (lib_gal_11.jpg!)
+	for pi: int in 6:
+		var pu: float = 22.8 + float(pi) * 4.9
+		var pxf: Transform3D = _frame_xform(lo + lu * pu + lv * 19.05, lu, lv, y_sunk)
 		_add_box_xf(st, pxf, Vector3(1.15, 0.52, 0.55), Vector3(0.0, 0.26, 0.0), col_black_metal)
 		_add_foliage_blob_xf(st, pxf, Vector3(0.0, 1.25, 0.0), 0.52, 0.85, col_planter_leaf)
 		_add_foliage_blob_xf(st, pxf, Vector3(0.18, 1.55, 0.05), 0.36, 0.52, col_planter_hi)
+	for palm_u: float in [23.5, 34.5, 45.5]:
+		var m_pxf: Transform3D = _frame_xform(lo + lu * palm_u + lv * 30.35, lu, lv, y_sunk)
+		_add_cyl_xf(st, m_pxf, 0.34, 0.54, Vector3(0.0, 0.27, 0.0), 8, col_black_metal)
+		_add_foliage_blob_xf(st, m_pxf, Vector3(0.0, 1.05, 0.0), 0.58, 0.62, col_planter_leaf)
+		_add_foliage_blob_xf(st, m_pxf, Vector3(-0.15, 1.38, 0.08), 0.42, 0.44, col_planter_hi)
 
-	# 3f) Minimalist modern "MERKEZ KÜTÜPHANESİ" giriş monoliti (Yemekhane & Tarihi Hamam çapraz yaklaşımına dönük!)
-	var m_wp: Vector2 = lo + lu * 55.5 + lv * 69.5
-	var m_out: Vector2 = (lu + lv).normalized()  # GD/G giriş meydanına 45° dönük
+	# 3h) Üst merdiven başında yönlendirme monoliti + çarpıştırıcılar
+	var m_wp: Vector2 = lo + lu * 60.4 + lv * 33.4
+	var m_out: Vector2 = (lu * 0.85 + lv * 0.52).normalized()
 	var m_right: Vector2 = Vector2(m_out.y, -m_out.x)
-	var m_y: float = TerrainHeight.active_height(m_wp.x, m_wp.y)
-	var mxf: Transform3D = _frame_xform(m_wp, m_right, m_out, m_y)
-	_add_box_xf(st, mxf, Vector3(4.6, 0.26, 0.72), Vector3(0.0, 0.13, 0.0), col_basalt)
-	_add_box_xf(st, mxf, Vector3(4.2, 2.35, 0.36), Vector3(0.0, 0.26 + 1.175, 0.0), col_black_metal)
-	_add_box_xf(st, mxf, Vector3(4.2, 0.28, 0.38), Vector3(0.0, 2.50, 0.0), col_white_lin)
-	_add_3d_sign(mxf, Vector3(0.0, 1.55, 0.24), "MerkezKutuphaneSign", "MERKEZ KÜTÜPHANESİ", 0.28, COL_WHITE)
+	var mxf: Transform3D = _frame_xform(m_wp, m_right, m_out, y_top)
+	_add_box_xf(st, mxf, Vector3(3.8, 0.24, 0.64), Vector3(0.0, 0.12, 0.0), col_basalt)
+	_add_box_xf(st, mxf, Vector3(3.5, 2.05, 0.32), Vector3(0.0, 0.24 + 1.025, 0.0), col_black_metal)
+	_add_box_xf(st, mxf, Vector3(3.5, 0.24, 0.34), Vector3(0.0, 2.38, 0.0), col_white_lin)
+	_add_label(mxf, Vector3(0.0, 1.32, 0.18), "MerkezKutuphaneUpperTotem", "MERKEZ KÜTÜPHANESİ\n↓ Giriş -1. Kat (Çökük Avlu)", 28, 0.0028, COL_WHITE, Color(0.06, 0.08, 0.12))
 	var mcol: CollisionShape3D = CollisionShape3D.new()
 	mcol.name = "MerkezKutuphaneMonolithCollider"
 	var msh: BoxShape3D = BoxShape3D.new()
-	msh.size = Vector3(4.6, 2.6, 0.72)
+	msh.size = Vector3(3.8, 2.5, 0.64)
 	mcol.shape = msh
-	mcol.transform = mxf * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.3, 0.0))
+	mcol.transform = mxf * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.25, 0.0))
 	col_body.add_child(mcol)
-	# Meydan kenarında modern ahşap çalışma bankları
-	_add_bench(st, col_body, lo + lu * 58.0 + lv * 42.0, lv, lu)
-	_add_bench(st, col_body, lo + lu * 58.0 + lv * 52.0, lv, lu)
+
+	# Çökük avlu tabanı çarpıştırıcısı (tekil testlerde de doğrulansın)
+	var scol: CollisionShape3D = CollisionShape3D.new()
+	scol.name = "MerkezKutuphaneSunkFloorCollider"
+	var ssh: BoxShape3D = BoxShape3D.new()
+	ssh.size = Vector3(31.8, 0.5, 13.15)
+	scol.shape = ssh
+	scol.transform = lxf * Transform3D(Basis.IDENTITY, Vector3(34.31, y_sunk - 0.25, 24.685))
+	col_body.add_child(scol)
+	_add_bench(st, col_body, lo + lu * 55.5 + lv * 42.0, lv, lu)
+	_add_bench(st, col_body, lo + lu * 55.5 + lv * 52.0, lv, lu)
 
 
 ## 4) Fen-Edebiyat Fakültesi (b#9): giriş alınlığı, çift cam kapı ve YTÜ fakülte totemi.
@@ -1086,6 +1152,45 @@ static func _add_foliage_blob_xf(st: SurfaceTool, xf: Transform3D, local_pos: Ve
 		st.add_vertex(top)
 		st.add_vertex(ring_pts[2][j])
 		st.add_vertex(ring_pts[2][i])
+
+
+## Merkez Kütüphanesi dış taş meydan dörtgeni: üst teras sınırında y_top kotuna kilitlenir, dışa doğru doğal araziye yumuşakça iner.
+static func _merkez_plaza_y(lo: Vector2, lu: Vector2, lv: Vector2, y_top: float, uv: Vector2) -> float:
+	var wp: Vector2 = lo + lu * uv.x + lv * uv.y
+	var ty: float = TerrainHeight.active_height(wp.x, wp.y) + 0.128
+	# Üst gezinti terası + merdiven başı sahanlık zarfına ([18.42..62.60] x [18.12..35.60]) 2B Öklid uzaklığı
+	var du: float = maxf(0.0, maxf(18.42 - uv.x, uv.x - 62.60))
+	var dv: float = maxf(0.0, maxf(18.12 - uv.y, uv.y - 35.60))
+	var dist: float = sqrt(du * du + dv * dv)
+	var t: float = smoothstep(0.0, 5.5, dist)
+	return lerpf(y_top, ty, t)
+
+
+static func _add_merkez_plaza_quad(st: SurfaceTool, lo: Vector2, lu: Vector2, lv: Vector2, y_top: float, uva: Vector2, uvb: Vector2, uvc: Vector2, uvd: Vector2, color: Color) -> void:
+	var a: Vector2 = lo + lu * uva.x + lv * uva.y
+	var b: Vector2 = lo + lu * uvb.x + lv * uvb.y
+	var c: Vector2 = lo + lu * uvc.x + lv * uvc.y
+	var d: Vector2 = lo + lu * uvd.x + lv * uvd.y
+	var va: Vector3 = Vector3(a.x, _merkez_plaza_y(lo, lu, lv, y_top, uva), a.y)
+	var vb: Vector3 = Vector3(b.x, _merkez_plaza_y(lo, lu, lv, y_top, uvb), b.y)
+	var vc: Vector3 = Vector3(c.x, _merkez_plaza_y(lo, lu, lv, y_top, uvc), c.y)
+	var vd: Vector3 = Vector3(d.x, _merkez_plaza_y(lo, lu, lv, y_top, uvd), d.y)
+	st.set_color(color)
+	var n1: Vector3 = (vc - va).cross(vb - va)
+	if n1.y >= 0.0:
+		st.add_vertex(va)
+		st.add_vertex(vb)
+		st.add_vertex(vc)
+		st.add_vertex(va)
+		st.add_vertex(vc)
+		st.add_vertex(vd)
+	else:
+		st.add_vertex(va)
+		st.add_vertex(vc)
+		st.add_vertex(vb)
+		st.add_vertex(va)
+		st.add_vertex(vd)
+		st.add_vertex(vc)
 
 
 ## Arazi eğimine birebir yapışan yukarı bakan tek renkli taş/drenaj dörtgeni (çim sızmasız meydan kaplaması).

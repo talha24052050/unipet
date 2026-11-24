@@ -35,10 +35,16 @@ func test_campus_landmarks_build_single_merged_mesh() -> String:
 		and n.get_node_or_null("BuyukEvSign") != null
 		and n.get_node_or_null("LojmanlarTotemTitle") != null
 		and col.get_node_or_null("MerkezKutuphaneMonolithCollider") != null
+		and col.get_node_or_null("MerkezKutuphaneSunkFloorCollider") != null
 	)
+	var sunk_col: CollisionShape3D = col.get_node_or_null("MerkezKutuphaneSunkFloorCollider") as CollisionShape3D if col != null else null
+	var mono_col: CollisionShape3D = col.get_node_or_null("MerkezKutuphaneMonolithCollider") as CollisionShape3D if col != null else null
+	var sunk_drop: float = (mono_col.transform.origin.y - 1.25) - (sunk_col.transform.origin.y + 0.25) if (sunk_col != null and mono_col != null) else 0.0
 	n.free()
 	if not ok:
 		return "CampusLandmarks düğümleri eksik"
+	if absf(sunk_drop - 3.50) > 0.15:
+		return "Merkez Kütüphanesi çökük avlusu üst meydanın ~3.5 m (1 kat) altında olmalı, bulunan fark: %.2f m" % sunk_drop
 	if mesh_count > 1:
 		return "CampusLandmarks en fazla 1 birleşik mesh üretmeli, %d bulundu" % mesh_count
 	return ""

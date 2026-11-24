@@ -382,15 +382,20 @@ void fragment() {
 					roughness = 0.82;
 				}
 			} else {
-				// L-kanat ana kütüphane cephesi (lib_ytu_1.jpg & lib_gal_11.jpg):
-				// Kalın beyaz dikey taşıyıcı kolonlar (6.8 m ritim) + beyaz kat bandı + üst beyaz friz +
-				// aralarında dev siyah kayıtlı şeffaf perde camlar (içte hafif sıcak çalışma katı parıltısı).
+				// L-kanat ana kütüphane cephesi (lib_ytu_1.jpg, lib_gal_11.jpg & lib_gal_18.jpg):
+				// - Çökük avlu cephesinde (lu ∈ [18.0, 58.6], lv ∈ [17.7, 32.0]) local_y ∈ [-3.50, -0.22] -1. kat (giriş katı) camları!
+				// - local_y ∈ [-0.22, +0.42]: merdiven üst kotu ve üst terasla birebir hizalı beyaz zemin döşeme bandı!
+				// - local_y ∈ [+0.42, +9.35]: iki kat yüksekliğinde şeffaf perde camlar + 6.8 m beyaz taşıyıcı kolonlar.
+				bool in_sunk_facade = (lu >= 18.0 && lu <= 58.6 && lv >= 17.7 && lv <= 32.0);
 				float bay_u = mod(wall_u, 6.8);
 				bool white_pier = (bay_u < 0.92);
-				bool white_band = (local_y < 0.18) || (local_y >= 3.38 && local_y <= 4.18) || (local_y >= 9.35);
+				bool white_band = (!in_sunk_facade && local_y < 0.18) ||
+					(in_sunk_facade && local_y < -3.36) ||
+					(local_y >= -0.22 && local_y <= 0.42) ||
+					(local_y >= 9.35);
 				if (white_pier || white_band) {
 					float j_u = fract(wall_u / 1.7);
-					float j_y = fract(local_y / 1.3);
+					float j_y = fract((local_y + 4.0) / 1.3);
 					col = wall_color.rgb * 0.99;
 					if (j_u < 0.018 || j_y < 0.018) {
 						col *= 0.92;  // ince beyaz prekast panel derzi
@@ -399,22 +404,24 @@ void fragment() {
 				} else {
 					float in_u = bay_u - 0.92;
 					float mu = mod(in_u, 1.47);
-					float my = local_y < 3.38 ? mod(local_y - 0.18, 1.60) : mod(local_y - 4.18, 1.30);
-					bool mull_l = (mu < 0.075 || mu > 1.395 || my < 0.065 || my > 1.235 ||
-						in_u < 0.08 || in_u > 5.80 || abs(local_y - 6.76) < 0.09);
+					float my = local_y < -0.22 ? mod(local_y + 3.36, 1.56) : mod(local_y - 0.42, 1.48);
+					bool mull_l = (mu < 0.075 || mu > 1.395 || my < 0.065 || my > 1.415 ||
+						in_u < 0.08 || in_u > 5.80 || abs(local_y - 4.78) < 0.08);
 					if (mull_l) {
 						col = vec3(0.09, 0.10, 0.12);
 						roughness = 0.46;
 						metallic = 0.35;
 					} else {
-						// Cam içinde hafif gökyüzü yansıması + orta okuma katında sıcak kırmızı-turuncu masa bölücü ipucu
-						float sky_l = clamp(local_y / 9.5, 0.0, 1.0);
-						vec3 glass_c = mix(vec3(0.08, 0.13, 0.18), vec3(0.16, 0.25, 0.33), sky_l);
-						// İnce sıcak çalışma salonu derinlik tonu (lib_ytu_1.jpg)
-						if (local_y > 5.35 && local_y < 5.95) {
-							glass_c = mix(glass_c, vec3(0.42, 0.21, 0.14), 0.32);
-						} else if (local_y > 6.85 && local_y < 7.45) {
-							glass_c = mix(glass_c, vec3(0.32, 0.28, 0.20), 0.22);
+						// Cam içinde gökyüzü yansıması + -1. kat giriş fuayesi ve üst okuma salonu sıcak ışık tonu
+						float sky_l = clamp((local_y + 3.5) / 13.0, 0.0, 1.0);
+						vec3 glass_c = mix(vec3(0.07, 0.12, 0.17), vec3(0.16, 0.25, 0.33), sky_l);
+						if (local_y < -0.22) {
+							// -1. kat çökük avlu giriş fuayesi sıcak aydınlatması (lib_ytu_1.jpg alt kat!)
+							glass_c = mix(glass_c, vec3(0.38, 0.32, 0.23), 0.34);
+						} else if (local_y > 5.10 && local_y < 5.75) {
+							glass_c = mix(glass_c, vec3(0.44, 0.21, 0.14), 0.34);
+						} else if (local_y > 1.25 && local_y < 1.80) {
+							glass_c = mix(glass_c, vec3(0.34, 0.29, 0.21), 0.24);
 						}
 						col = glass_c;
 						roughness = 0.14;

@@ -706,7 +706,11 @@ def build_places() -> dict:
 
         if matched_entity is not None and score >= 0.6:
             pos = matched_entity["pos"]
-            spawn = compute_safe_spawn(pos, solid_buildings, walk_points)
+            # Yeni Merkez Kütüphanesi: merdiven üst sahanlığına ışınla (1 kat aşağı çökük avlu girişine bakan meydan)
+            if pid == "yeni_kutuphane":
+                spawn = [-39.1, -180.5]
+            else:
+                spawn = compute_safe_spawn(pos, solid_buildings, walk_points)
             zone = assign_zone(pos, zones_data)
             places_list.append({
                 "id": pid,

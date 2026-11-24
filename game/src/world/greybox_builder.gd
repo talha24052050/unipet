@@ -430,8 +430,25 @@ func _build_ground_rect(rect: Rect2) -> void:
 	add_child(body)
 
 
+const MERKEZ_LIB_ORIGIN: Vector2 = Vector2(-74.33, -236.71)
+const MERKEZ_LIB_U: Vector2 = Vector2(0.809885, 0.586589)
+const MERKEZ_LIB_V: Vector2 = Vector2(-0.586589, 0.809885)
+const MERKEZ_LIB_UPPER_Y: float = -0.42
+const MERKEZ_LIB_SUNK_Y: float = -3.92
+
+
+static func _in_merkez_sunk_pit(wx: float, wz: float) -> bool:
+	var rx: float = wx - MERKEZ_LIB_ORIGIN.x
+	var rz: float = wz - MERKEZ_LIB_ORIGIN.y
+	var lu: float = rx * MERKEZ_LIB_U.x + rz * MERKEZ_LIB_U.y
+	var lv: float = rx * MERKEZ_LIB_V.x + rz * MERKEZ_LIB_V.y
+	return lu >= 18.42 and lu <= 58.20 and lv >= 18.12 and lv <= 31.25
+
+
 func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 	# Zemin mesh'ini TerrainHeight ızgarasıyla birebir hizala (yollar ve binalarla 0.0 mm örtüşme).
+	# Yeni Merkez Kütüphanesi'nin -1. kat çökük avlusunda (u=18.42..58.20, v=18.12..31.25) zemin açılır.
+	var has_merkez_pit: bool = rect.has_point(Vector2(-48.0, -198.0))
 	var c0: int = clampi(floori((rect.position.x - th.min_x) / th.step), 0, th.cols - 2)
 	var r0: int = clampi(floori((rect.position.y - th.min_z) / th.step), 0, th.rows - 2)
 	var c1: int = clampi(ceili((rect.end.x - th.min_x) / th.step), c0 + 1, th.cols - 1)
@@ -458,21 +475,43 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 			uvs[idx] = Vector2(x * 0.05, z * 0.05)
 
 	var indices: PackedInt32Array = PackedInt32Array()
-	indices.resize((nx - 1) * (nz - 1) * 6)
-	var k: int = 0
 	for r: int in nz - 1:
+		var z0: float = th.min_z + float(r0 + r) * th.step
 		for c: int in nx - 1:
+			var x0: float = th.min_x + float(c0 + c) * th.step
+			if has_merkez_pit and absf(x0 + th.step * 0.5 + 48.0) < 52.0 and absf(z0 + th.step * 0.5 + 198.0) < 52.0:
+				var sub: int = 8
+				var ds: float = th.step / float(sub)
+				for sr: int in sub:
+					var sz0: float = z0 + float(sr) * ds
+					var sz1: float = sz0 + ds
+					for sc: int in sub:
+						var sx0: float = x0 + float(sc) * ds
+						var sx1: float = sx0 + ds
+						if _in_merkez_sunk_pit(sx0, sz0) or _in_merkez_sunk_pit(sx1, sz0) or _in_merkez_sunk_pit(sx1, sz1) or _in_merkez_sunk_pit(sx0, sz1):
+							continue
+						var base_vi: int = verts.size()
+						for qpt: Vector2 in [Vector2(sx0, sz0), Vector2(sx1, sz0), Vector2(sx1, sz1), Vector2(sx0, sz1)]:
+							verts.append(Vector3(qpt.x, th.height_at(qpt.x, qpt.y), qpt.y))
+							normals.append(th.normal_at(qpt.x, qpt.y))
+							uvs.append(Vector2(qpt.x * 0.05, qpt.y * 0.05))
+						indices.append(base_vi)
+						indices.append(base_vi + 1)
+						indices.append(base_vi + 2)
+						indices.append(base_vi)
+						indices.append(base_vi + 2)
+						indices.append(base_vi + 3)
+				continue
 			var i00: int = r * nx + c
 			var i10: int = i00 + 1
 			var i01: int = i00 + nx
 			var i11: int = i01 + 1
-			indices[k] = i00
-			indices[k + 1] = i10
-			indices[k + 2] = i11
-			indices[k + 3] = i00
-			indices[k + 4] = i11
-			indices[k + 5] = i01
-			k += 6
+			indices.append(i00)
+			indices.append(i10)
+			indices.append(i11)
+			indices.append(i00)
+			indices.append(i11)
+			indices.append(i01)
 
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
@@ -493,7 +532,63 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	body.add_child(shape)
 	body.add_child(mi)
+	if has_merkez_pit:
+		_add_merkez_sunk_ground_colliders(body)
 	add_child(body)
+
+
+static func _add_merkez_sunk_ground_colliders(body: StaticBody3D) -> void:
+	# Navmesh ve oyuncu fiziği için Yeni Merkez Kütüphanesi -1. kat çökük avlusu + sağ merdiven rampası + sol amfi + üst teras.
+	var lxf: Transform3D = Transform3D(
+		Basis(Vector3(MERKEZ_LIB_U.x, 0.0, MERKEZ_LIB_U.y), Vector3.UP, Vector3(MERKEZ_LIB_V.x, 0.0, MERKEZ_LIB_V.y)),
+		Vector3(MERKEZ_LIB_ORIGIN.x, 0.0, MERKEZ_LIB_ORIGIN.y)
+	)
+	var boxes: Array = [
+		# -1. kat çökük avlu tabanı (u=18.42..50.20, v=18.12..31.25, üst kot = MERKEZ_LIB_SUNK_Y)
+		[Vector3(31.8, 0.5, 13.15), Vector3(34.31, MERKEZ_LIB_SUNK_Y - 0.25, 24.685)],
+		# Üst gezinti terası (siyah cam küp önü: u=18.42..58.20, v=31.25..35.80)
+		[Vector3(39.8, 0.9, 4.55), Vector3(38.31, MERKEZ_LIB_UPPER_Y - 0.45, 33.525)],
+		# Merdiven başı üst sahanlık (u=58.20..62.60, v=18.12..35.80)
+		[Vector3(4.4, 0.9, 17.68), Vector3(60.40, MERKEZ_LIB_UPPER_Y - 0.45, 26.96)],
+		# İstinat duvarı + üst korkuluk bariyeri (v=31.25, u=18.42..58.20)
+		[Vector3(39.78, 4.65, 0.36), Vector3(38.31, MERKEZ_LIB_SUNK_Y + 2.325, 31.25)],
+	]
+	# Sol taraftaki 6 ahşap amfi oturma basamağı (aşağı inerken solda: v=24.95..31.25, u=50.20..58.20)
+	for ti: int in 6:
+		var u_hi: float = 58.20 - float(ti) * (8.0 / 6.0)
+		var u_lo: float = u_hi - (8.0 / 6.0)
+		var y_seat: float = MERKEZ_LIB_UPPER_Y - float(ti + 1) * 0.50
+		var h_seat: float = y_seat - (MERKEZ_LIB_SUNK_Y - 0.30)
+		boxes.append([Vector3(8.0 / 6.0, h_seat, 6.30), Vector3((u_lo + u_hi) * 0.5, y_seat - h_seat * 0.5, 28.10)])
+	for b_def: Array in boxes:
+		var cs: CollisionShape3D = CollisionShape3D.new()
+		var bs: BoxShape3D = BoxShape3D.new()
+		bs.size = b_def[0]
+		cs.shape = bs
+		cs.transform = lxf * Transform3D(Basis.IDENTITY, b_def[1])
+		body.add_child(cs)
+	# Sağ taraftaki yürüyüş merdiveni eğimli rampa çarpıştırıcısı (u=50.20..58.20, v=18.12..24.95, 23.6° <= 45°)
+	var r_len: float = sqrt(8.0 * 8.0 + 3.5 * 3.5)
+	var t_dir: Vector3 = Vector3(8.0 / r_len, 3.5 / r_len, 0.0)
+	var n_dir: Vector3 = Vector3(-3.5 / r_len, 8.0 / r_len, 0.0)
+	var r_cs: CollisionShape3D = CollisionShape3D.new()
+	var r_bs: BoxShape3D = BoxShape3D.new()
+	r_bs.size = Vector3(r_len, 0.40, 6.83)
+	r_cs.shape = r_bs
+	var r_mid: Vector3 = Vector3(54.20, (MERKEZ_LIB_SUNK_Y + MERKEZ_LIB_UPPER_Y) * 0.5, 21.535) - n_dir * 0.20
+	r_cs.transform = lxf * Transform3D(Basis(t_dir, n_dir, Vector3(0.0, 0.0, 1.0)), r_mid)
+	body.add_child(r_cs)
+	# Üst sahanlıktan doğal araziye yumuşak geçiş rampası (u=62.60..66.60, v=18.12..35.80)
+	var o_len: float = sqrt(4.0 * 4.0 + 0.30 * 0.30)
+	var ot_dir: Vector3 = Vector3(4.0 / o_len, -0.30 / o_len, 0.0)
+	var on_dir: Vector3 = Vector3(0.30 / o_len, 4.0 / o_len, 0.0)
+	var o_cs: CollisionShape3D = CollisionShape3D.new()
+	var o_bs: BoxShape3D = BoxShape3D.new()
+	o_bs.size = Vector3(o_len, 0.40, 17.68)
+	o_cs.shape = o_bs
+	var o_mid: Vector3 = Vector3(64.60, MERKEZ_LIB_UPPER_Y - 0.15, 26.96) - on_dir * 0.20
+	o_cs.transform = lxf * Transform3D(Basis(ot_dir, on_dir, Vector3(0.0, 0.0, 1.0)), o_mid)
+	body.add_child(o_cs)
 
 
 ## Zemin bölge merkezinde (bölge dosyaları kampüs koordinatı kullanır; Ortabahçe'de merkez orijin).
@@ -525,11 +620,15 @@ func _build_building(b: Dictionary) -> void:
 		_build_canopy(poly, height)
 		return
 	# OSM building:min_level: binalar arası havada köprü — altı açık (eskiden yerden yükselip yolu kapatıyordu)
+	var name_text: String = str(b.get("name", ""))
+	var is_merkez_lib: bool = name_text == MERKEZ_KUTUPHANE_NAME
 	var min_h: float = clampf(float(b.get("min_height", 0.0)), 0.0, height - 1.0)
 	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
-	var ref_y: float = _polygon_avg_height(poly) if has_terrain else 0.0
+	var ref_y: float = MERKEZ_LIB_UPPER_Y if (has_terrain and is_merkez_lib) else (_polygon_avg_height(poly) if has_terrain else 0.0)
 	var min_y: float = _polygon_min_height(poly) if has_terrain else 0.0
 	var floor_y: float = -((ref_y - min_y) + BUILDING_FOUNDATION_M) if (has_terrain and min_h <= 0.0) else 0.0
+	if has_terrain and is_merkez_lib:
+		floor_y = minf(floor_y, -4.60)  # -1. kat çökük avlu (-3.50 m) tabanının altına kesintisiz duvar!
 	# Sadece kutusu binanın kutusuyla kesişen yollar (kampüsün tamamında 300+ yol × 140 bina çok yavaştı).
 	var near_paths: Array[PackedVector2Array] = _paths_near(_poly_box(poly).grow(GATE_TOUCH_DIST + 1.0))
 	var no_paths: Array[PackedVector2Array] = []
@@ -540,7 +639,6 @@ func _build_building(b: Dictionary) -> void:
 		push_warning("Bina üçgenlenemedi, atlandı: %s" % b.get("name", "?"))
 		return
 
-	var name_text: String = str(b.get("name", ""))
 	var area: float = BuildingStyle.polygon_area(poly)
 	var style: StringName = BuildingStyle.style_for(name_text, height, area, kind)
 	var sdata: Dictionary = BuildingStyle.get_style_data(style)
@@ -549,7 +647,6 @@ func _build_building(b: Dictionary) -> void:
 
 	var is_kisla: bool = name_text == KISLA_NAME
 	var is_mescit: bool = name_text == MESCIT_NAME
-	var is_merkez_lib: bool = name_text == MERKEZ_KUTUPHANE_NAME
 	var lojman_grp: String = str(LOJMAN_GROUPS.get(name_text, ""))
 	var is_lojman: bool = not lojman_grp.is_empty()
 	var unique_mat: bool = is_kisla or is_mescit or is_merkez_lib

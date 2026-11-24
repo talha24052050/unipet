@@ -205,9 +205,11 @@ func _ready() -> void:
 		Services.return_position = Vector3.INF
 		teleport_to(tp)
 	elif Services.return_position != Vector3.INF:
-		# Haritadan / pet seçiminden dönüş: tam bıraktığı yer ve yön (bina içindeyse dışarı çıkar)
-		var ret_xz: Vector2 = resolve_safe_outdoor_xz(Vector2(Services.return_position.x, Services.return_position.z), 1.6)
-		position = Vector3(ret_xz.x, TerrainHeight.active_height(ret_xz.x, ret_xz.y) + 0.35, ret_xz.y)
+		# Haritadan / pet seçiminden dönüş: tam bıraktığı yer ve yön (çökük avlu vb. özel kotları koru)
+		var orig_xz: Vector2 = Vector2(Services.return_position.x, Services.return_position.z)
+		var ret_xz: Vector2 = resolve_safe_outdoor_xz(orig_xz, 1.6)
+		var ret_y: float = Services.return_position.y if ret_xz.distance_to(orig_xz) < 0.5 else (TerrainHeight.active_height(ret_xz.x, ret_xz.y) + 0.35)
+		position = Vector3(ret_xz.x, ret_y, ret_xz.y)
 		rotation.y = Services.return_yaw
 		Services.return_position = Vector3.INF
 	else:
