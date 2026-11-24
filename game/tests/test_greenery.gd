@@ -19,7 +19,8 @@ func test_greenery_data_and_build() -> String:
 		return "pist verisi bozuk"
 	var d: Node3D = Decor.new()
 	d.build(data)
-	var ok: bool = d.tree_count == trees.size() and d.track_count == 1 and d.bed_count > 0 and d.kiosk_count == 1
+	var bushes: Array = data.get("bushes", [])
+	var ok: bool = d.tree_count == trees.size() and d.bush_count == bushes.size() and d.bush_count > 100 and d.track_count == 1 and d.bed_count > 0 and d.kiosk_count == 1
 	d.free()
 	return "" if ok else "kurulum sayıları tutmuyor"
 

@@ -180,6 +180,11 @@ func build_props(data: Dictionary) -> void:
 
 				var mm := MultiMesh.new()
 				mm.transform_format = MultiMesh.TRANSFORM_3D
+				var is_tree_type: bool = type.begins_with("tree_")
+				var mat0: BaseMaterial3D = mesh.surface_get_material(0) as BaseMaterial3D if mesh.get_surface_count() > 0 else null
+				var tint_trees: bool = is_tree_type and mat0 != null and mat0.vertex_color_use_as_albedo
+				if tint_trees:
+					mm.use_colors = true
 				mm.mesh = mesh
 				mm.instance_count = count
 
@@ -193,10 +198,23 @@ func build_props(data: Dictionary) -> void:
 					var final_scale: float = s * float(TYPE_SCALES.get(type, 1.0))
 
 					var py: float = TerrainHeight.active_height(px, pz)
-					var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * final_scale)
+					var basis := Basis(Vector3.UP, yaw)
+					if is_tree_type:
+						var h1: float = fposmod(sin(px * 12.9898 + pz * 78.233 + 37.7) * 43758.5453, 1.0)
+						var h2: float = fposmod(sin(px * 12.9898 + pz * 78.233 + 75.4) * 43758.5453, 1.0)
+						basis = basis * Basis(Vector3.RIGHT, (h1 - 0.5) * 0.075) * Basis(Vector3.FORWARD, (h2 - 0.5) * 0.075)
+						basis = basis.scaled(Vector3(final_scale * lerpf(0.90, 1.12, h1), final_scale * lerpf(0.90, 1.14, h2), final_scale * lerpf(0.90, 1.12, h1)))
+						py -= 0.25
+					else:
+						basis = basis.scaled(Vector3.ONE * final_scale)
 					var prop_t := Transform3D(basis, Vector3(px, py, pz))
 					var final_mesh_t: Transform3D = prop_t * local_t
 					mm.set_instance_transform(i, final_mesh_t)
+					if tint_trees:
+						var v_t: float = lerpf(0.86, 1.12, fposmod(sin(px * 12.9898 + pz * 78.233 + 19.0) * 43758.5453, 1.0))
+						var h_t: float = fposmod(sin(px * 12.9898 + pz * 78.233 + 11.0) * 43758.5453, 1.0)
+						var col_t: Color = Color(0.96 * v_t, 1.03 * v_t, 0.87 * v_t) if h_t > 0.4 else Color(0.86 * v_t, 0.97 * v_t, 0.88 * v_t)
+						mm.set_instance_color(i, col_t)
 
 				mmi.multimesh = mm
 				add_child(mmi)

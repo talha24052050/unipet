@@ -12,13 +12,19 @@ const TREE_MODELS: Dictionary = {
 	"tree_birch": "res://assets/props/tree_birch.glb",
 	"tree_common": "res://assets/props/tree_common.glb",
 }
+const BUSH_MODELS: Dictionary = {
+	"bush_common": "res://assets/props/bush_common.glb",
+	"bush_berries": "res://assets/props/bush_berries.glb",
+}
 ## Dış paket ağaçları (Quaternius) prop_placer'daki ölçekle aynı boyda görünsün.
 const TREE_SCALES: Dictionary = {"tree_birch": 1.4, "tree_common": 1.1}
 const CELL_SIZE: float = 100.0
 const VISIBILITY_END: float = 240.0
+const BUSH_VISIBILITY_END: float = 135.0
 const VISIBILITY_MARGIN: float = 20.0
 const TREE_RADIUS: float = 0.4
 const TREE_COLLIDER_H: float = 4.0
+const TREE_ROOT_SINK: float = 0.25
 const BED_RADIUS: float = 3.2
 const BED_HEIGHT: float = 0.45
 const TRACK_Y: float = 0.035
@@ -26,6 +32,7 @@ const TRACK_COLOR: Color = Color(0.62, 0.29, 0.23)  # kırmızı tartan (drone: 
 const FLOWERBED_SHADER: Shader = preload("res://assets/shaders/flowerbed.gdshader")
 
 var tree_count: int = 0
+var bush_count: int = 0
 var bed_count: int = 0
 var track_count: int = 0
 var kiosk_count: int = 0
@@ -50,6 +57,7 @@ func build_from_file(path: String) -> void:
 
 func build(data: Dictionary) -> void:
 	_build_trees(data.get("trees", []))
+	_build_bushes(data.get("bushes", []))
 	_build_beds(data.get("beds", []))
 	for t: Variant in data.get("tracks", []):
 		_build_track(t as Dictionary)
@@ -63,7 +71,7 @@ func build(data: Dictionary) -> void:
 
 
 func _build_trees(trees: Array) -> void:
-	var by_cell: Dictionary = {}  # Vector2i -> {kind: [Transform3D]}
+	var by_cell: Dictionary = {}  # Vector2i -> {kind: {"xforms": [], "colors": []}}
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "GreeneryTreeColliders"
 	var shape: CylinderShape3D = CylinderShape3D.new()
@@ -76,14 +84,30 @@ func _build_trees(trees: Array) -> void:
 			continue
 		var tx: float = float(a[1])
 		var tz: float = float(a[2])
-		var pos: Vector3 = Vector3(tx, TerrainHeight.active_height(tx, tz), tz)
-		var s: float = float(a[4]) * float(TREE_SCALES.get(kind, 1.0))
-		var cell: Vector2i = Vector2i(floori(pos.x / CELL_SIZE), floori(pos.z / CELL_SIZE))
+		var ty: float = TerrainHeight.active_height(tx, tz)
+		var pos: Vector3 = Vector3(tx, ty - TREE_ROOT_SINK, tz)
+		var base_s: float = float(a[4]) * float(TREE_SCALES.get(kind, 1.0))
+		# Organik çeşitlilik: hafif gövde eğimi (±2.4°) ve bağımsız en/boy oranı
+		var h1: float = _pos_hash(tx, tz, 1.0)
+		var h2: float = _pos_hash(tx, tz, 2.0)
+		var h3: float = _pos_hash(tx, tz, 3.0)
+		var h4: float = _pos_hash(tx, tz, 4.0)
+		var lean_x: float = (h1 - 0.5) * 0.085
+		var lean_z: float = (h2 - 0.5) * 0.085
+		var s_xz: float = base_s * lerpf(0.88, 1.14, h3)
+		var s_y: float = base_s * lerpf(0.88, 1.16, h4)
+		var b: Basis = Basis(Vector3.UP, float(a[3])) * Basis(Vector3.RIGHT, lean_x) * Basis(Vector3.FORWARD, lean_z)
+		b = b.scaled(Vector3(s_xz, s_y, s_xz))
+
+		var cell: Vector2i = Vector2i(floori(tx / CELL_SIZE), floori(tz / CELL_SIZE))
 		var kinds: Dictionary = by_cell.get_or_add(cell, {})
-		(kinds.get_or_add(kind, []) as Array).append(Transform3D(Basis(Vector3.UP, float(a[3])).scaled(Vector3.ONE * s), pos))
+		var bucket: Dictionary = kinds.get_or_add(kind, {"xforms": [], "colors": []})
+		(bucket["xforms"] as Array).append(Transform3D(b, pos))
+		(bucket["colors"] as Array).append(tree_tint_for(kind, tx, tz))
+
 		var col: CollisionShape3D = CollisionShape3D.new()
 		col.shape = shape
-		col.position = pos + Vector3(0.0, TREE_COLLIDER_H * 0.5, 0.0)
+		col.position = Vector3(tx, ty + TREE_COLLIDER_H * 0.5, tz)
 		body.add_child(col)
 		tree_count += 1
 	add_child(body)
@@ -92,8 +116,60 @@ func _build_trees(trees: Array) -> void:
 		meshes[kind] = _load_meshes(TREE_MODELS[kind])
 	for cell: Vector2i in by_cell:
 		for kind: String in by_cell[cell]:
+			var bucket: Dictionary = by_cell[cell][kind]
 			for entry: Array in meshes[kind]:
-				_add_multimesh(entry[0], entry[1], by_cell[cell][kind])
+				_add_multimesh(entry[0], entry[1], bucket["xforms"], bucket["colors"], VISIBILITY_END)
+
+
+## Dekoratif çalı alt-katmanı (çarpışmasız, 100 m hücrelerde MultiMesh).
+func _build_bushes(bushes: Array) -> void:
+	if bushes.is_empty():
+		return
+	var by_cell: Dictionary = {}
+	for b_var: Variant in bushes:
+		var a: Array = b_var
+		var kind: String = str(a[0])
+		if not BUSH_MODELS.has(kind):
+			continue
+		var bx: float = float(a[1])
+		var bz: float = float(a[2])
+		var by: float = TerrainHeight.active_height(bx, bz)
+		var yaw: float = float(a[3])
+		var sc: float = float(a[4])
+		var h1: float = _pos_hash(bx, bz, 7.0)
+		var basis: Basis = Basis(Vector3.UP, yaw).scaled(Vector3(sc * lerpf(0.9, 1.15, h1), sc * lerpf(0.82, 1.12, 1.0 - h1), sc * lerpf(0.9, 1.15, h1)))
+		var cell: Vector2i = Vector2i(floori(bx / CELL_SIZE), floori(bz / CELL_SIZE))
+		var kinds: Dictionary = by_cell.get_or_add(cell, {})
+		(kinds.get_or_add(kind, []) as Array).append(Transform3D(basis, Vector3(bx, by - 0.08, bz)))
+		bush_count += 1
+	var meshes: Dictionary = {}
+	for kind: String in BUSH_MODELS:
+		meshes[kind] = _load_meshes(BUSH_MODELS[kind])
+	for cell: Vector2i in by_cell:
+		for kind: String in by_cell[cell]:
+			for entry: Array in meshes[kind]:
+				_add_multimesh(entry[0], entry[1], by_cell[cell][kind], [], BUSH_VISIBILITY_END)
+
+
+static func _pos_hash(x: float, z: float, salt: float) -> float:
+	return fposmod(sin(x * 12.9898 + z * 78.233 + salt * 37.719) * 43758.5453, 1.0)
+
+
+## Konuma bağlı deterministik ağaç yaprak tonu (klon görünümünü kırar; drone referansındaki zengin yeşil paleti).
+static func tree_tint_for(kind: String, x: float, z: float) -> Color:
+	var h: float = _pos_hash(x, z, 11.0)
+	var v: float = lerpf(0.84, 1.12, _pos_hash(x, z, 19.0))
+	if kind == "tree_plane":
+		if h > 0.88:
+			return Color(1.10 * v, 1.02 * v, 0.76 * v)  # nadir güneşli altın-yeşil çınar
+		if h < 0.35:
+			return Color(0.86 * v, 0.98 * v, 0.84 * v)  # derin zümrüt çınar
+		return Color(0.98 * v, 1.04 * v, 0.88 * v)      # taze ilkbahar yeşili
+	if kind == "tree_stonepine" or kind == "tree_cypress":
+		if h < 0.45:
+			return Color(0.84 * v, 0.96 * v, 0.90 * v)  # serin çam yeşili
+		return Color(0.96 * v, 1.02 * v, 0.86 * v)      # sıcak Akdeniz çamı
+	return Color(v, v, v)
 
 
 ## [[mesh, yerel dönüşüm], ...]
@@ -110,19 +186,31 @@ func _load_meshes(path: String) -> Array:
 	return out
 
 
-func _add_multimesh(mesh: Mesh, local: Transform3D, xforms: Array) -> void:
+func _add_multimesh(mesh: Mesh, local: Transform3D, xforms: Array, colors: Array = [], vis_end: float = VISIBILITY_END) -> void:
 	var mm: MultiMesh = MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
+	var use_col: bool = not colors.is_empty() and _mesh_supports_instance_color(mesh)
+	if use_col:
+		mm.use_colors = true
 	mm.mesh = mesh
 	mm.instance_count = xforms.size()
 	for i: int in xforms.size():
 		mm.set_instance_transform(i, (xforms[i] as Transform3D) * local)
+		if use_col:
+			mm.set_instance_color(i, colors[i] as Color)
 	var mmi: MultiMeshInstance3D = MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.visibility_range_end = VISIBILITY_END
+	mmi.visibility_range_end = vis_end
 	mmi.visibility_range_end_margin = VISIBILITY_MARGIN
 	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(mmi)
+
+
+static func _mesh_supports_instance_color(mesh: Mesh) -> bool:
+	if mesh == null or mesh.get_surface_count() == 0:
+		return false
+	var mat: BaseMaterial3D = mesh.surface_get_material(0) as BaseMaterial3D
+	return mat != null and mat.vertex_color_use_as_albedo
 
 
 func _build_beds(beds: Array) -> void:

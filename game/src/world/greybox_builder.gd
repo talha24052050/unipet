@@ -29,23 +29,24 @@ static var _cobble_materials: Dictionary = {}
 ## Bina adlarını üstlerinde göster (greybox'ta yön bulmak için).
 @export var show_labels: bool = true
 
-const PATH_WIDTHS: Dictionary = {"footway": 2.0, "path": 1.5, "pedestrian": 4.0, "service": 4.0}
+const PATH_WIDTHS: Dictionary = {"footway": 2.2, "path": 1.5, "pedestrian": 4.0, "service": 4.6}
 const AREA_COLORS: Dictionary = {
-	"park": Color(0.36, 0.53, 0.24),  # doğal koyu çim (referans: Ortabahçe drone/Street View)
-	"garden": Color(0.34, 0.50, 0.22),
-	"grass": Color(0.36, 0.53, 0.24),
-	"playground": Color(0.8, 0.7, 0.45),
-	"pitch": Color(0.3, 0.55, 0.3),
+	"park": Color(0.30, 0.49, 0.21),   # zengin zümrüt-yeşil park çimi (Ortabahçe/Yıldızbahçe)
+	"garden": Color(0.27, 0.45, 0.20), # koyu botanik bahçe yeşili
+	"grass": Color(0.36, 0.54, 0.24),  # sıcak güneşli çayır yeşili
+	"playground": Color(0.76, 0.67, 0.44),
+	"pitch": Color(0.28, 0.53, 0.27),
 }
 const BUILDING_COLOR: Color = Color(0.91, 0.93, 0.94)
-const GROUND_COLOR: Color = Color(0.39, 0.55, 0.26)  # doğal çim; alanlardan biraz açık
+const GROUND_COLOR: Color = Color(0.38, 0.53, 0.25)  # doğal tepe çimi; parklardan hafif sıcak
 const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
 const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
-## Z-fighting olmasın diye katmanlar arası küçük yükseklik farkı.
+## Z-fighting olmasın diye katmanlar arası net kot hiyerarşisi: çim (0.05) < araç yolu (0.09) < yaya yolu (0.11).
 const AREA_Y: float = 0.05
-const AREA_SUBDIV_M: float = 12.0
-const PATH_Y: float = 0.10
-const PATH_SUBDIV_M: float = 4.0
+const AREA_SUBDIV_M: float = 8.0
+const ROAD_Y: float = 0.09
+const PATH_Y: float = 0.11
+const PATH_SUBDIV_M: float = 3.0
 const BUILDING_FOUNDATION_M: float = 2.5
 const GROUND_MARGIN: float = 30.0
 const CampusMap := preload("res://src/ui/campus_map.gd")
@@ -94,6 +95,8 @@ var gate_count: int = 0
 var _path_lines: Array[PackedVector2Array] = []
 ## Her yolun kutusu (geçit aramasında sadece binaya yakın yollara bakmak için).
 var _path_boxes: Array[Rect2] = []
+## Kavşak / bölünmüş OSM yolu düğüm sayacı (uç kapakların yolu kesmesini önler).
+var _path_node_counts: Dictionary = {}
 
 
 ## true ise data_path yerine Services.current_zone'un greybox verisi yüklenir (ana sahne bunu kullanır).
@@ -117,7 +120,9 @@ func _ready() -> void:
 	_batching = true
 	for a: Dictionary in data.get("areas", []):
 		_build_area(a)
-	for p: Dictionary in data.get("paths", []):
+	var all_paths: Array = data.get("paths", [])
+	_index_path_nodes(all_paths)
+	for p: Dictionary in all_paths:
 		_build_path(p)
 		var line: PackedVector2Array = to_polygon(p.get("points", []))
 		_path_lines.append(line)
@@ -643,56 +648,101 @@ func _build_area(a: Dictionary) -> void:
 
 
 func _build_path(p: Dictionary) -> void:
-	var pts: PackedVector2Array = to_polygon(p.get("points", []))
+	var raw_pts: PackedVector2Array = to_polygon(p.get("points", []))
+	# Ardışık çok yakın düğümleri temizle (köşe birleştirmeyi bozmasın)
+	var pts: PackedVector2Array = PackedVector2Array()
+	for pt: Vector2 in raw_pts:
+		if pts.is_empty() or pts[pts.size() - 1].distance_to(pt) >= 0.05:
+			pts.append(pt)
+	var m: int = pts.size()
+	if m < 2:
+		return
 	var kind: String = str(p.get("kind", "footway"))
-	var width: float = PATH_WIDTHS.get(kind, 2.0)
+	var width: float = PATH_WIDTHS.get(kind, 2.2)
+	var half_w: float = width * 0.5
+	var y_off: float = ROAD_Y if kind == "service" else PATH_Y
 	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
+
+	# Her segment için yön, yan vektör ve uzunluk
+	var seg_dirs: Array[Vector2] = []
+	var seg_sides: Array[Vector2] = []
+	var seg_lens: Array[float] = []
+	var cum_s: Array[float] = [0.0]
+	for i: int in m - 1:
+		var d: Vector2 = pts[i + 1] - pts[i]
+		var L: float = d.length()
+		var dn: Vector2 = d / maxf(L, 0.0001)
+		seg_dirs.append(dn)
+		seg_sides.append(dn.orthogonal() * half_w)
+		seg_lens.append(L)
+		cum_s.append(cum_s[i] + L)
+
+	# Segment uç kenar noktaları (yumuşak dönüşlerde sınırlandırılmış miter birleşimi, sert dönüşte köşe yelpazesi)
+	var start_l: Array[Vector2] = []
+	var start_r: Array[Vector2] = []
+	var end_l: Array[Vector2] = []
+	var end_r: Array[Vector2] = []
+	for i: int in m - 1:
+		start_l.append(pts[i] + seg_sides[i])
+		start_r.append(pts[i] - seg_sides[i])
+		end_l.append(pts[i + 1] + seg_sides[i])
+		end_r.append(pts[i + 1] - seg_sides[i])
+
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for i: int in pts.size() - 1:
-		var a: Vector2 = pts[i]
-		var b: Vector2 = pts[i + 1]
-		var seg_len: float = a.distance_to(b)
-		if seg_len < 0.01:
-			continue
-		var side: Vector2 = (b - a).normalized().orthogonal() * (width * 0.5)
+
+	for i: int in range(1, m - 1):
+		var d_prev: Vector2 = seg_dirs[i - 1]
+		var d_next: Vector2 = seg_dirs[i]
+		var dot_v: float = d_prev.dot(d_next)
+		if dot_v > 0.25:
+			var sum_s: Vector2 = seg_sides[i - 1] + seg_sides[i]
+			if sum_s.length_squared() > 0.0001:
+				var bis: Vector2 = sum_s.normalized()
+				var denom: float = maxf(0.55, bis.dot(seg_sides[i - 1].normalized()))
+				var miter: Vector2 = bis * minf(half_w / denom, half_w * 1.35)
+				var ml: Vector2 = pts[i] + miter
+				var mr: Vector2 = pts[i] - miter
+				end_l[i - 1] = ml
+				start_l[i] = ml
+				end_r[i - 1] = mr
+				start_r[i] = mr
+		else:
+			# Sert dönüşlerde dış kenar boşluğunu 3 segmentli yuvarlak köşe yelpazesiyle kapat.
+			# Godot Vector2.orthogonal() = (y, -x): turn_cross < 0 ise dış kenar sağ (-side), > 0 ise sol (+side).
+			var turn_cross: float = d_prev.x * d_next.y - d_prev.y * d_next.x
+			var outer_a: Vector2 = end_r[i - 1] if turn_cross < 0.0 else end_l[i - 1]
+			var outer_b: Vector2 = start_r[i] if turn_cross < 0.0 else start_l[i]
+			var edge_u: float = 1.0 if turn_cross < 0.0 else 0.0
+			_emit_path_corner_fan(st, pts[i], outer_a, outer_b, half_w, edge_u, cum_s[i], width, y_off, has_terrain)
+
+	# Segment şeritleri (eğime göre 3 m alt-bölüm, UV.y = gerçek metre)
+	for i: int in m - 1:
+		var seg_len: float = seg_lens[i]
 		var subdiv: int = maxi(1, ceili(seg_len / PATH_SUBDIV_M)) if has_terrain else 1
+		var s0_base: float = cum_s[i]
 		for s: int in subdiv:
 			var t0: float = float(s) / float(subdiv)
 			var t1: float = float(s + 1) / float(subdiv)
-			var sa: Vector2 = a.lerp(b, t0)
-			var sb: Vector2 = a.lerp(b, t1)
-			var p0: Vector2 = sa + side
-			var p1: Vector2 = sa - side
-			var p2: Vector2 = sb - side
-			var p3: Vector2 = sb + side
-			var q: Array[Vector3] = [
-				Vector3(p0.x, (TerrainHeight.active_height(p0.x, p0.y) if has_terrain else 0.0) + PATH_Y, p0.y),
-				Vector3(p1.x, (TerrainHeight.active_height(p1.x, p1.y) if has_terrain else 0.0) + PATH_Y, p1.y),
-				Vector3(p2.x, (TerrainHeight.active_height(p2.x, p2.y) if has_terrain else 0.0) + PATH_Y, p2.y),
-				Vector3(p3.x, (TerrainHeight.active_height(p3.x, p3.y) if has_terrain else 0.0) + PATH_Y, p3.y),
-			]
-			var nrms: Array[Vector3] = [
-				TerrainHeight.active_normal(p0.x, p0.y) if has_terrain else Vector3.UP,
-				TerrainHeight.active_normal(p1.x, p1.y) if has_terrain else Vector3.UP,
-				TerrainHeight.active_normal(p2.x, p2.y) if has_terrain else Vector3.UP,
-				TerrainHeight.active_normal(p3.x, p3.y) if has_terrain else Vector3.UP,
-			]
-			# UV.x = yol genişliği boyunca 0..1 (0: sol kenar, 1: sağ kenar)
-			var uvs: Array[Vector2] = [
-				Vector2(0.0, t0), Vector2(1.0, t0),
-				Vector2(1.0, t1), Vector2(0.0, t1),
-			]
-			var indices: Array[int] = [0, 2, 1, 0, 3, 2]
-			for idx: int in indices:
-				st.set_normal(nrms[idx])
-				st.set_uv(uvs[idx])
-				st.set_uv2(Vector2(width, 0.0))  # genişlik (m): tek parke malzemesiyle birleştirme için
-				st.add_vertex(q[idx])
+			var p0: Vector2 = start_l[i].lerp(end_l[i], t0)
+			var p1: Vector2 = start_r[i].lerp(end_r[i], t0)
+			var p2: Vector2 = start_r[i].lerp(end_r[i], t1)
+			var p3: Vector2 = start_l[i].lerp(end_l[i], t1)
+			var sy0: float = s0_base + seg_len * t0
+			var sy1: float = s0_base + seg_len * t1
+			_emit_path_tri(st, p0, p2, p1, Vector2(0.0, sy0), Vector2(1.0, sy1), Vector2(1.0, sy0), width, y_off, has_terrain)
+			_emit_path_tri(st, p0, p3, p2, Vector2(0.0, sy0), Vector2(0.0, sy1), Vector2(1.0, sy1), width, y_off, has_terrain)
+
+	# Başlangıç ve bitiş yuvarlak uç kapakları: kavşak/birleşim düğümünde saf asfalt/parke ve alçak kot,
+	# çıkmaz uçlarda bordürlü yuvarlak kapak.
+	var is_road: bool = kind == "service"
+	_emit_path_end_cap(st, pts[0], -seg_dirs[0], seg_sides[0], half_w, cum_s[0], width, y_off, has_terrain, _is_shared_path_node(pts[0], is_road), is_road)
+	_emit_path_end_cap(st, pts[m - 1], seg_dirs[m - 2], seg_sides[m - 2], half_w, cum_s[m - 1], width, y_off, has_terrain, _is_shared_path_node(pts[m - 1], is_road), is_road)
+
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
-	var mid: Vector2 = pts[pts.size() / 2]
+	var mid: Vector2 = pts[m / 2]
 	var mat: Material = _get_asphalt_material() if kind == "service" \
 		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE)
 	if _batching:
@@ -703,6 +753,102 @@ func _build_path(p: Dictionary) -> void:
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
+
+
+func _index_path_nodes(paths: Array) -> void:
+	_path_node_counts.clear()
+	for p: Dictionary in paths:
+		var is_road: bool = str(p.get("kind", "footway")) == "service"
+		var layer: int = 1 if is_road else 0
+		var seen: Dictionary = {}
+		for pt: Array in p.get("points", []):
+			var key: Vector3i = Vector3i(layer, roundi(float(pt[0]) * 4.0), roundi(float(pt[1]) * 4.0))
+			if seen.has(key):
+				continue
+			seen[key] = true
+			_path_node_counts[key] = int(_path_node_counts.get(key, 0)) + 1
+
+
+func _is_shared_path_node(pt: Vector2, is_road: bool) -> bool:
+	var key: Vector3i = Vector3i(1 if is_road else 0, roundi(pt.x * 4.0), roundi(pt.y * 4.0))
+	return int(_path_node_counts.get(key, 0)) >= 2
+
+
+static func _emit_path_tri(
+	st: SurfaceTool,
+	a: Vector2, b: Vector2, c: Vector2,
+	ua: Vector2, ub: Vector2, uc: Vector2,
+	width: float, y_off: float, has_terrain: bool, cap_flag: float = 0.0
+) -> void:
+	# Godot sağ el koordinatında saat yönü (+Y normal): ((c - a) x (b - a)).y > 0
+	var cross_y: float = (c.y - a.y) * (b.x - a.x) - (c.x - a.x) * (b.y - a.y)
+	if absf(cross_y) < 1e-6:
+		return
+	if cross_y < 0.0:
+		var tmp_v: Vector2 = b
+		b = c
+		c = tmp_v
+		var tmp_u: Vector2 = ub
+		ub = uc
+		uc = tmp_u
+	var verts: Array[Vector2] = [a, b, c]
+	var uvs: Array[Vector2] = [ua, ub, uc]
+	for k: int in 3:
+		var v: Vector2 = verts[k]
+		var vy: float = (TerrainHeight.active_height(v.x, v.y) if has_terrain else 0.0) + y_off
+		st.set_normal(TerrainHeight.active_normal(v.x, v.y) if has_terrain else Vector3.UP)
+		st.set_uv(uvs[k])
+		st.set_uv2(Vector2(width, cap_flag))
+		st.add_vertex(Vector3(v.x, vy, v.y))
+
+
+static func _emit_path_corner_fan(
+	st: SurfaceTool,
+	center: Vector2, outer_a: Vector2, outer_b: Vector2,
+	half_w: float, edge_u: float, s_pos: float,
+	width: float, y_off: float, has_terrain: bool
+) -> void:
+	var va: Vector2 = (outer_a - center).normalized()
+	var vb: Vector2 = (outer_b - center).normalized()
+	var total_arc: float = absf(va.angle_to(vb)) * half_w
+	var prev: Vector2 = outer_a
+	var prev_s: float = s_pos
+	for k: int in range(1, 4):
+		var f: float = float(k) / 3.0
+		var dir: Vector2 = va.lerp(vb, f).normalized()
+		var curr: Vector2 = outer_b if k == 3 else center + dir * half_w
+		var curr_s: float = s_pos + total_arc * f
+		_emit_path_tri(st, center, prev, curr, Vector2(0.5, s_pos), Vector2(edge_u, prev_s), Vector2(edge_u, curr_s), width, y_off, has_terrain)
+		prev = curr
+		prev_s = curr_s
+
+
+static func _emit_path_end_cap(
+	st: SurfaceTool,
+	center: Vector2, out_dir: Vector2, side_vec: Vector2,
+	half_w: float, s_pos: float,
+	width: float, y_off: float, has_terrain: bool,
+	is_junction: bool = false, is_road: bool = false
+) -> void:
+	# Kavşak/birleşim uçlarında kapak hem ana şeridin altında (12-18 mm alçak) hem de bordürsüz (cap_flag=1.0)
+	# çizilir; böylece engebeli arazide dahi karşı yolu kesen bordür/çizgi görünmez.
+	var sink: float = (0.018 if is_road else 0.012) if is_junction else 0.004
+	var cap_y: float = y_off - sink
+	var cap_flag: float = 1.0 if is_junction else 0.0
+	var left_dir: Vector2 = side_vec.normalized()
+	var steps: int = 4
+	var prev: Vector2 = center + left_dir * half_w
+	var prev_ang: float = 0.0
+	for k: int in range(1, steps + 1):
+		var ang: float = PI * float(k) / float(steps)  # 0: +left, PI/2: +out_dir, PI: -left
+		var dir: Vector2 = left_dir * cos(ang) + out_dir * sin(ang)
+		var curr: Vector2 = center + dir * half_w
+		var edge_u: float = 0.0 if k <= steps / 2 else 1.0
+		var s_a: float = s_pos + prev_ang * half_w
+		var s_b: float = s_pos + ang * half_w
+		_emit_path_tri(st, center, prev, curr, Vector2(0.5, s_pos), Vector2(edge_u, s_a), Vector2(edge_u, s_b), width, cap_y, has_terrain, cap_flag)
+		prev = curr
+		prev_ang = ang
 
 
 var _shared_materials: Dictionary = {}

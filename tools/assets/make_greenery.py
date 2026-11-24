@@ -44,7 +44,48 @@ ROADSIDE_OFFSET = 4.8       # yol ekseninden (yol 4 m: kenardan ~2.8 m)
 ROADSIDE_JITTER = 0.8
 ROADSIDE_SPACING = 8.0      # diğer ağaçlara en az
 ROADSIDE_SPECIES = {"tree_plane": 60, "tree_stonepine": 25, "tree_cypress": 15}
+GROVE_SPECIES = {"tree_stonepine": 48, "tree_plane": 34, "tree_cypress": 18}
+BUSH_SPECIES = {"bush_common": 68, "bush_berries": 32}
 TRACK_WIDTH = 7.5
+
+# İkonik meydanlar ve giriş önleri: ağaç/çalı buralara girmesin (x, z, yarıçap m)
+PLAZA_NO_GO = [
+    (0.0, 0.0, 8.0),          # başlangıç noktası
+    (-2.1, 5.3, 8.0),         # Ortabahçe anıt meydanı
+    (-92.0, -68.0, 24.0),     # Yemekhane önü meydanı
+    (-124.0, -58.0, 17.0),    # Yıldız Store amfi & A101
+    (38.0, -234.0, 22.0),     # EEF önü + totem + kafe
+    (548.0, 247.0, 15.0),     # Kongre Merkezi protokol girişi
+    (434.0, 268.0, 12.0),     # Otağ-ı Hümayun havuzlu avlu
+    (376.0, 471.0, 15.0),     # İlhan Varank Kütüphanesi önü
+    (-90.0, -148.0, 15.0),    # Merkez Kütüphanesi önü
+    (150.0, -168.0, 14.0),    # Fen-Edebiyat önü
+    (-234.0, -260.0, 14.0),   # Eğitim Fakültesi önü
+    (169.0, 463.0, 14.0),     # Yabancı Diller önü
+    (210.0, -95.0, 12.0),     # Ring Durağı
+    (-80.0, 304.0, 14.0),     # İnşaat Fakültesi önü
+    (235.0, -239.0, 14.0),    # Kimya-Metalurji önü
+    (-17.0, 544.0, 14.0),     # Merkez Laboratuvarı önü
+    (-164.0, 526.0, 15.0),    # Yıldız Teknopark önü
+    (-275.0, -240.0, 15.0),   # Spor Kompleksi önü
+    (-4.0, -65.0, 13.0),      # Büyük Ev kafe terası
+]
+
+# Davutpaşa koruluk / ağaçlık yamaç kümeleri (merkez x, z, yarıçap m, hedef yoğunluk aralığı m)
+GROVE_ZONES = [
+    (-205.0, 125.0, 62.0, 9.5),   # Stadyum kuzeydoğu yamacı
+    (-355.0, 55.0, 58.0, 10.0),   # Stadyum batı sırtı
+    (-215.0, -25.0, 48.0, 10.0),  # Stadyum - Kulüpler Vadisi arası tepe
+    (-150.0, 85.0, 52.0, 9.5),    # Taşbina batı koruluğu
+    (-135.0, 185.0, 55.0, 10.0),  # Sanat Tasarım - İnşaat arası ağaçlık
+    (245.0, 290.0, 65.0, 10.0),   # Bilgelik Yolu - Otağ-ı Hümayun koruluğu
+    (360.0, 215.0, 58.0, 10.0),   # Otağ-ı Hümayun batı yamacı
+    (475.0, 190.0, 55.0, 10.5),   # Kongre Merkezi güney koruluğu
+    (285.0, 395.0, 58.0, 10.5),   # Sancak Köşkü - Kütüphane arası ağaçlık
+    (120.0, 195.0, 55.0, 10.5),   # Taşbina doğu sırtı
+    (295.0, -85.0, 55.0, 10.5),   # Ring Durağı doğu koruluğu
+    (-185.0, 365.0, 55.0, 10.5),  # İnşaat - Hidrodinamik arası tepe
+]
 
 
 class SegGrid:
@@ -259,15 +300,15 @@ def main():
             if len(q) >= 3:
                 no_go.append(L.offset(q, 1.5))
 
-    # Kampüs kapıları (beton portal vb.) çevresi açık kalsın
+    # Kampüs kapıları (beton portal vb.) ve ikonik meydanlar çevresi açık kalsın
     GATE_CLEAR = 16.0
     gates = json.load(open(os.path.join(ROOT, "tools/assets/landmarks.json"), encoding="utf-8")).get("gates", [])
-    for g in gates:
-        gx, gz = g["pos"]
-        no_go.append([(gx + GATE_CLEAR * math.cos(k * math.tau / 12), gz + GATE_CLEAR * math.sin(k * math.tau / 12)) for k in range(12)])
+    clear_circles = [(g["pos"][0], g["pos"][1], GATE_CLEAR) for g in gates] + list(PLAZA_NO_GO)
+    for cx, cz, rad in clear_circles:
+        no_go.append([(cx + rad * math.cos(k * math.tau / 12), cz + rad * math.sin(k * math.tau / 12)) for k in range(12)])
     n_before = len(trees)
-    trees = [t for t in trees if not any(L.inside((t[1], t[2]), z) for z in no_go[-len(gates):])] if gates else trees
-    stats["kapı çevresinden çıkarılan"] = n_before - len(trees)
+    trees = [t for t in trees if not any(math.hypot(t[1] - cx, t[2] - cz) < rad for cx, cz, rad in clear_circles)]
+    stats["meydan/kapı çevresinden çıkarılan"] = n_before - len(trees)
 
     # Araç yollarının iki yanına ağaç sırası
     road_lines = [line for line, tag in lines if tag == "road"]
@@ -332,23 +373,73 @@ def main():
     pitches = sorted((L.clean([tuple(q) for q in a["points"]]) for a in grey["areas"] if a.get("kind") == "pitch"),
                      key=lambda p: -abs(L.signed_area(p)) if len(p) > 2 else 0)
     tracks = []
+    track_ring = None
     if pitches and abs(L.signed_area(pitches[0])) > 5000:
         inner, outer = stadium_track(pitches[0])
         tracks.append({"inner": [[round(x, 2), round(z, 2)] for x, z in inner],
                        "outer": [[round(x, 2), round(z, 2)] for x, z in outer]})
+        track_ring = L.offset([tuple(q) for q in tracks[0]["outer"]], 4.5)
+        no_go.append(track_ring)
+
+    # Koruluk / ağaçlık yamaç kümeleri (Stadyum sırtları, Taşbina dışı, Bilgelik Yolu, Otağ-ı Hümayun)
+    n_grove = 0
+    for gx, gz, rad, sp in GROVE_ZONES:
+        attempts = int((math.pi * rad * rad) / (sp * sp) * 1.8)
+        for _ in range(attempts):
+            ang = rng.uniform(0.0, math.tau)
+            rr = rad * math.sqrt(rng.random())
+            p = (gx + rr * math.cos(ang), gz + rr * math.sin(ang))
+            if in_courtyard(p, 0.0):
+                continue
+            d, tag = sgrid.nearest(p)
+            if d < (ROAD_CLEAR if tag == "road" else PATH_CLEAR):
+                continue
+            if placed.any_within(p, sp) or bgrid.near(p, BUILDING_CLEAR + 0.5):
+                continue
+            if any(L.inside(p, z) for z in no_go):
+                continue
+            placed.add(p)
+            trees.append([pick(GROVE_SPECIES, rng), round(p[0], 2), round(p[1], 2),
+                          round(rng.uniform(0, math.tau), 3), round(rng.uniform(0.92, 1.32), 3)])
+            n_grove += 1
+    stats["koruluk"] = n_grove
 
     # Pist/saha üstüne ağaç düşmesin (çim alanları pistle örtüşebiliyor)
-    if tracks:
-        ring = L.offset([tuple(q) for q in tracks[0]["outer"]], 2.0)
+    if track_ring is not None:
         n0 = len(trees)
-        trees = [t for t in trees if not L.inside((t[1], t[2]), ring)]
+        trees = [t for t in trees if not L.inside((t[1], t[2]), track_ring)]
         print("pist üstünden çıkarılan ağaç:", n0 - len(trees))
-    out = {"_note": "tools/assets/make_greenery.py üretir; elle düzenleme. trees: [tür, x, z, yaw, ölçek]",
-           "trees": trees, "beds": [[round(x, 2), round(z, 2)] for x, z in beds], "tracks": tracks, "kiosks": kiosks}
+
+    # Çalı alt-katmanı: ağaç dipleri, Ortabahçe çim kenarları ve koruluk içlerinde dekoratif kümeler
+    bush_grid = PointGrid(8.0)
+    bushes = []
+    for idx, t in enumerate(trees):
+        if idx % 4 != 0:
+            continue  # her ~4 ağaçtan 1'inin dibinde 1-2 çalı kümesi (doğal orman altı)
+        tx, tz = t[1], t[2]
+        n_clump = 2 if rng.random() < 0.35 else 1
+        for _ in range(n_clump):
+            ang = rng.uniform(0.0, math.tau)
+            dist = rng.uniform(1.6, 3.4)
+            bp = (tx + math.cos(ang) * dist, tz + math.sin(ang) * dist)
+            d, tag = sgrid.nearest(bp)
+            if d < (4.0 if tag == "road" else 2.2):
+                continue
+            if bush_grid.any_within(bp, 3.2) or bgrid.near(bp, 2.5):
+                continue
+            if any(L.inside(bp, z) for z in no_go):
+                continue
+            bush_grid.add(bp)
+            bushes.append([pick(BUSH_SPECIES, rng), round(bp[0], 2), round(bp[1], 2),
+                           round(rng.uniform(0, math.tau), 3), round(rng.uniform(0.75, 1.30), 3)])
+
+    out = {"_note": "tools/assets/make_greenery.py üretir; elle düzenleme. trees/bushes: [tür, x, z, yaw, ölçek]",
+           "trees": trees, "bushes": bushes, "beds": [[round(x, 2), round(z, 2)] for x, z in beds],
+           "tracks": tracks, "kiosks": kiosks}
     with open(os.path.join(ROOT, "game/data/zones/kampus_greenery.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
         f.write("\n")
-    print("ağaç:", len(trees), stats, "tarh:", len(beds), "pist:", len(tracks), "büfe:", kiosks)
+    print("ağaç:", len(trees), stats, "çalı:", len(bushes), "tarh:", len(beds), "pist:", len(tracks), "büfe:", kiosks)
 
 
 if __name__ == "__main__":

@@ -116,26 +116,37 @@ func test_greybox_terrain_ground_building_and_path() -> String:
 		TerrainHeight.enabled = prev_enabled
 		return "Zemin yüksekliği 10.0 m olmalı, %f bulundu" % max_gy
 
-	# Eğimli yolda segment alt-bölünmeli ve yükseklik takip etmeli
-	builder.call("_build_path", {"kind": "footway", "points": [[0.0, 10.0], [40.0, 10.0]]})
+	# Eğimli yolda segment alt-bölünmeli, tüm üçgenler yukarı bakmalı ve UV.y gerçek metreyi taşımalı
+	builder.call("_build_path", {"kind": "footway", "points": [[0.0, 10.0], [20.0, 10.0], [40.0, 20.0]]})
 	var pmi: MeshInstance3D = null
 	for ch: Node in builder.get_children():
 		if ch is MeshInstance3D:
 			pmi = ch as MeshInstance3D
-	var pverts: PackedVector3Array = pmi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var parrays: Array = pmi.mesh.surface_get_arrays(0)
+	var pverts: PackedVector3Array = parrays[Mesh.ARRAY_VERTEX]
+	var puvs: PackedVector2Array = parrays[Mesh.ARRAY_TEX_UV]
 	if pverts.size() <= 6:
 		builder.free()
 		TerrainHeight.active = prev_active
 		TerrainHeight.enabled = prev_enabled
 		return "40 m eğimli yol alt-bölünmeli (köşe sayısı: %d)" % pverts.size()
 	var max_py: float = -1e9
-	for v: Vector3 in pverts:
-		max_py = maxf(max_py, v.y)
-	if max_py < 9.5:
+	var max_uv_y: float = -1e9
+	for ti: int in range(0, pverts.size(), 3):
+		var fn: Vector3 = (pverts[ti + 2] - pverts[ti]).cross(pverts[ti + 1] - pverts[ti])
+		if fn.y <= 0.0:
+			builder.free()
+			TerrainHeight.active = prev_active
+			TerrainHeight.enabled = prev_enabled
+			return "Yol üçgeni aşağı bakıyor (ters sarma yönü): %s" % str(fn)
+	for vi: int in pverts.size():
+		max_py = maxf(max_py, pverts[vi].y)
+		max_uv_y = maxf(max_uv_y, puvs[vi].y)
+	if max_py < 9.5 or max_uv_y < 35.0:
 		builder.free()
 		TerrainHeight.active = prev_active
 		TerrainHeight.enabled = prev_enabled
-		return "Yol yüksekliği eğimi takip etmiyor: %f" % max_py
+		return "Yol yüksekliği (%.2f) veya UV.y uzunluğu (%.2f) hatalı" % [max_py, max_uv_y]
 
 	# Eğimli çim alanı silinmemeli, alt-bölünerek araziye oturmalı
 	var children_before: int = builder.get_child_count()
