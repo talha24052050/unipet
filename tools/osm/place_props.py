@@ -272,11 +272,27 @@ def _run_ortabahce(data: dict[str, Any], out_path: str, seed: int) -> None:
     )
 
 
+ROAD_KINDS = {"residential", "residential_oneway", "service", "parking_aisle"}
+PATH_CLEAR_BY_KIND = {
+    "residential": 4.6,
+    "residential_oneway": 3.8,
+    "service": 3.6,
+    "parking_aisle": 3.0,
+    "pedestrian": 3.0,
+    "cycleway": 2.4,
+    "footway": 2.4,
+    "path": 2.2,
+}
+GREEN_AREA_KINDS = {"grass", "park", "garden", "wood"}
+
+
 def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
     buildings: list[dict[str, Any]] = data.get("buildings", [])
     areas: list[dict[str, Any]] = data.get("areas", [])
     all_paths: list[dict[str, Any]] = data.get("paths", [])
-    ped_paths: list[dict[str, Any]] = [p for p in all_paths if p.get("kind") != "service"]
+    ped_paths: list[dict[str, Any]] = [
+        p for p in all_paths if p.get("kind") not in ROAD_KINDS and p.get("kind") != "cycleway"
+    ]
 
     # Hızlandırma için sınırlayıcı kutular (bounding boxes)
     b_boxes = []
@@ -285,14 +301,26 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
         b_boxes.append((min(p[0] for p in pts), max(p[0] for p in pts), min(p[1] for p in pts), max(p[1] for p in pts), pts))
 
     p_boxes = []
+    road_boxes = []
     for p in all_paths:
         pts = p["points"]
-        p_boxes.append((min(pt[0] for pt in pts), max(pt[0] for pt in pts), min(pt[1] for pt in pts), max(pt[1] for pt in pts), pts))
+        kind = str(p.get("kind", "footway"))
+        clr = PATH_CLEAR_BY_KIND.get(kind, 2.5)
+        box = (min(pt[0] for pt in pts), max(pt[0] for pt in pts), min(pt[1] for pt in pts), max(pt[1] for pt in pts), pts, clr)
+        p_boxes.append(box)
+        if kind in ROAD_KINDS or kind == "cycleway":
+            road_boxes.append(box)
 
     a_boxes = []
+    parking_boxes = []
     for a in areas:
         pts = a["points"]
-        a_boxes.append((min(pt[0] for pt in pts), max(pt[0] for pt in pts), min(pt[1] for pt in pts), max(pt[1] for pt in pts), pts))
+        ak = str(a.get("kind", "grass"))
+        box = (min(pt[0] for pt in pts), max(pt[0] for pt in pts), min(pt[1] for pt in pts), max(pt[1] for pt in pts), pts)
+        if ak == "parking":
+            parking_boxes.append(box)
+        elif ak in GREEN_AREA_KINDS and "havuz" not in str(a.get("name", "")).lower():
+            a_boxes.append(box)
 
     def fast_is_valid_building_dist(x: float, z: float, min_dist: float = 3.0) -> bool:
         for min_x, max_x, min_z, max_z, pts in b_boxes:
@@ -304,11 +332,29 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
                 return False
         return True
 
-    def fast_dist_paths(x: float, z: float, min_dist: float = 2.5) -> bool:
-        for min_x, max_x, min_z, max_z, pts in p_boxes:
-            if x < min_x - min_dist or x > max_x + min_dist or z < min_z - min_dist or z > max_z + min_dist:
+    def fast_not_in_parking(x: float, z: float, margin: float = 1.5) -> bool:
+        for min_x, max_x, min_z, max_z, pts in parking_boxes:
+            if x < min_x - margin or x > max_x + margin or z < min_z - margin or z > max_z + margin:
                 continue
-            if dist_pt_polyline(x, z, pts) < min_dist:
+            if point_in_polygon(x, z, pts) or dist_pt_poly_boundary(x, z, pts) < margin:
+                return False
+        return True
+
+    def fast_clear_of_roads(x: float, z: float, pad: float = 0.0) -> bool:
+        for min_x, max_x, min_z, max_z, pts, clr in road_boxes:
+            req = clr + pad
+            if x < min_x - req or x > max_x + req or z < min_z - req or z > max_z + req:
+                continue
+            if dist_pt_polyline(x, z, pts) < req:
+                return False
+        return True
+
+    def fast_dist_paths(x: float, z: float, min_dist: float = 2.5) -> bool:
+        for min_x, max_x, min_z, max_z, pts, clr in p_boxes:
+            req = max(min_dist, clr)
+            if x < min_x - req or x > max_x + req or z < min_z - req or z > max_z + req:
+                continue
+            if dist_pt_polyline(x, z, pts) < req:
                 return False
         return True
 
@@ -378,6 +424,8 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
                             continue
                         if not fast_is_valid_building_dist(cx, cz, 3.0):
                             continue
+                        if not fast_clear_of_roads(cx, cz) or not fast_not_in_parking(cx, cz):
+                            continue
                         if any(math.hypot(cx - b["pos"][0], cz - b["pos"][1]) < bench_interval for b in benches):
                             continue
                         fx = px - cx
@@ -398,7 +446,12 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
                             for sign in [1, -1]:
                                 tx = cx + ux * 1.4 * sign
                                 tz = cz + uz * 1.4 * sign
-                                if math.hypot(tx, tz) >= 6.0 and fast_is_valid_building_dist(tx, tz, 3.0):
+                                if (
+                                    math.hypot(tx, tz) >= 6.0
+                                    and fast_is_valid_building_dist(tx, tz, 3.0)
+                                    and fast_clear_of_roads(tx, tz)
+                                    and fast_not_in_parking(tx, tz)
+                                ):
                                     if is_far_from_props(tx, tz, 0.8):
                                         tc_obj = {
                                             "type": "trashcan",
@@ -422,6 +475,8 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
                         if math.hypot(cx, cz) < 6.0:
                             continue
                         if not fast_is_valid_building_dist(cx, cz, 3.0):
+                            continue
+                        if not fast_clear_of_roads(cx, cz) or not fast_not_in_parking(cx, cz):
                             continue
                         if any(math.hypot(cx - l["pos"][0], cz - l["pos"][1]) < lamp_interval for l in lamps):
                             continue
@@ -466,6 +521,8 @@ def _run_campus(data: dict[str, Any], out_path: str, seed: int) -> None:
             continue
         if not fast_is_valid_building_dist(cx, cz, 3.0):
             continue
+        if not fast_not_in_parking(cx, cz, 1.8):
+            continue
         if not fast_dist_paths(cx, cz, 2.5):
             continue
         if not is_far_from_props(cx, cz, 4.0):
@@ -509,7 +566,7 @@ def drop_on_fields(props: list[dict[str, Any]], data: dict[str, Any]) -> list[di
     fields: list[tuple[list[list[float]], float]] = []
     for a in data.get("areas", []):
         is_pool = "havuz" in str(a.get("name", "")).lower()  # oyunda su olarak çizilir
-        if a.get("kind") not in ("pitch", "playground") and not is_pool:
+        if a.get("kind") not in ("pitch", "playground", "parking") and not is_pool:
             continue
         poly = a["points"]
         area = abs(sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1]

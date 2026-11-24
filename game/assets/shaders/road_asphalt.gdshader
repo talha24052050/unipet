@@ -7,6 +7,8 @@ uniform vec4 asphalt_color : source_color = vec4(0.22, 0.24, 0.27, 1.0);
 uniform vec4 curb_color : source_color = vec4(0.62, 0.61, 0.58, 1.0);
 uniform vec4 line_color : source_color = vec4(0.90, 0.88, 0.82, 1.0);
 uniform float curb_width = 0.26;
+uniform bool draw_center_line = true;
+uniform bool draw_curbs = true;
 
 varying vec3 world_pos;
 varying float v_width;
@@ -51,28 +53,30 @@ void fragment() {
 
 		float dist_edge = min(UV.x, 1.0 - UV.x) * v_width;
 
-		// Bordür dibinde ince yağmur oluğu gölgesi + kenar banket çizgisi
-		float gutter = 1.0 - smoothstep(curb_width, curb_width + 0.18, dist_edge);
-		col *= (1.0 - gutter * 0.14);
-		if (v_width >= 3.8) {
-			float shoulder = 1.0 - smoothstep(0.04, 0.07, abs(dist_edge - (curb_width + 0.18)));
-			col = mix(col, line_color.rgb, shoulder * 0.36);
+		if (draw_curbs) {
+			// Bordür dibinde ince yağmur oluğu gölgesi + kenar banket çizgisi
+			float gutter = 1.0 - smoothstep(curb_width, curb_width + 0.18, dist_edge);
+			col *= (1.0 - gutter * 0.14);
+			if (v_width >= 3.8) {
+				float shoulder = 1.0 - smoothstep(0.04, 0.07, abs(dist_edge - (curb_width + 0.18)));
+				col = mix(col, line_color.rgb, shoulder * 0.36);
+			}
+
+			// Segmentli beton bordür taşları (her 0.85 m'de bir koyu derz + hafif taş tonu farkı)
+			float curb_mask = 1.0 - smoothstep(curb_width - 0.03, curb_width + 0.02, dist_edge);
+			if (curb_mask > 0.01) {
+				float stone_id = floor(UV.y / 0.85);
+				float stone_f = fract(UV.y / 0.85);
+				float joint = smoothstep(0.0, 0.04, min(stone_f, 1.0 - stone_f));
+				float bevel = smoothstep(0.0, 0.06, dist_edge) * (0.94 + 0.12 * hash(vec2(stone_id, 5.0)));
+				vec3 curb_col = curb_color.rgb * bevel * mix(0.68, 1.0, joint);
+				col = mix(col, curb_col, curb_mask);
+				rough = mix(rough, 0.88, curb_mask);
+			}
 		}
 
-		// Segmentli beton bordür taşları (her 0.85 m'de bir koyu derz + hafif taş tonu farkı)
-		float curb_mask = 1.0 - smoothstep(curb_width - 0.03, curb_width + 0.02, dist_edge);
-		if (curb_mask > 0.01) {
-			float stone_id = floor(UV.y / 0.85);
-			float stone_f = fract(UV.y / 0.85);
-			float joint = smoothstep(0.0, 0.04, min(stone_f, 1.0 - stone_f));
-			float bevel = smoothstep(0.0, 0.06, dist_edge) * (0.94 + 0.12 * hash(vec2(stone_id, 5.0)));
-			vec3 curb_col = curb_color.rgb * bevel * mix(0.68, 1.0, joint);
-			col = mix(col, curb_col, curb_mask);
-			rough = mix(rough, 0.88, curb_mask);
-		}
-
-		// Gerçek yol uzunluğu (UV.y) tabanlı kesikli orta çizgi (2.2 m çizgi, 2.8 m boşluk — her açıda düzgün)
-		if (v_width >= 3.4) {
+		// Gerçek yol uzunluğu (UV.y) tabanlı kesikli orta çizgi (2.2 m çizgi, 2.8 m boşluk — sadece çift yönlü ana yollarda)
+		if (draw_center_line && v_width >= 3.4) {
 			float center_dist = abs(UV.x - 0.5) * v_width;
 			float dash_pos = fract(UV.y / 5.0);
 			float dash = (1.0 - smoothstep(0.42, 0.46, dash_pos)) * smoothstep(0.0, 0.03, dash_pos);

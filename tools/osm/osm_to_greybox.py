@@ -29,7 +29,27 @@ DEFAULT_LEVELS = 3
 M_PER_DEG_LAT = 110_540.0
 M_PER_DEG_LON_EQ = 111_320.0
 AREA_KINDS = {"park", "garden", "pitch", "playground", "grass"}
-PATH_KINDS = {"footway", "pedestrian", "path", "service"}
+PATH_KINDS = {
+    "residential", "unclassified", "living_street", "service",
+    "cycleway", "pedestrian", "footway", "path", "steps", "track",
+}
+
+
+def classify_path(tags: dict) -> str | None:
+    hw = tags.get("highway")
+    if hw not in PATH_KINDS:
+        return None
+    if hw == "residential":
+        return "residential_oneway" if tags.get("oneway") == "yes" else "residential"
+    if hw in ("unclassified", "living_street"):
+        return "residential"
+    if hw == "service":
+        return "parking_aisle" if tags.get("service") == "parking_aisle" else "service"
+    if hw == "steps":
+        return "footway"
+    if hw == "track":
+        return "path"
+    return hw
 
 
 def project(lat: float, lon: float, lat0: float, lon0: float) -> tuple[float, float]:
@@ -103,7 +123,10 @@ def main() -> None:
         def keep(e, pts: list[tuple[float, float]]) -> bool:
             if e.get("id") == args.area_way:
                 return False
-            return point_in_polygon(centroid(pts), area_poly)
+            if "building" in e.get("tags", {}):
+                return point_in_polygon(centroid(pts), area_poly)
+            in_count = sum(1 for p in pts if point_in_polygon(p, area_poly))
+            return in_count >= max(1, len(pts) // 2) or (point_in_polygon(centroid(pts), area_poly) and in_count > 0)
     else:
         out_radius = args.radius if args.radius is not None else 220.0
 
@@ -128,12 +151,18 @@ def main() -> None:
                 "points": [list(p) for p in ring],
                 "height": round(levels * LEVEL_HEIGHT_M, 2),
             })
-        elif (tags.get("leisure") in AREA_KINDS or tags.get("landuse") == "grass") and len(pts) >= 4:
+        elif (tags.get("leisure") in AREA_KINDS or tags.get("landuse") in ("grass", "meadow")) and len(pts) >= 4:
             kind = tags.get("leisure") or "grass"
             ring = pts[:-1] if pts[0] == pts[-1] else pts
             areas.append({"kind": kind, "name": tags.get("name", ""), "points": [list(p) for p in ring]})
-        elif tags.get("highway") in PATH_KINDS:
-            paths.append({"kind": tags["highway"], "points": [list(p) for p in pts]})
+        elif tags.get("amenity") == "parking" and len(pts) >= 4:
+            ring = pts[:-1] if pts[0] == pts[-1] else pts
+            areas.append({"kind": "parking", "name": tags.get("name", ""), "points": [list(p) for p in ring]})
+        elif (tags.get("natural") == "wood" or tags.get("landuse") == "forest") and len(pts) >= 4:
+            ring = pts[:-1] if pts[0] == pts[-1] else pts
+            areas.append({"kind": "wood", "name": tags.get("name", ""), "points": [list(p) for p in ring]})
+        elif classify_path(tags) is not None:
+            paths.append({"kind": classify_path(tags), "points": [list(p) for p in pts]})
 
     out = {
         "source": "OpenStreetMap contributors (ODbL)",

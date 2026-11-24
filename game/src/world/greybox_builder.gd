@@ -7,8 +7,11 @@ const BuildingStyle := preload("res://src/world/building_style.gd")
 const BUILDING_WALL_SHADER: Shader = preload("res://assets/shaders/building_wall.gdshader")
 const PATH_COBBLE_SHADER: Shader = preload("res://assets/shaders/path_cobble.gdshader")
 const ROAD_ASPHALT_SHADER: Shader = preload("res://assets/shaders/road_asphalt.gdshader")
+const CYCLEWAY_SHADER: Shader = preload("res://assets/shaders/cycleway.gdshader")
+const PARKING_LOT_SHADER: Shader = preload("res://assets/shaders/parking_lot.gdshader")
 const GRASS_SHADER: Shader = preload("res://assets/shaders/grass.gdshader")
-const GRASS_KINDS: PackedStringArray = ["grass", "park", "garden"]
+const GRASS_KINDS: PackedStringArray = ["grass", "park", "garden", "wood"]
+const ROAD_KINDS: PackedStringArray = ["residential", "residential_oneway", "service", "parking_aisle"]
 const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
 ## Ortabahçe'yi çevreleyen bina (avlu tespiti için).
 const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
@@ -29,23 +32,40 @@ static var _cobble_materials: Dictionary = {}
 ## Bina adlarını üstlerinde göster (greybox'ta yön bulmak için).
 @export var show_labels: bool = true
 
-const PATH_WIDTHS: Dictionary = {"footway": 2.2, "path": 1.5, "pedestrian": 4.0, "service": 4.6}
+const PATH_WIDTHS: Dictionary = {
+	"residential": 6.2,
+	"residential_oneway": 4.6,
+	"service": 4.4,
+	"parking_aisle": 3.6,
+	"cycleway": 1.6,
+	"pedestrian": 4.0,
+	"footway": 2.2,
+	"path": 1.5,
+}
 const AREA_COLORS: Dictionary = {
 	"park": Color(0.30, 0.49, 0.21),   # zengin zümrüt-yeşil park çimi (Ortabahçe/Yıldızbahçe)
 	"garden": Color(0.27, 0.45, 0.20), # koyu botanik bahçe yeşili
+	"wood": Color(0.24, 0.41, 0.17),   # koruluk / orman altı derin yeşili
 	"grass": Color(0.36, 0.54, 0.24),  # sıcak güneşli çayır yeşili
 	"playground": Color(0.76, 0.67, 0.44),
 	"pitch": Color(0.28, 0.53, 0.27),
+	"parking": Color(0.24, 0.26, 0.29),
 }
 const BUILDING_COLOR: Color = Color(0.91, 0.93, 0.94)
 const GROUND_COLOR: Color = Color(0.38, 0.53, 0.25)  # doğal tepe çimi; parklardan hafif sıcak
 const PATH_COLOR: Color = Color(0.91, 0.89, 0.85) # yaya yolu krem/açık gri
 const SERVICE_PATH_COLOR: Color = Color(0.290, 0.310, 0.333) # araç yolu koyu gri #4A4F55
-## Z-fighting olmasın diye katmanlar arası net kot hiyerarşisi: çim (0.05) < araç yolu (0.09) < yaya yolu (0.11).
+## Z-fighting olmasın diye net kot hiyerarşisi: çim (0.05) < otopark (0.078) < araç yolları (0.084..0.094) < bisiklet (0.102) < yaya (0.114).
 const AREA_Y: float = 0.05
+const PARKING_Y: float = 0.080
 const AREA_SUBDIV_M: float = 8.0
-const ROAD_Y: float = 0.09
-const PATH_Y: float = 0.11
+const PARKING_SUBDIV_M: float = 2.5
+const AISLE_Y: float = 0.084
+const SERVICE_Y: float = 0.088
+const ROAD_ONEWAY_Y: float = 0.091
+const ROAD_Y: float = 0.094
+const CYCLE_Y: float = 0.102
+const PATH_Y: float = 0.114
 const PATH_SUBDIV_M: float = 3.0
 const BUILDING_FOUNDATION_M: float = 2.5
 const GROUND_MARGIN: float = 30.0
@@ -278,7 +298,7 @@ static func _add_wall_with_gates(st: SurfaceTool, a: Vector2, b: Vector2, height
 	_add_wall_piece(st, a, b, cursor, 1.0, floor_y, height)
 
 
-static func flat_polygon_mesh(poly: PackedVector2Array, y: float, sample_terrain: bool = false) -> ArrayMesh:
+static func flat_polygon_mesh(poly: PackedVector2Array, y: float, sample_terrain: bool = false, subdiv_m: float = AREA_SUBDIV_M, max_depth: int = 6) -> ArrayMesh:
 	if Geometry2D.is_polygon_clockwise(poly):
 		poly.reverse()
 	var tris: PackedInt32Array = Geometry2D.triangulate_polygon(poly)
@@ -291,7 +311,7 @@ static func flat_polygon_mesh(poly: PackedVector2Array, y: float, sample_terrain
 		var b: Vector2 = poly[tris[i + 1]]
 		var c: Vector2 = poly[tris[i + 2]]
 		if sample_terrain:
-			_emit_terrain_tri(st, a, b, c, y, 0)
+			_emit_terrain_tri(st, a, b, c, y, 0, subdiv_m, max_depth)
 		else:
 			st.set_normal(Vector3.UP)
 			st.add_vertex(Vector3(a.x, y, a.y))
@@ -300,25 +320,25 @@ static func flat_polygon_mesh(poly: PackedVector2Array, y: float, sample_terrain
 	return st.commit()
 
 
-## Eğimli arazide büyük çim/park üçgenlerini özyinelemeli alt-bölerek zemine oturtur (z-fighting önler, renkleri korur).
-static func _emit_terrain_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, y_off: float, depth: int) -> void:
+## Eğimli arazide büyük çim/park/otopark üçgenlerini özyinelemeli alt-bölerek zemine oturtur (z-fighting önler).
+static func _emit_terrain_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, y_off: float, depth: int, subdiv_m: float = AREA_SUBDIV_M, max_depth: int = 6) -> void:
 	var ab: float = a.distance_squared_to(b)
 	var bc: float = b.distance_squared_to(c)
 	var ca: float = c.distance_squared_to(a)
 	var max_sq: float = maxf(ab, maxf(bc, ca))
-	if depth < 4 and max_sq > AREA_SUBDIV_M * AREA_SUBDIV_M:
+	if depth < max_depth and max_sq > subdiv_m * subdiv_m:
 		if ab >= bc and ab >= ca:
 			var m: Vector2 = (a + b) * 0.5
-			_emit_terrain_tri(st, a, m, c, y_off, depth + 1)
-			_emit_terrain_tri(st, m, b, c, y_off, depth + 1)
+			_emit_terrain_tri(st, a, m, c, y_off, depth + 1, subdiv_m, max_depth)
+			_emit_terrain_tri(st, m, b, c, y_off, depth + 1, subdiv_m, max_depth)
 		elif bc >= ab and bc >= ca:
 			var m: Vector2 = (b + c) * 0.5
-			_emit_terrain_tri(st, a, b, m, y_off, depth + 1)
-			_emit_terrain_tri(st, a, m, c, y_off, depth + 1)
+			_emit_terrain_tri(st, a, b, m, y_off, depth + 1, subdiv_m, max_depth)
+			_emit_terrain_tri(st, a, m, c, y_off, depth + 1, subdiv_m, max_depth)
 		else:
 			var m: Vector2 = (c + a) * 0.5
-			_emit_terrain_tri(st, a, b, m, y_off, depth + 1)
-			_emit_terrain_tri(st, m, b, c, y_off, depth + 1)
+			_emit_terrain_tri(st, a, b, m, y_off, depth + 1, subdiv_m, max_depth)
+			_emit_terrain_tri(st, m, b, c, y_off, depth + 1, subdiv_m, max_depth)
 		return
 	for v: Vector2 in [a, b, c]:
 		st.set_normal(TerrainHeight.active_normal(v.x, v.y))
@@ -625,18 +645,23 @@ func _build_area(a: Dictionary) -> void:
 	var poly: PackedVector2Array = to_polygon(a.get("points", []))
 	var kind: String = str(a.get("kind", "grass"))
 	var is_water: bool = str(a.get("name", "")).to_lower().contains("havuz")
+	var is_parking: bool = kind == "parking"
 	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
+	var y_off: float = PARKING_Y if is_parking else AREA_Y
 	var mesh: ArrayMesh
 	if has_terrain and (is_water or kind == "pitch" or kind == "playground"):
 		var ctr: Vector2 = _polygon_center(poly)
-		mesh = flat_polygon_mesh(poly, TerrainHeight.active_height(ctr.x, ctr.y) + AREA_Y, false)
+		mesh = flat_polygon_mesh(poly, TerrainHeight.active_height(ctr.x, ctr.y) + y_off, false)
+	elif is_parking:
+		mesh = flat_polygon_mesh(poly, y_off, has_terrain, PARKING_SUBDIV_M, 9)
 	else:
-		mesh = flat_polygon_mesh(poly, AREA_Y, has_terrain)
+		mesh = flat_polygon_mesh(poly, y_off, has_terrain)
 	if mesh == null:
 		return
 	var color: Color = AREA_COLORS.get(kind, AREA_COLORS["grass"])
 	var mat: Material = _water_material() if is_water \
-		else (_grass_material(color) if GRASS_KINDS.has(kind) else _shared_material(color))
+		else (_get_parking_material() if is_parking \
+		else (_grass_material(color) if GRASS_KINDS.has(kind) else _shared_material(color)))
 	if _batching:
 		_batch_mesh(mesh, mat, _poly_box(poly).get_center(), 0.0, false)
 		return
@@ -645,6 +670,34 @@ func _build_area(a: Dictionary) -> void:
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF  # düz yüzey: gölge geçişinde boşa çizilmesin
 	add_child(mi)
+
+
+static func is_road_kind(kind: String) -> bool:
+	return ROAD_KINDS.has(kind)
+
+
+static func _path_layer(kind: String) -> int:
+	if is_road_kind(kind):
+		return 1
+	if kind == "cycleway":
+		return 2
+	return 0
+
+
+static func _path_y_for(kind: String) -> float:
+	match kind:
+		"residential":
+			return ROAD_Y
+		"residential_oneway":
+			return ROAD_ONEWAY_Y
+		"service":
+			return SERVICE_Y
+		"parking_aisle":
+			return AISLE_Y
+		"cycleway":
+			return CYCLE_Y
+		_:
+			return PATH_Y
 
 
 func _build_path(p: Dictionary) -> void:
@@ -658,9 +711,11 @@ func _build_path(p: Dictionary) -> void:
 	if m < 2:
 		return
 	var kind: String = str(p.get("kind", "footway"))
+	var is_road: bool = is_road_kind(kind)
+	var is_cycle: bool = kind == "cycleway"
 	var width: float = PATH_WIDTHS.get(kind, 2.2)
 	var half_w: float = width * 0.5
-	var y_off: float = ROAD_Y if kind == "service" else PATH_Y
+	var y_off: float = _path_y_for(kind)
 	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 
 	# Her segment için yön, yan vektör ve uzunluk
@@ -735,16 +790,17 @@ func _build_path(p: Dictionary) -> void:
 
 	# Başlangıç ve bitiş yuvarlak uç kapakları: kavşak/birleşim düğümünde saf asfalt/parke ve alçak kot,
 	# çıkmaz uçlarda bordürlü yuvarlak kapak.
-	var is_road: bool = kind == "service"
-	_emit_path_end_cap(st, pts[0], -seg_dirs[0], seg_sides[0], half_w, cum_s[0], width, y_off, has_terrain, _is_shared_path_node(pts[0], is_road), is_road)
-	_emit_path_end_cap(st, pts[m - 1], seg_dirs[m - 2], seg_sides[m - 2], half_w, cum_s[m - 1], width, y_off, has_terrain, _is_shared_path_node(pts[m - 1], is_road), is_road)
+	var layer: int = _path_layer(kind)
+	_emit_path_end_cap(st, pts[0], -seg_dirs[0], seg_sides[0], half_w, cum_s[0], width, y_off, has_terrain, _is_shared_path_node(pts[0], layer), layer)
+	_emit_path_end_cap(st, pts[m - 1], seg_dirs[m - 2], seg_sides[m - 2], half_w, cum_s[m - 1], width, y_off, has_terrain, _is_shared_path_node(pts[m - 1], layer), layer)
 
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
 	var mid: Vector2 = pts[m / 2]
-	var mat: Material = _get_asphalt_material() if kind == "service" \
-		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE)
+	var mat: Material = _get_asphalt_material(kind) if is_road \
+		else (_get_cycleway_material() if is_cycle \
+		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE))
 	if _batching:
 		_batch_mesh(mesh, mat, mid, 0.0, false)
 		return
@@ -758,8 +814,7 @@ func _build_path(p: Dictionary) -> void:
 func _index_path_nodes(paths: Array) -> void:
 	_path_node_counts.clear()
 	for p: Dictionary in paths:
-		var is_road: bool = str(p.get("kind", "footway")) == "service"
-		var layer: int = 1 if is_road else 0
+		var layer: int = _path_layer(str(p.get("kind", "footway")))
 		var seen: Dictionary = {}
 		for pt: Array in p.get("points", []):
 			var key: Vector3i = Vector3i(layer, roundi(float(pt[0]) * 4.0), roundi(float(pt[1]) * 4.0))
@@ -769,8 +824,8 @@ func _index_path_nodes(paths: Array) -> void:
 			_path_node_counts[key] = int(_path_node_counts.get(key, 0)) + 1
 
 
-func _is_shared_path_node(pt: Vector2, is_road: bool) -> bool:
-	var key: Vector3i = Vector3i(1 if is_road else 0, roundi(pt.x * 4.0), roundi(pt.y * 4.0))
+func _is_shared_path_node(pt: Vector2, layer: int) -> bool:
+	var key: Vector3i = Vector3i(layer, roundi(pt.x * 4.0), roundi(pt.y * 4.0))
 	return int(_path_node_counts.get(key, 0)) >= 2
 
 
@@ -828,11 +883,12 @@ static func _emit_path_end_cap(
 	center: Vector2, out_dir: Vector2, side_vec: Vector2,
 	half_w: float, s_pos: float,
 	width: float, y_off: float, has_terrain: bool,
-	is_junction: bool = false, is_road: bool = false
+	is_junction: bool = false, layer: int = 0
 ) -> void:
-	# Kavşak/birleşim uçlarında kapak hem ana şeridin altında (12-18 mm alçak) hem de bordürsüz (cap_flag=1.0)
+	# Kavşak/birleşim uçlarında kapak hem ana şeridin altında hem de bordürsüz (cap_flag=1.0)
 	# çizilir; böylece engebeli arazide dahi karşı yolu kesen bordür/çizgi görünmez.
-	var sink: float = (0.018 if is_road else 0.012) if is_junction else 0.004
+	var j_sink: float = 0.015 if layer == 1 else (0.006 if layer == 2 else 0.008)
+	var sink: float = j_sink if is_junction else 0.003
 	var cap_y: float = y_off - sink
 	var cap_flag: float = 1.0 if is_junction else 0.0
 	var left_dir: Vector2 = side_vec.normalized()
@@ -951,14 +1007,35 @@ func _flush_batches() -> void:
 	_batches.clear()
 
 
-static var _asphalt_material: ShaderMaterial
+static var _asphalt_materials: Dictionary = {}
+static var _cycleway_material: ShaderMaterial
+static var _parking_material: ShaderMaterial
 
 
-static func _get_asphalt_material() -> ShaderMaterial:
-	if _asphalt_material == null:
-		_asphalt_material = ShaderMaterial.new()
-		_asphalt_material.shader = ROAD_ASPHALT_SHADER
-	return _asphalt_material
+static func _get_asphalt_material(kind: String = "service") -> ShaderMaterial:
+	var variant: String = "two_way" if kind == "residential" \
+		else ("aisle" if kind == "parking_aisle" else "single")
+	if not _asphalt_materials.has(variant):
+		var mat: ShaderMaterial = ShaderMaterial.new()
+		mat.shader = ROAD_ASPHALT_SHADER
+		mat.set_shader_parameter("draw_center_line", variant == "two_way")
+		mat.set_shader_parameter("draw_curbs", variant != "aisle")
+		_asphalt_materials[variant] = mat
+	return _asphalt_materials[variant]
+
+
+static func _get_cycleway_material() -> ShaderMaterial:
+	if _cycleway_material == null:
+		_cycleway_material = ShaderMaterial.new()
+		_cycleway_material.shader = CYCLEWAY_SHADER
+	return _cycleway_material
+
+
+static func _get_parking_material() -> ShaderMaterial:
+	if _parking_material == null:
+		_parking_material = ShaderMaterial.new()
+		_parking_material.shader = PARKING_LOT_SHADER
+	return _parking_material
 
 
 static func _get_cobble_material(pattern: int = PATTERN_COBBLE) -> ShaderMaterial:

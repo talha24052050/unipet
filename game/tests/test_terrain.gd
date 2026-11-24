@@ -279,10 +279,26 @@ func test_stadium_is_flat_and_asphalt_shader_valid() -> String:
 	var shader: Shader = load("res://assets/shaders/road_asphalt.gdshader") as Shader
 	if shader == null:
 		return "road_asphalt.gdshader yüklenemedi"
+	if load("res://assets/shaders/cycleway.gdshader") == null or load("res://assets/shaders/parking_lot.gdshader") == null:
+		return "cycleway veya parking_lot shader yüklenemedi"
 
-	# Taşbina (Kışla) ve sahaya bakan batı çevre yolu düz platoda olmalı
+	# Kampüs ana araç yolları (residential), bisiklet yolları ve otoparklar eksiksiz olmalı
 	var gb: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/zones/kampus_greybox.json"))
 	if gb is Dictionary:
+		var res_cnt: int = 0
+		var cycle_cnt: int = 0
+		for p: Dictionary in (gb as Dictionary).get("paths", []):
+			var pk: String = str(p.get("kind", ""))
+			if pk == "residential" or pk == "residential_oneway":
+				res_cnt += 1
+			elif pk == "cycleway":
+				cycle_cnt += 1
+		var park_cnt: int = 0
+		for a: Dictionary in (gb as Dictionary).get("areas", []):
+			if str(a.get("kind", "")) == "parking":
+				park_cnt += 1
+		if res_cnt < 50 or cycle_cnt < 8 or park_cnt < 25:
+			return "Kampüs yol/otopark verisi eksik: residential=%d cycleway=%d parking=%d" % [res_cnt, cycle_cnt, park_cnt]
 		for b: Dictionary in (gb as Dictionary).get("buildings", []):
 			if str(b.get("name", "")) == "Yıldız Teknik Üniversitesi Davutpaşa Kışlası":
 				var klo: float = INF

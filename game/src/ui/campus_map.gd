@@ -36,8 +36,11 @@ const COLOR_LEGEND_TEXT: Color = Color(0.22, 0.24, 0.26)
 const COLOR_BG: Color = Color(0.93, 0.93, 0.9)
 const COLOR_CAMPUS: Color = Color(0.56, 0.74, 0.38)
 const COLOR_GRASS: Color = Color(0.49, 0.73, 0.31)
+const COLOR_WOOD: Color = Color(0.34, 0.56, 0.24)
+const COLOR_PARKING: Color = Color(0.44, 0.46, 0.49)
 const COLOR_PITCH: Color = Color(0.36, 0.6, 0.28)
 const COLOR_PATH: Color = Color(0.97, 0.95, 0.88)
+const COLOR_CYCLE: Color = Color(0.22, 0.48, 0.74)
 const COLOR_ROAD: Color = Color(0.29, 0.31, 0.33)
 const COLOR_BUILDING: Color = Color(0.86, 0.86, 0.84)
 const COLOR_HISTORIC: Color = Color(0.94, 0.89, 0.78)
@@ -140,12 +143,23 @@ func _draw() -> void:
 	for a: Dictionary in _data.get("areas", []):
 		var poly: PackedVector2Array = _to_map(a.get("points", []))
 		if poly.size() >= 3 and not Geometry2D.triangulate_polygon(poly).is_empty():
-			draw_colored_polygon(poly, COLOR_PITCH if str(a.get("kind", "")) == "pitch" else COLOR_GRASS)
+			var ak: String = str(a.get("kind", ""))
+			var acol: Color = COLOR_PITCH if ak == "pitch" \
+				else (COLOR_PARKING if ak == "parking" \
+				else (COLOR_WOOD if ak == "wood" else COLOR_GRASS))
+			draw_colored_polygon(poly, acol)
 	for p: Dictionary in _data.get("paths", []):
 		var line: PackedVector2Array = _to_map(p.get("points", []))
 		if line.size() >= 2:
-			var road: bool = str(p.get("kind", "")) == "service"
-			draw_polyline(line, COLOR_ROAD if road else COLOR_PATH, ROAD_WIDTH if road else PATH_WIDTH, true)
+			var pk: String = str(p.get("kind", ""))
+			if pk == "residential" or pk == "residential_oneway":
+				draw_polyline(line, COLOR_ROAD, ROAD_WIDTH + (1.2 if pk == "residential" else 0.0), true)
+			elif pk == "service" or pk == "parking_aisle":
+				draw_polyline(line, COLOR_ROAD.lightened(0.08), ROAD_WIDTH * 0.7, true)
+			elif pk == "cycleway":
+				draw_polyline(line, COLOR_CYCLE, PATH_WIDTH * 0.85, true)
+			else:
+				draw_polyline(line, COLOR_PATH, PATH_WIDTH, true)
 	for b: Dictionary in _data.get("buildings", []):
 		var poly: PackedVector2Array = _to_map(b.get("points", []))
 		if poly.size() < 3 or Geometry2D.triangulate_polygon(poly).is_empty():

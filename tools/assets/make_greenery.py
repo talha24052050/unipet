@@ -29,20 +29,38 @@ REGIONS = {
     #             aralık  yol-yakın kabul  uzak kabul  yol-yakın bandı (m)   türler (ağırlık)
     "courtyard": (9.0, 1.0, 1.0, (3.2, 99.0), {"tree_stonepine": 55, "tree_plane": 45}),
     # Sadece tek yüzeyli (script) ağaçlar: dış paket ağaçları 2-3 yüzey = 2-3 kat çizim çağrısı (telefon)
+    "wood":      (9.5, 0.90, 0.60, (3.5, 18.0), {"tree_stonepine": 50, "tree_plane": 32, "tree_cypress": 18}),
     "park":      (11.0, 0.85, 0.3, (3.5, 13.0), {"tree_plane": 55, "tree_stonepine": 30, "tree_cypress": 15}),
     "grass":     (14.0, 0.55, 0.12, (3.5, 11.0), {"tree_plane": 60, "tree_cypress": 20, "tree_stonepine": 20}),
 }
-PATH_CLEAR = 3.2
-ROAD_CLEAR = 5.5           # araç yolu (service)
+ROAD_KINDS = {"residential", "residential_oneway", "service", "parking_aisle"}
+AVENUE_ROAD_KINDS = {"residential", "residential_oneway", "service"}
+CLEAR_BY_TAG = {
+    "road_main": 5.4,   # çift yönlü ana bulvar (6.2 m)
+    "road": 4.4,        # tek yönlü bulvar / servis yolu (4.4-4.6 m)
+    "aisle": 3.5,       # otopark geçiş yolu (3.6 m)
+    "cycle": 2.4,       # bisiklet yolu (1.6 m)
+    "path": 3.0,        # yaya yolu (1.5-4.0 m)
+}
+BUSH_CLEAR_BY_TAG = {
+    "road_main": 4.8,
+    "road": 3.9,
+    "aisle": 3.1,
+    "cycle": 2.1,
+    "path": 2.2,
+}
+PATH_CLEAR = 3.0
+ROAD_CLEAR = 4.4
 BUILDING_CLEAR = 4.0
 COURTYARD_WALL_CLEAR = 10.0
 EXISTING_TREE_CLEAR = 5.0
 BED_RADIUS = 3.2
 # Kampüs içi araç yolları iki yanı sık ağaçlı (Street View 2025, Google aracı çekimi)
-ROADSIDE_STEP = 10.0        # yol boyunca aralık
-ROADSIDE_OFFSET = 4.8       # yol ekseninden (yol 4 m: kenardan ~2.8 m)
-ROADSIDE_JITTER = 0.8
-ROADSIDE_SPACING = 8.0      # diğer ağaçlara en az
+ROADSIDE_STEP = 11.5        # yol boyunca aralık
+ROADSIDE_OFFSET = 4.8       # tek yön / servis yolu ekseninden
+ROADSIDE_OFFSET_MAIN = 5.6  # çift yönlü ana yol (6.2 m) ekseninden
+ROADSIDE_JITTER = 0.7
+ROADSIDE_SPACING = 8.5      # diğer ağaçlara en az
 ROADSIDE_SPECIES = {"tree_plane": 60, "tree_stonepine": 25, "tree_cypress": 15}
 GROVE_SPECIES = {"tree_stonepine": 48, "tree_plane": 34, "tree_cypress": 18}
 BUSH_SPECIES = {"bush_common": 68, "bush_berries": 32}
@@ -240,12 +258,39 @@ def main():
     def in_courtyard(p, clear=COURTYARD_WALL_CLEAR):
         return L.inside(p, hull) and not L.inside(p, kisla) and dist_to_poly(p, kisla) > clear
 
-    lines = [([tuple(q) for q in p["points"]], "road" if p.get("kind") == "service" else "path") for p in grey["paths"]]
+    def tag_of(kind):
+        if kind == "residential":
+            return "road_main"
+        if kind in ("residential_oneway", "service"):
+            return "road"
+        if kind == "parking_aisle":
+            return "aisle"
+        if kind == "cycleway":
+            return "cycle"
+        return "path"
+
+    def path_clear_ok(p, table):
+        # Komşu hücrelerdeki tüm yolları kontrol et (yakındaki geniş ana yol dar patikadan daha uzak mesafe ister)
+        gx, gz = int(math.floor(p[0] / GRID)), int(math.floor(p[1] / GRID))
+        for a, b, tag in sgrid.cells.get((gx, gz), ()):
+            if math.dist(p, L.seg_closest(p, a, b)) < table.get(tag, PATH_CLEAR):
+                return False
+        return True
+
+    lines = [([tuple(q) for q in p["points"]], tag_of(p.get("kind", "footway"))) for p in grey["paths"]]
     sgrid = SegGrid(lines)
     placed = PointGrid(15.0)  # en büyük aralıktan (14 m) büyük olmalı: komşu hücre taraması yeterli
     for it in props["props"]:
         if str(it.get("type", "")).startswith("tree_"):
             placed.add(tuple(it["pos"]))
+
+    # Saha / oyun alanı / havuz / OTOPARK çokgenleri (hiçbir ağaç veya çalı buralara düşmesin!)
+    no_go = []
+    for a in grey["areas"]:
+        if a.get("kind") in ("pitch", "playground", "parking") or "havuz" in str(a.get("name", "")).lower():
+            q = L.clean([tuple(v) for v in a["points"]])
+            if len(q) >= 3:
+                no_go.append(L.offset(q, 1.5))
 
     areas = []
     for a in grey["areas"]:
@@ -253,9 +298,11 @@ def main():
         poly = L.clean([tuple(q) for q in a["points"]])
         if len(poly) < 3:
             continue
-        if "havuz" in str(a.get("name", "")).lower():
-            continue  # su (greybox_builder havuzu su olarak çizer)
-        if kind in ("park", "garden") and a.get("name") != ORTABAHCE:
+        if "havuz" in str(a.get("name", "")).lower() or kind == "parking":
+            continue  # su veya otopark
+        if kind == "wood" and a.get("name") != ORTABAHCE:
+            areas.append(("wood", poly))
+        elif kind in ("park", "garden") and a.get("name") != ORTABAHCE:
             areas.append(("park", poly))
         elif kind == "grass":
             areas.append(("grass", poly))
@@ -277,28 +324,20 @@ def main():
                     continue
             elif not L.inside(p, poly) or in_courtyard(p, 0.0):
                 continue
-            d, tag = sgrid.nearest(p)
-            if d < (ROAD_CLEAR if tag == "road" else PATH_CLEAR):
+            if not path_clear_ok(p, CLEAR_BY_TAG):
                 continue
+            d, _ = sgrid.nearest(p)
             accept = near_p if band[0] <= d <= band[1] else far_p
             if rng.random() > accept:
                 continue
-            if placed.any_within(p, spacing if region != "courtyard" else spacing) or placed.any_within(p, EXISTING_TREE_CLEAR):
+            if placed.any_within(p, spacing) or placed.any_within(p, EXISTING_TREE_CLEAR):
                 continue
-            if bgrid.near(p, BUILDING_CLEAR):
+            if bgrid.near(p, BUILDING_CLEAR) or any(L.inside(p, z) for z in no_go):
                 continue
             kind = pick(species, rng)
             placed.add(p)
             trees.append([kind, round(p[0], 2), round(p[1], 2), round(rng.uniform(0, math.tau), 3), round(rng.uniform(0.85, 1.2), 3)])
             stats[region] = stats.get(region, 0) + 1
-
-    # Saha / oyun alanı / havuz çokgenleri (yol kenarı ağaçları buralara düşmesin)
-    no_go = []
-    for a in grey["areas"]:
-        if a.get("kind") in ("pitch", "playground") or "havuz" in str(a.get("name", "")).lower():
-            q = L.clean([tuple(v) for v in a["points"]])
-            if len(q) >= 3:
-                no_go.append(L.offset(q, 1.5))
 
     # Kampüs kapıları (beton portal vb.) ve ikonik meydanlar çevresi açık kalsın
     GATE_CLEAR = 16.0
@@ -310,10 +349,11 @@ def main():
     trees = [t for t in trees if not any(math.hypot(t[1] - cx, t[2] - cz) < rad for cx, cz, rad in clear_circles)]
     stats["meydan/kapı çevresinden çıkarılan"] = n_before - len(trees)
 
-    # Araç yollarının iki yanına ağaç sırası
-    road_lines = [line for line, tag in lines if tag == "road"]
+    # Araç yollarının (ana bulvar + servis) iki yanına ağaç sırası (otopark içi yollar hariç)
+    road_lines = [([tuple(q) for q in p["points"]], p.get("kind", "service")) for p in grey["paths"] if p.get("kind") in AVENUE_ROAD_KINDS]
     n_road = 0
-    for line in road_lines:
+    for line, rkind in road_lines:
+        base_off = ROADSIDE_OFFSET_MAIN if rkind == "residential" else ROADSIDE_OFFSET
         acc = ROADSIDE_STEP / 2
         for j in range(len(line) - 1):
             a, c = line[j], line[j + 1]
@@ -325,11 +365,10 @@ def main():
             t = acc
             while t < seg:
                 for side in (-1, 1):
-                    off = ROADSIDE_OFFSET + rng.uniform(-ROADSIDE_JITTER, ROADSIDE_JITTER)
+                    off = base_off + rng.uniform(-ROADSIDE_JITTER, ROADSIDE_JITTER)
                     p = (a[0] + u[0] * t + nrm[0] * side * off, a[1] + u[1] * t + nrm[1] * side * off)
-                    d, tag = sgrid.nearest(p)
-                    if d < (ROADSIDE_OFFSET - 1.2 if tag == "road" else PATH_CLEAR):
-                        continue  # kavşak / başka yol
+                    if not path_clear_ok(p, CLEAR_BY_TAG):
+                        continue  # karşı şerit / refüj / bisiklet yolu / kavşak
                     if placed.any_within(p, ROADSIDE_SPACING) or bgrid.near(p, BUILDING_CLEAR):
                         continue
                     if any(L.inside(p, z) for z in no_go):
@@ -391,8 +430,7 @@ def main():
             p = (gx + rr * math.cos(ang), gz + rr * math.sin(ang))
             if in_courtyard(p, 0.0):
                 continue
-            d, tag = sgrid.nearest(p)
-            if d < (ROAD_CLEAR if tag == "road" else PATH_CLEAR):
+            if not path_clear_ok(p, CLEAR_BY_TAG):
                 continue
             if placed.any_within(p, sp) or bgrid.near(p, BUILDING_CLEAR + 0.5):
                 continue
@@ -422,8 +460,7 @@ def main():
             ang = rng.uniform(0.0, math.tau)
             dist = rng.uniform(1.6, 3.4)
             bp = (tx + math.cos(ang) * dist, tz + math.sin(ang) * dist)
-            d, tag = sgrid.nearest(bp)
-            if d < (4.0 if tag == "road" else 2.2):
+            if not path_clear_ok(bp, BUSH_CLEAR_BY_TAG):
                 continue
             if bush_grid.any_within(bp, 3.2) or bgrid.near(bp, 2.5):
                 continue

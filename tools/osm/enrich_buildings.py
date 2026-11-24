@@ -22,6 +22,10 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 MATCH_DIST = 1.5
 ROOF_ONLY_HEIGHT = 4.0       # sundurma/gölgelik çatı yüksekliği (seviye yoksa)
 MIN_STOREY_M, MAX_STOREY_M = 2.6, 4.6  # ölçülmüş yükseklik / kat bu aralıktaysa güvenilir
+# OSM'de isimsiz/yanlış katlı kalan kampüs binaları: (merkez yakınlık x, z) -> (ad, yükseklik)
+MANUAL_OVERRIDES = [
+    ((-127.8, -62.5), "Yıldız Store", 5.0),
+]
 
 
 def chosen_height(tags: dict, levels: float | None) -> float | None:
@@ -90,6 +94,10 @@ def main() -> None:
         if str(t.get("building:colour", "")).startswith("#"):
             b["colour"] = t["building:colour"]
             stats["renk"] += 1
+        for m_ctr, m_name, m_height in MANUAL_OVERRIDES:
+            if math.dist(c, m_ctr) < 8.0:
+                b["name"] = m_name
+                b["height"] = m_height
 
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(grey, f, ensure_ascii=False, separators=(",", ":"))  # orijinal gibi tek satır (diff küçük kalsın)
