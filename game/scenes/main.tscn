@@ -29,6 +29,7 @@
 [ext_resource type="Script" path="res://src/world/yemekhane_plaza.gd" id="27"]
 [ext_resource type="Script" path="res://src/world/eef_plaza.gd" id="28"]
 [ext_resource type="Script" path="res://src/world/campus_landmarks.gd" id="29"]
+[ext_resource type="Script" path="res://src/ui/pet_button.gd" id="30"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -56,16 +57,6 @@ outer_radius = 0.35
 [sub_resource type="StandardMaterial3D" id="marker_mat"]
 shading_mode = 0
 albedo_color = Color(1, 0.85, 0.2, 1)
-
-[sub_resource type="GDScript" id="pet_btn_script"]
-script/source = "extends Button
-
-func _ready() -> void:
-	pressed.connect(_on_pressed)
-
-func _on_pressed() -> void:
-	get_tree().change_scene_to_file(\"res://scenes/ui/pet_select.tscn\")
-"
 
 [sub_resource type="GDScript" id="main_script"]
 script/source = "extends Node3D
@@ -203,7 +194,7 @@ mouse_filter = 0
 theme_type_variation = &"HudButton"
 theme_override_font_sizes/font_size = 28
 text = "Pet"
-script = SubResource("pet_btn_script")
+script = ExtResource("30")
 
 [node name="ConnectionLabel" type="Label" parent="UI"]
 anchors_preset = 2

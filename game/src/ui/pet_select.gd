@@ -18,6 +18,9 @@ const DRAG_SENSITIVITY: float = 0.01
 
 @export var profile_path: String = LocalProfile.PATH
 
+signal closed(saved: bool)
+
+var overlay_mode: bool = false
 var profile: LocalProfile
 var _selectable_pets: Array[CharacterDef] = []
 var _current_pet_index: int = 0
@@ -26,6 +29,7 @@ var _drag_pause_timer: float = 0.0
 var _accessory_labels: Dictionary = {}
 var _wallet_label: Label
 var _buy_btn: Button
+var _cancel_btn: Button
 
 @onready var _pet_pivot: Node3D = %PetPivot
 @onready var _pet_visual: PetVisual = %PetVisual
@@ -37,12 +41,56 @@ var _buy_btn: Button
 
 
 func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	_setup_ui()
 	_selectable_pets = _available_pets()
 	load_selection(profile_path)
 	_connect_signals()
 	_add_logout_button()
 	_add_shop_ui()
+	if overlay_mode:
+		set_overlay_mode(true)
+
+
+## Oyun içinden katman (overlay) olarak açıldığında sahneyi yıkmaz; "Kaydet ve Dön" / "Geri" anında döner.
+func set_overlay_mode(enabled: bool) -> void:
+	overlay_mode = enabled
+	if _start_btn != null:
+		_start_btn.text = "Kaydet ve Dön" if enabled else "Başla"
+	if enabled and _cancel_btn == null:
+		var insets: Dictionary = SafeArea.get_viewport_insets(get_viewport())
+		_cancel_btn = Button.new()
+		_cancel_btn.name = "CancelOverlayButton"
+		_cancel_btn.text = "Geri"
+		_cancel_btn.theme_type_variation = &"HudButton"
+		_cancel_btn.add_theme_font_size_override("font_size", LOGOUT_FONT_SIZE)
+		_cancel_btn.position = Vector2(168.0 + float(insets.get("left", 0.0)), 16.0 + float(insets.get("top", 0.0)))
+		_cancel_btn.custom_minimum_size = Vector2(132, 96)
+		_cancel_btn.pressed.connect(_cancel_overlay)
+		add_child(_cancel_btn)
+	elif _cancel_btn != null:
+		_cancel_btn.visible = enabled
+
+
+## Katman görünürlüğünü ve 3B önizleme SubViewport çizimini açar/durdurur (arka planda 0 GPU yükü!).
+func set_active(active: bool) -> void:
+	visible = active
+	set_process(active)
+	var sv: SubViewport = get_node_or_null("MainLayout/ViewportContainer/SubViewport") as SubViewport
+	if sv != null:
+		sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS if active else SubViewport.UPDATE_DISABLED
+	if active:
+		_selectable_pets = _available_pets()
+		load_selection(profile_path)
+		if Services.net != null:
+			Services.net.request_wallet()
+		_refresh_shop()
+
+
+func _cancel_overlay() -> void:
+	Sfx.play(&"ui_click")
+	set_active(false)
+	closed.emit(false)
 
 
 # ---- dükkan: fiyatlı aksesuarlar denenebilir, takmak için yıldız tozuyla satın alınır
@@ -381,4 +429,8 @@ func load_selection(path: String = "") -> void:
 func start_game() -> void:
 	Sfx.play(&"ui_click")
 	save_selection()
+	if overlay_mode:
+		set_active(false)
+		closed.emit(true)
+		return
 	get_tree().change_scene_to_file("res://scenes/main.tscn")

@@ -109,3 +109,44 @@ func test_short_names_for_landmarks() -> String:
 		if M.short_name(k) != cases[k]:
 			return "%s → %s (beklenen %s)" % [k, M.short_name(k), cases[k]]
 	return ""
+
+
+func test_overlay_mode_zoom_and_instant_teleport() -> String:
+	var m: Control = _make()
+	m.call("open_overlay", Vector3(-10.0, 0.0, 15.0))
+	if not bool(m.get("overlay_mode")) or not m.visible:
+		m.free()
+		return "open_overlay haritayı görünür overlay yapmadı"
+	# Yakınlaştırma ve sıfırlama
+	m.call("_zoom_at", Vector2(360.0, 640.0), 2.4)
+	if float(m.get("_zoom")) < 2.3:
+		m.free()
+		return "harita yakınlaştırma çalışmadı"
+	m.call("reset_view")
+	if not is_equal_approx(float(m.get("_zoom")), 1.0):
+		m.free()
+		return "reset_view yakınlaştırmayı 1.0'a döndürmedi"
+
+	# Yeni Merkez Kütüphanesi (service) artık seçilebilir ve overlay ışınlanma sahne değiştirmeden sinyal üretmeli
+	var places: Array = m.get("_places")
+	var lib_place: Dictionary = {}
+	for p: Dictionary in places:
+		if str(p.get("id", "")) == "yeni_kutuphane":
+			lib_place = p
+	if lib_place.is_empty():
+		m.free()
+		return "yeni_kutuphane places listesinde yok"
+	var lp_pos: Array = lib_place["pos"]
+	var hit: Dictionary = m.call("place_at", m.call("world_to_map", Vector2(float(lp_pos[0]), float(lp_pos[1]))))
+	if str(hit.get("id", "")) != "yeni_kutuphane":
+		m.free()
+		return "service türündeki yeni_kutuphane haritada dokunularak seçilemedi: %s" % str(hit)
+	var got_tp: Array = []
+	m.connect("teleport_requested", func(xz: Vector2, _pl: Dictionary) -> void: got_tp.append(xz))
+	m.call("select_place", lib_place)
+	m.call("travel")
+	var was_hidden: bool = not m.visible
+	m.free()
+	if got_tp.size() != 1 or not was_hidden:
+		return "overlay travel() anlık teleport_requested sinyali üretmedi veya kapanmadı"
+	return ""

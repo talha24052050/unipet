@@ -32,6 +32,14 @@ func get_camera() -> Camera3D:
 	return _camera
 
 
+## Işınlanma veya ekran dönüşü sonrası kamerayı gecikmesiz oyuncunun üstüne oturtur.
+func snap_to_target() -> void:
+	_touches.clear()
+	if target != null:
+		global_position = target.global_position + Vector3.UP * Config.CAMERA_TARGET_HEIGHT
+	_apply()
+
+
 func _process(delta: float) -> void:
 	if target == null:
 		return

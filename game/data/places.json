@@ -8,6 +8,10 @@
         17.6,
         26.9
       ],
+      "spawn": [
+        17.6,
+        26.9
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
@@ -17,6 +21,10 @@
       "name": "Ortabahçe",
       "kind": "landmark",
       "pos": [
+        -2.1,
+        5.3
+      ],
+      "spawn": [
         -2.1,
         5.3
       ],
@@ -32,6 +40,10 @@
         -103.5,
         -95.2
       ],
+      "spawn": [
+        -88.7,
+        -114.3
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Yemekhane"
@@ -43,6 +55,10 @@
       "pos": [
         47.1,
         -254.7
+      ],
+      "spawn": [
+        41.5,
+        -243.0
       ],
       "zone": "kampus",
       "source": "osm",
@@ -56,6 +72,10 @@
         164.2,
         -184.8
       ],
+      "spawn": [
+        152.7,
+        -174.0
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "A Blok - Fen Edebiyat Fakültesi Dekanlığı"
@@ -68,6 +88,10 @@
         240.0,
         -230.0
       ],
+      "spawn": [
+        236.4,
+        -232.9
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -79,6 +103,10 @@
         353.8,
         -183.8
       ],
+      "spawn": [
+        348.6,
+        -182.4
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -87,6 +115,10 @@
       "name": "Ring ve Otobüs Peronu",
       "kind": "transport",
       "pos": [
+        210.0,
+        -95.0
+      ],
+      "spawn": [
         210.0,
         -95.0
       ],
@@ -101,6 +133,10 @@
         434.4,
         255.3
       ],
+      "spawn": [
+        431.5,
+        267.1
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Otağ-ı Hümayun"
@@ -113,6 +149,10 @@
         549.2,
         305.7
       ],
+      "spawn": [
+        542.7,
+        332.5
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -123,6 +163,10 @@
       "pos": [
         405.0,
         463.4
+      ],
+      "spawn": [
+        405.5,
+        448.5
       ],
       "zone": "kampus",
       "source": "osm",
@@ -136,6 +180,10 @@
         165.1,
         506.7
       ],
+      "spawn": [
+        171.7,
+        523.6
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Yabancı Diller Yüksekokulu"
@@ -145,6 +193,10 @@
       "name": "Teknopark",
       "kind": "service",
       "pos": [
+        53.5,
+        660.5
+      ],
+      "spawn": [
         53.5,
         660.5
       ],
@@ -159,6 +211,10 @@
         -55.3,
         512.3
       ],
+      "spawn": [
+        -46.8,
+        497.9
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "YTÜ Merkez Laboratuvarı"
@@ -170,6 +226,10 @@
       "pos": [
         -168.4,
         429.9
+      ],
+      "spawn": [
+        -189.3,
+        413.1
       ],
       "zone": "kampus",
       "source": "osm",
@@ -183,6 +243,10 @@
         -109.5,
         300.8
       ],
+      "spawn": [
+        -103.9,
+        255.1
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "E Blok - İnşaat Mühendisliği"
@@ -192,6 +256,10 @@
       "name": "Bilgelik Yolu",
       "kind": "landmark",
       "pos": [
+        130.4,
+        300.3
+      ],
+      "spawn": [
         130.4,
         300.3
       ],
@@ -206,6 +274,10 @@
         -285.5,
         49.3
       ],
+      "spawn": [
+        -285.5,
+        49.3
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -214,6 +286,10 @@
       "name": "Kulüpler Vadisi",
       "kind": "sport",
       "pos": [
+        -280.0,
+        -20.0
+      ],
+      "spawn": [
         -280.0,
         -20.0
       ],
@@ -228,6 +304,10 @@
         -298.8,
         -213.6
       ],
+      "spawn": [
+        -282.3,
+        -199.2
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -236,6 +316,10 @@
       "name": "Açık Oyun Sahaları",
       "kind": "sport",
       "pos": [
+        -260.0,
+        -115.0
+      ],
+      "spawn": [
         -260.0,
         -115.0
       ],
@@ -250,6 +334,10 @@
         -127.8,
         -68.0
       ],
+      "spawn": [
+        -135.2,
+        -58.7
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -261,6 +349,10 @@
         -179.8,
         -197.8
       ],
+      "spawn": [
+        -173.7,
+        -186.2
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -269,6 +361,10 @@
       "name": "Eğitim Fakültesi",
       "kind": "faculty",
       "pos": [
+        -280.0,
+        -304.8
+      ],
+      "spawn": [
         -280.0,
         -304.8
       ],
@@ -284,6 +380,10 @@
         -373.1,
         -315.7
       ],
+      "spawn": [
+        -361.9,
+        -308.5
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -294,6 +394,10 @@
       "pos": [
         -374.7,
         -370.5
+      ],
+      "spawn": [
+        -367.4,
+        -381.9
       ],
       "zone": "kampus",
       "source": "manual"
@@ -306,6 +410,10 @@
         -354.9,
         -474.6
       ],
+      "spawn": [
+        -366.6,
+        -461.0
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -314,6 +422,10 @@
       "name": "Lojmanlar",
       "kind": "dorm",
       "pos": [
+        -170.0,
+        -450.0
+      ],
+      "spawn": [
         -170.0,
         -450.0
       ],
@@ -328,6 +440,10 @@
         -100.0,
         50.0
       ],
+      "spawn": [
+        -100.0,
+        50.0
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -336,6 +452,10 @@
       "name": "Sancak Köşkü",
       "kind": "landmark",
       "pos": [
+        300.0,
+        350.0
+      ],
+      "spawn": [
         300.0,
         350.0
       ],
@@ -350,6 +470,10 @@
         -77.2,
         -182.7
       ],
+      "spawn": [
+        -68.6,
+        -194.6
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Merkez Kütüphanesi"
@@ -362,6 +486,10 @@
         95.4,
         426.2
       ],
+      "spawn": [
+        87.9,
+        432.7
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -370,6 +498,10 @@
       "name": "Temiz Enerji Teknolojileri Enstitüsü",
       "kind": "service",
       "pos": [
+        10.0,
+        470.0
+      ],
+      "spawn": [
         10.0,
         470.0
       ],
@@ -384,6 +516,10 @@
         -140.9,
         551.0
       ],
+      "spawn": [
+        -129.5,
+        539.9
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -392,6 +528,10 @@
       "name": "Innovation Hub",
       "kind": "service",
       "pos": [
+        -200.0,
+        530.0
+      ],
+      "spawn": [
         -200.0,
         530.0
       ],
@@ -406,6 +546,10 @@
         -37.4,
         350.7
       ],
+      "spawn": [
+        -51.1,
+        358.0
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Academic Lounge"
@@ -418,6 +562,10 @@
         516.5,
         368.8
       ],
+      "spawn": [
+        529.6,
+        372.1
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Misafirhane"
@@ -427,6 +575,10 @@
       "name": "Cami",
       "kind": "landmark",
       "pos": [
+        -70.0,
+        -345.0
+      ],
+      "spawn": [
         -70.0,
         -345.0
       ],
@@ -441,6 +593,10 @@
         800.0,
         575.0
       ],
+      "spawn": [
+        801.0,
+        575.4
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -449,6 +605,10 @@
       "name": "B Girişi",
       "kind": "gate",
       "pos": [
+        -70.0,
+        -470.0
+      ],
+      "spawn": [
         -70.0,
         -470.0
       ],
@@ -463,6 +623,10 @@
         15.0,
         830.0
       ],
+      "spawn": [
+        15.0,
+        830.0
+      ],
       "zone": "kampus",
       "source": "manual"
     },
@@ -471,6 +635,10 @@
       "name": "M1A Davutpaşa-YTÜ metro durağı",
       "kind": "transport",
       "pos": [
+        -40.0,
+        -560.0
+      ],
+      "spawn": [
         -40.0,
         -560.0
       ],
@@ -485,6 +653,10 @@
         -75.2,
         -106.6
       ],
+      "spawn": [
+        -69.0,
+        -114.5
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Hokka"
@@ -496,6 +668,10 @@
       "pos": [
         -99.9,
         -124.7
+      ],
+      "spawn": [
+        -87.4,
+        -115.8
       ],
       "zone": "kampus",
       "source": "osm",
@@ -509,6 +685,10 @@
         -15.5,
         -74.5
       ],
+      "spawn": [
+        -25.8,
+        -82.9
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "BÜYÜK EV"
@@ -521,6 +701,10 @@
         133.6,
         339.7
       ],
+      "spawn": [
+        122.2,
+        353.7
+      ],
       "zone": "kampus",
       "source": "osm",
       "osm_name": "Eskafe"
@@ -532,6 +716,10 @@
       "pos": [
         216.6,
         -2.8
+      ],
+      "spawn": [
+        236.0,
+        3.8
       ],
       "zone": "kampus",
       "source": "osm",

@@ -41,7 +41,11 @@ static func newly_found(pos: Vector2, place_list: Array, discovered: PackedStrin
 		if id.is_empty() or discovered.has(id):
 			continue
 		var pp: Array = p.get("pos", [0, 0])
-		if pos.distance_to(Vector2(float(pp[0]), float(pp[1]))) <= radius:
+		var d: float = pos.distance_to(Vector2(float(pp[0]), float(pp[1])))
+		if p.has("spawn"):
+			var sp: Array = p.get("spawn", pp)
+			d = minf(d, pos.distance_to(Vector2(float(sp[0]), float(sp[1]))))
+		if d <= radius:
 			out.append(id)
 	return out
 

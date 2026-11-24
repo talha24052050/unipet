@@ -255,6 +255,19 @@ func send_local_profile() -> void:
 	net.send_profile(pet_id, accs, LocalProfile.load_or_default().display_name)
 
 
+## Sahneyi yeniden kurmadan yapılan anlık ışınlanmalarda odayı temizce yeniler (sunucu hız koruması için).
+func notify_local_teleport() -> void:
+	_has_sent_state = false
+	_heartbeat_accum = HEARTBEAT_INTERVAL
+	if net == null:
+		return
+	if _in_room:
+		_in_room = false
+		_clear_remote_players()
+		net.leave_zone()
+		net.join_zone(_zone_id())
+
+
 func _process(delta: float) -> void:
 	if _waiting_reconnect:
 		_reconnect_timer -= delta

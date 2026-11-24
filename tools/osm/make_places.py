@@ -58,6 +58,95 @@ def calculate_centroid(pts: list[list[float]]) -> list[float]:
     return [round(cx, 1), round(cz, 1)]
 
 
+def _point_in_poly(x: float, z: float, poly: list[list[float]]) -> bool:
+    inside = False
+    n = len(poly)
+    for i in range(n):
+        x1, z1 = poly[i]
+        x2, z2 = poly[(i + 1) % n]
+        if ((z1 > z) != (z2 > z)) and (x < (x2 - x1) * (z - z1) / (z2 - z1 + 1e-12) + x1):
+            inside = not inside
+    return inside
+
+
+def _closest_on_seg(px: float, pz: float, ax: float, az: float, bx: float, bz: float) -> tuple[float, float, float]:
+    dx, dz = bx - ax, bz - az
+    l2 = dx * dx + dz * dz
+    if l2 <= 1e-9:
+        return ax, az, math.hypot(px - ax, pz - az)
+    t = min(max(((px - ax) * dx + (pz - az) * dz) / l2, 0.0), 1.0)
+    cx, cz = ax + t * dx, az + t * dz
+    return cx, cz, math.hypot(px - cx, pz - cz)
+
+
+def _min_building_clearance(x: float, z: float, solid_buildings: list[list[list[float]]]) -> float:
+    """Nokta herhangi bir katı binanın içindeyse negatif, dışındaysa en yakın duvara mesafeyi döner."""
+    best = 1e9
+    for poly in solid_buildings:
+        if _point_in_poly(x, z, poly):
+            return -1.0
+        n = len(poly)
+        for i in range(n):
+            _, _, d = _closest_on_seg(x, z, poly[i][0], poly[i][1], poly[(i + 1) % n][0], poly[(i + 1) % n][1])
+            if d < best:
+                best = d
+    return best
+
+
+def compute_safe_spawn(
+    pos: list[float],
+    solid_buildings: list[list[list[float]]],
+    walk_points: list[tuple[float, float]],
+    min_clear: float = 3.6,
+) -> list[float]:
+    """Bina içindeki veya duvar dibindeki yerler için en yakın güvenli açık hava / yürüyüş yolu noktasını bulur."""
+    px, pz = float(pos[0]), float(pos[1])
+    if _min_building_clearance(px, pz, solid_buildings) >= min_clear:
+        return [round(px, 1), round(pz, 1)]
+
+    candidates: list[tuple[float, float, float]] = []
+    # 1) Yakındaki yürüyüş / araç yolu noktaları (doğal giriş kaldırımları)
+    for wx, wz in walk_points:
+        d0 = math.hypot(wx - px, wz - pz)
+        if d0 <= 85.0 and _min_building_clearance(wx, wz, solid_buildings) >= min_clear:
+            candidates.append((d0, wx, wz))
+
+    # 2) Bina kenarlarının dışa bakan normali yönünde 4.8 m açık noktalar
+    for poly in solid_buildings:
+        n = len(poly)
+        for i in range(n):
+            ax, az = poly[i]
+            bx, bz = poly[(i + 1) % n]
+            cx, cz, d_edge = _closest_on_seg(px, pz, ax, az, bx, bz)
+            if d_edge > 75.0:
+                continue
+            edx, edz = bx - ax, bz - az
+            el = math.hypot(edx, edz)
+            if el < 0.5:
+                continue
+            nx, nz = -edz / el, edx / el
+            for sign in (1.0, -1.0):
+                ox, oz = cx + nx * sign * (min_clear + 1.2), cz + nz * sign * (min_clear + 1.2)
+                if _min_building_clearance(ox, oz, solid_buildings) >= min_clear:
+                    # Yola yakın olan bina cephesini (ön giriş) hafifçe ödüllendir
+                    d_path = min((math.hypot(ox - wx, oz - wz) for wx, wz in walk_points if abs(ox - wx) < 40 and abs(oz - wz) < 40), default=25.0)
+                    score = math.hypot(ox - px, oz - pz) + min(d_path, 25.0) * 0.35
+                    candidates.append((score, ox, oz))
+
+    if candidates:
+        candidates.sort(key=lambda item: item[0])
+        return [round(candidates[0][1], 1), round(candidates[0][2], 1)]
+
+    # 3) Son çare: radyal arama
+    for r in range(4, 90, 3):
+        for k in range(24):
+            ang = 2.0 * math.pi * k / 24.0
+            ox, oz = px + math.cos(ang) * r, pz + math.sin(ang) * r
+            if _min_building_clearance(ox, oz, solid_buildings) >= min_clear:
+                return [round(ox, 1), round(oz, 1)]
+    return [round(px, 1), round(pz, 1)]
+
+
 def assign_zone(pos: list[float], zones: list[dict]) -> str:
     """Verilen koordinatın düştüğü en yakın bölgenin id'sini bulur; bölge dışındaysa boş döner."""
     x, z = pos[0], pos[1]
@@ -570,6 +659,20 @@ def build_places() -> dict:
                 "pos": calculate_centroid(a.get("points", [])),
             })
 
+    # Katı bina poligonları (roof sundurmalar hariç) ve yürüyüş/yol örnek noktaları
+    solid_buildings = [
+        b.get("points", [])
+        for b in campus.get("buildings", [])
+        if len(b.get("points", [])) >= 3 and str(b.get("kind", "")) != "roof"
+    ]
+    walk_points: list[tuple[float, float]] = []
+    for p in campus.get("paths", []):
+        pts = p.get("points", [])
+        for i in range(len(pts)):
+            walk_points.append((float(pts[i][0]), float(pts[i][1])))
+            if i + 1 < len(pts):
+                walk_points.append((0.5 * (pts[i][0] + pts[i + 1][0]), 0.5 * (pts[i][1] + pts[i + 1][1])))
+
     places_list = []
 
     for spec in PLACE_SPECS:
@@ -584,12 +687,14 @@ def build_places() -> dict:
         if pid in MANUAL_PLACES:
             manual_entry = MANUAL_PLACES[pid]
             pos = manual_entry["pos"]
+            spawn = compute_safe_spawn(pos, solid_buildings, walk_points)
             zone = assign_zone(pos, zones_data)
             places_list.append({
                 "id": pid,
                 "name": pname,
                 "kind": pkind,
                 "pos": pos,
+                "spawn": spawn,
                 "zone": zone,
                 "source": "manual",
             })
@@ -601,12 +706,14 @@ def build_places() -> dict:
 
         if matched_entity is not None and score >= 0.6:
             pos = matched_entity["pos"]
+            spawn = compute_safe_spawn(pos, solid_buildings, walk_points)
             zone = assign_zone(pos, zones_data)
             places_list.append({
                 "id": pid,
                 "name": pname,
                 "kind": pkind,
                 "pos": pos,
+                "spawn": spawn,
                 "zone": zone,
                 "source": "osm",
                 "osm_name": matched_entity["osm_name"],

@@ -134,3 +134,33 @@ func test_required_landmarks_present_and_zoned() -> String:
 			return "zorunlu yer bir bölgeye düşmüyor: '%s'" % req_id
 
 	return ""
+
+
+func test_all_place_spawns_outside_solid_buildings() -> String:
+	var data = _load_places()
+	var gb: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/zones/kampus_greybox.json"))
+	if not (data is Dictionary) or not (gb is Dictionary):
+		return "places.json veya kampus_greybox.json yüklenemedi"
+	var polys: Array[PackedVector2Array] = []
+	for b: Dictionary in (gb as Dictionary).get("buildings", []):
+		if str(b.get("kind", "")) == "roof":
+			continue
+		var pts: Array = b.get("points", [])
+		if pts.size() < 3:
+			continue
+		var poly: PackedVector2Array = PackedVector2Array()
+		for pt: Array in pts:
+			poly.append(Vector2(float(pt[0]), float(pt[1])))
+		polys.append(poly)
+	for p: Dictionary in (data as Dictionary).get("places", []):
+		var id: String = str(p.get("id", ""))
+		if not p.has("spawn"):
+			return "%s: güvenli 'spawn' alanı eksik" % id
+		var sp: Array = p["spawn"]
+		if sp.size() != 2:
+			return "%s: 'spawn' 2 elemanlı değil" % id
+		var sxz: Vector2 = Vector2(float(sp[0]), float(sp[1]))
+		for poly: PackedVector2Array in polys:
+			if Geometry2D.is_point_in_polygon(sxz, poly):
+				return "%s: spawn koordinatı (%s) hâlâ bir binanın içinde!" % [id, str(sxz)]
+	return ""
