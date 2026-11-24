@@ -16,6 +16,21 @@ const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
 ## Ortabahçe'yi çevreleyen bina (avlu tespiti için).
 const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
 const MESCIT_NAME: String = "Davutpaşa Kışlası Mesciti"
+const MERKEZ_KUTUPHANE_NAME: String = "Merkez Kütüphanesi"
+## YTÜ Davutpaşa Kampüsü Lojmanları (Yapı Dergisi Tablo 2 — Munsell Renk Dizgesi 3 blok grubu):
+## - Grup 1 (C1, J3, K1, L2): Çakıl Sinterflex seramik kaplama (32,5-9/2) + Sarı merdiven kuleleri
+## - Grup 2 (C2, F, J2, L3):  Beyaz Sinterflex seramik kaplama (35-9/1) + Yeşil merdiven kuleleri
+## - Grup 3 (J1, K2, L1):     Çimento Sinterflex seramik kaplama (30-5/2) + Turuncu merdiven kuleleri
+const LOJMAN_GROUPS: Dictionary = {
+	"C1 Blok": "cakil", "J3 Blok": "cakil", "K1 Blok": "cakil", "L2 Blok": "cakil",
+	"C2 Blok": "beyaz", "F Blok": "beyaz", "J2 Blok": "beyaz", "L3 Blok": "beyaz",
+	"J1 Blok": "cimento", "K2 Blok": "cimento", "L1 Blok": "cimento",
+}
+const LOJMAN_PALETTES: Dictionary = {
+	"cakil": {"wall": Color(0.84, 0.83, 0.76), "roof": Color(0.68, 0.67, 0.62)},
+	"beyaz": {"wall": Color(0.87, 0.88, 0.85), "roof": Color(0.71, 0.72, 0.69)},
+	"cimento": {"wall": Color(0.57, 0.57, 0.53), "roof": Color(0.46, 0.46, 0.43)},
+}
 ## Ortabahçe (Kışla avlusu) yolları gerçekte pembe-kırmızı beton; dışarıdaki yaya yolları parke.
 const PATTERN_COBBLE: int = 0
 const PATTERN_PINK_CONCRETE: int = 1
@@ -534,25 +549,45 @@ func _build_building(b: Dictionary) -> void:
 
 	var is_kisla: bool = name_text == KISLA_NAME
 	var is_mescit: bool = name_text == MESCIT_NAME
-	var unique_mat: bool = is_kisla or is_mescit
-	var mat_key: String = "%s|%s" % [style, colour]  # OSM rengi olan binalar kendi (ortak) malzemesini alır
+	var is_merkez_lib: bool = name_text == MERKEZ_KUTUPHANE_NAME
+	var lojman_grp: String = str(LOJMAN_GROUPS.get(name_text, ""))
+	var is_lojman: bool = not lojman_grp.is_empty()
+	var unique_mat: bool = is_kisla or is_mescit or is_merkez_lib
+	var mat_key: String = ("lojman|%s" % lojman_grp) if is_lojman else ("%s|%s" % [style, colour])
 	var wall_mat: ShaderMaterial = _style_materials.get(mat_key) if not unique_mat and _style_materials.has(mat_key) else ShaderMaterial.new()
 	if not unique_mat:
 		_style_materials[mat_key] = wall_mat
 	wall_mat.shader = BUILDING_WALL_SHADER
-	wall_mat.set_shader_parameter("wall_color", Color(0.78, 0.77, 0.71) if is_mescit else wall_color)
-	wall_mat.set_shader_parameter("window_color", sdata["window_color"])
-	wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
-	wall_mat.set_shader_parameter("roof_color", Color(0.56, 0.54, 0.48) if is_mescit else sdata["roof_color"])
-	wall_mat.set_shader_parameter("style", sdata["shader_style"])
-	if is_mescit:
-		wall_mat.set_shader_parameter("sparse_stone", true)
-	if is_kisla and _courtyard_hull.size() >= 3:
-		var cc: Vector2 = Vector2.ZERO
-		for v: Vector2 in _courtyard_hull:
-			cc += v
-		wall_mat.set_shader_parameter("outer_stone", true)
-		wall_mat.set_shader_parameter("courtyard_center", cc / float(_courtyard_hull.size()))
+	if is_merkez_lib:
+		wall_mat.set_shader_parameter("wall_color", Color(0.94, 0.94, 0.93))
+		wall_mat.set_shader_parameter("window_color", Color(0.08, 0.12, 0.17))
+		wall_mat.set_shader_parameter("frame_color", Color(0.09, 0.10, 0.12))
+		wall_mat.set_shader_parameter("roof_color", Color(0.88, 0.89, 0.88))
+		wall_mat.set_shader_parameter("style", 6)
+		wall_mat.set_shader_parameter("lib_origin", Vector2(-74.33, -236.71))
+		wall_mat.set_shader_parameter("lib_u", Vector2(0.8099, 0.5866))
+		wall_mat.set_shader_parameter("lib_v", Vector2(-0.5866, 0.8099))
+	elif is_lojman:
+		var pal: Dictionary = LOJMAN_PALETTES[lojman_grp]
+		wall_mat.set_shader_parameter("wall_color", pal["wall"])
+		wall_mat.set_shader_parameter("window_color", Color(0.11, 0.15, 0.20))
+		wall_mat.set_shader_parameter("frame_color", Color(0.14, 0.15, 0.17))
+		wall_mat.set_shader_parameter("roof_color", pal["roof"])
+		wall_mat.set_shader_parameter("style", 5)
+	else:
+		wall_mat.set_shader_parameter("wall_color", Color(0.78, 0.77, 0.71) if is_mescit else wall_color)
+		wall_mat.set_shader_parameter("window_color", sdata["window_color"])
+		wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
+		wall_mat.set_shader_parameter("roof_color", Color(0.56, 0.54, 0.48) if is_mescit else sdata["roof_color"])
+		wall_mat.set_shader_parameter("style", sdata["shader_style"])
+		if is_mescit:
+			wall_mat.set_shader_parameter("sparse_stone", true)
+		if is_kisla and _courtyard_hull.size() >= 3:
+			var cc: Vector2 = Vector2.ZERO
+			for v: Vector2 in _courtyard_hull:
+				cc += v
+			wall_mat.set_shader_parameter("outer_stone", true)
+			wall_mat.set_shader_parameter("courtyard_center", cc / float(_courtyard_hull.size()))
 
 	mesh.surface_set_material(0, wall_mat)
 	var body: StaticBody3D = StaticBody3D.new()

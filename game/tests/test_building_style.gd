@@ -83,6 +83,16 @@ func test_shader_compiles() -> String:
 	mat.set_shader_parameter("roof_color", BuildingStyle.HISTORIC_ROOF)
 	mat.set_shader_parameter("style", BuildingStyle.SHADER_STYLE_HISTORIC)
 
+	# Lojmanlar (style=5) ve Yeni Merkez Kütüphanesi (style=6) modlarını da doğrula
+	for extra_style: int in [5, 6]:
+		var m_extra: ShaderMaterial = ShaderMaterial.new()
+		m_extra.shader = shader
+		m_extra.set_shader_parameter("style", extra_style)
+		if int(m_extra.get_shader_parameter("style")) != extra_style:
+			return "building_wall style=%d atanamadı" % extra_style
+	if Greybox.LOJMAN_GROUPS.size() != 11:
+		return "LOJMAN_GROUPS 11 blok içermeli, %d bulundu" % Greybox.LOJMAN_GROUPS.size()
+
 	var mi: MeshInstance3D = MeshInstance3D.new()
 	var box: BoxMesh = BoxMesh.new()
 	box.material = mat

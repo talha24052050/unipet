@@ -37,6 +37,11 @@
       "recipe": "library"
     },
     {
+      "match": "Merkez Kütüphanesi",
+      "id": "merkez_kutuphane",
+      "recipe": "new_library"
+    },
+    {
       "match": "Otağ-ı Hümayun",
       "id": "otag",
       "recipe": "domed",

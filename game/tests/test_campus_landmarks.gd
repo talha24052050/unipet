@@ -33,6 +33,8 @@ func test_campus_landmarks_build_single_merged_mesh() -> String:
 		and n.get_node_or_null("TeknoparkSign") != null
 		and n.get_node_or_null("SporKompleksiSign") != null
 		and n.get_node_or_null("BuyukEvSign") != null
+		and n.get_node_or_null("LojmanlarTotemTitle") != null
+		and col.get_node_or_null("MerkezKutuphaneMonolithCollider") != null
 	)
 	n.free()
 	if not ok:

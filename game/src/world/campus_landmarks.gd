@@ -50,6 +50,7 @@ func build() -> void:
 	_build_yildiz_teknopark(st, col_body)
 	_build_spor_kompleksi(st, col_body)
 	_build_buyuk_ev_terrace(st, col_body)
+	_build_lojmanlar(st, col_body)
 
 	st.generate_normals()
 	var mesh: ArrayMesh = st.commit()
@@ -135,27 +136,142 @@ func _build_ilhan_varank_library(st: SurfaceTool, col_body: StaticBody3D) -> voi
 	_add_bench(st, col_body, mid + out * 5.5 - right_dir * 5.2, right_dir, out)
 
 
-## 3) Yeni Merkez Kütüphanesi (b#139): modern cam cephe girişi, koyu kanopi ve çalışma bankları.
+## 3) Yeni Merkez Kütüphanesi (b#139 — TEB Mimarlık 2024, yildiz.edu.tr & mimarizm.com referansları):
+##    - İç avlu açık gri taş döşeme + koyu drenaj kanal çerçevesi (lib_ytu_2.jpg & lib_gal_11.jpg)
+##    - Tarihi Hamam yönüne bakan yarı siyah bazalt basamak / yarı sıcak ahşap oturma amfisi (lib_gal_18.jpg)
+##    - Siyah cam küp önünde koyu mermer bordürlü siyah metal korkuluklu gezinti terası (lib_gal_19.jpg)
+##    - Avlu ekseninde modern siyah YTÜ lale lambaları + antrasit dikdörtgen defne saksıları (lib_gal_11.jpg)
+##    - Yemekhane/meydan yönünde geniş taş giriş meydanı + minimalist "YTÜ MERKEZ KÜTÜPHANESİ" giriş monoliti
 func _build_merkez_library(st: SurfaceTool, col_body: StaticBody3D) -> void:
-	var mid: Vector2 = Vector2(-84.3, -157.8)
-	var out: Vector2 = Vector2(-0.59, 0.81).normalized()
-	var right_dir: Vector2 = Vector2(out.y, -out.x)
-	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
-	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+	var lo: Vector2 = Vector2(-74.33, -236.71)
+	var lu: Vector2 = Vector2(0.8099, 0.5866)
+	var lv: Vector2 = Vector2(-0.5866, 0.8099)
+	var col_stone_plaza: Color = Color(0.78, 0.77, 0.74).srgb_to_linear()
+	var col_drain: Color = Color(0.24, 0.24, 0.25).srgb_to_linear()
+	var col_basalt: Color = Color(0.28, 0.30, 0.33).srgb_to_linear()
+	var col_amphi_wood: Color = Color(0.56, 0.38, 0.24).srgb_to_linear()
+	var col_marble_curb: Color = Color(0.26, 0.28, 0.31).srgb_to_linear()
+	var col_black_metal: Color = Color(0.11, 0.12, 0.14).srgb_to_linear()
+	var col_planter_leaf: Color = Color(0.18, 0.36, 0.16).srgb_to_linear()
+	var col_planter_hi: Color = Color(0.25, 0.46, 0.21).srgb_to_linear()
+	var col_lamp_glow: Color = Color(0.95, 0.96, 0.92).srgb_to_linear()
+	var col_white_lin: Color = Color(0.94, 0.94, 0.93).srgb_to_linear()
 
-	_add_paver_xf(st, xf, 16.0, 8.0, 4.1)
-	_add_box_xf(st, xf, Vector3(12.2, 1.15, 0.35), Vector3(0.0, 3.95, 0.20), COL_WHITE)
-	_add_box_xf(st, xf, Vector3(10.8, 0.22, 3.6), Vector3(0.0, 3.55, 1.85), COL_ANTHRACITE)
-	for sx: float in [-4.8, 4.8]:
-		_add_box_xf(st, xf, Vector3(0.26, 3.55, 0.26), Vector3(sx, 1.775, 3.35), COL_ANTHRACITE)
-	_add_box_xf(st, xf, Vector3(8.2, 3.2, 0.20), Vector3(0.0, 1.60, 0.12), COL_ANTHRACITE)
-	_add_box_xf(st, xf, Vector3(7.6, 2.95, 0.10), Vector3(0.0, 1.56, 0.20), COL_GLASS)
-	for mx: float in [-2.2, 0.0, 2.2]:
-		_add_box_xf(st, xf, Vector3(0.09, 2.95, 0.15), Vector3(mx, 1.56, 0.22), COL_WHITE)
-	_add_box_xf(st, xf, Vector3(7.6, 0.09, 0.15), Vector3(0.0, 2.30, 0.22), COL_WHITE)
-	_add_3d_sign(xf, Vector3(0.0, 3.98, 0.40), "MerkezKutuphaneSign", "MERKEZ KÜTÜPHANESİ", 0.38, COL_ANTHRACITE)
-	_add_bench(st, col_body, mid + out * 6.2 - right_dir * 5.2, right_dir, out)
-	_add_bench(st, col_body, mid + out * 6.2 + right_dir * 5.2, right_dir, out)
+	# 3a) İç avlu + Tarihi Hamam önü ve cam küp önü arazi eğimini birebir izleyen pürüzsüz taş meydan (0 çim sızması!)
+	var tile_zones: Array = [
+		[18.6, 51.0, 18.2, 35.4, 9, 5],
+		[50.6, 69.2, 18.2, 71.2, 6, 15],
+		[18.5, 62.0, 70.0, 81.5, 12, 4],
+		[18.4, 25.5, 35.2, 56.2, 2, 6],
+	]
+	for tz: Array in tile_zones:
+		var u0: float = float(tz[0])
+		var u1: float = float(tz[1])
+		var v0: float = float(tz[2])
+		var v1: float = float(tz[3])
+		var nu: int = int(tz[4])
+		var nv: int = int(tz[5])
+		var du: float = (u1 - u0) / float(nu)
+		var dv: float = (v1 - v0) / float(nv)
+		for iu: int in nu:
+			for iv: int in nv:
+				var ua: float = u0 + float(iu) * du
+				var ub: float = ua + du
+				var va: float = v0 + float(iv) * dv
+				var vb: float = va + dv
+				_add_terrain_quad(st, lo + lu * ua + lv * va, lo + lu * ub + lv * va, lo + lu * ub + lv * vb, lo + lu * ua + lv * vb, 0.128, col_stone_plaza)
+
+	# Avlu içi araziye yapışık koyu drenaj ızgara dikdörtgeni (lib_ytu_2.jpg & lib_gal_11.jpg!)
+	var dr_u0: float = 21.8
+	var dr_u1: float = 47.8
+	var dr_v0: float = 20.1
+	var dr_v1: float = 33.7
+	for k: int in 6:
+		var fa: float = lerpf(dr_u0, dr_u1, float(k) / 6.0)
+		var fb: float = lerpf(dr_u0, dr_u1, float(k + 1) / 6.0)
+		for vv: float in [dr_v0, dr_v1]:
+			_add_terrain_quad(st, lo + lu * fa + lv * (vv - 0.12), lo + lu * fb + lv * (vv - 0.12), lo + lu * fb + lv * (vv + 0.12), lo + lu * fa + lv * (vv + 0.12), 0.138, col_drain)
+	for k: int in 4:
+		var fa: float = lerpf(dr_v0, dr_v1, float(k) / 4.0)
+		var fb: float = lerpf(dr_v0, dr_v1, float(k + 1) / 4.0)
+		for uu: float in [dr_u0, dr_u1]:
+			_add_terrain_quad(st, lo + lu * (uu - 0.12) + lv * fa, lo + lu * (uu + 0.12) + lv * fa, lo + lu * (uu + 0.12) + lv * fb, lo + lu * (uu - 0.12) + lv * fb, 0.138, col_drain)
+
+	# 3b) İkonik geniş açık hava merdiven & ahşap oturma amfisi (u = 50.5..57.5, v = 19.0..34.6 — lib_gal_11/18.jpg!)
+	#     Sol yarı (v = 19.0..26.8): 8 koyu bazalt taş basamak; Sağ yarı (v = 26.8..34.6): 5 sıcak ahşap amfi oturma basamağı
+	var amp_wp: Vector2 = lo + lu * 54.0 + lv * 26.8
+	var amp_y: float = TerrainHeight.active_height(amp_wp.x, amp_wp.y)
+	var axf: Transform3D = _frame_xform(amp_wp, lu, lv, amp_y)
+	for si: int in 8:
+		var sx: float = -3.2 + float(si) * 0.82
+		var sh: float = 0.20 + float(si) * 0.14
+		# Bazalt yürüyüş merdivenleri (L-kanat tarafı)
+		_add_box_xf(st, axf, Vector3(0.84, sh + 0.55, 7.8), Vector3(sx, (sh - 0.55) * 0.5, -3.9), col_basalt)
+	for wi: int in 5:
+		var wx: float = -2.8 + float(wi) * 1.32
+		var wh: float = 0.28 + float(wi) * 0.24
+		# Ahşap kaplı geniş oturma amfi basamakları (cam küp tarafı — lib_gal_18.jpg!)
+		_add_box_xf(st, axf, Vector3(1.34, wh + 0.50, 7.6), Vector3(wx, (wh - 0.50) * 0.5, 3.8), col_basalt)
+		_add_box_xf(st, axf, Vector3(1.26, 0.07, 7.45), Vector3(wx, wh + 0.035, 3.8), col_amphi_wood)
+
+	# 3c) Siyah cam küp önünde koyu mermer bordür + siyah metal korkuluk bandı (lib_gal_18/19.jpg!)
+	#     Avlunun v = 34.8 kenarı boyunca (u = 24.5..51.0)
+	for ri: int in 9:
+		var ru: float = 26.0 + float(ri) * 2.95
+		var rwp: Vector2 = lo + lu * ru + lv * 34.4
+		var ry: float = TerrainHeight.active_height(rwp.x, rwp.y)
+		var rxf: Transform3D = _frame_xform(rwp, lu, lv, ry)
+		_add_box_xf(st, rxf, Vector3(2.98, 0.34, 0.36), Vector3(0.0, 0.17, 0.0), col_marble_curb)
+		_add_box_xf(st, rxf, Vector3(2.98, 0.055, 0.055), Vector3(0.0, 1.18, 0.0), col_black_metal)
+		_add_box_xf(st, rxf, Vector3(2.98, 0.035, 0.035), Vector3(0.0, 0.86, 0.0), col_black_metal)
+		_add_box_xf(st, rxf, Vector3(2.98, 0.035, 0.035), Vector3(0.0, 0.56, 0.0), col_black_metal)
+		_add_box_xf(st, rxf, Vector3(0.07, 0.90, 0.07), Vector3(-1.45, 0.76, 0.0), col_black_metal)
+
+	# 3d) Avlu ekseninde ve üst terasta siyah modern YTÜ lale lambaları (lib_ytu_2.jpg & lib_gal_11.jpg!)
+	var lamp_uvs: Array = [
+		[23.5, 26.8], [32.5, 26.8], [41.5, 26.8], [49.0, 26.8],
+		[53.5, 36.2], [53.5, 48.0], [53.5, 60.0],
+	]
+	for luv: Array in lamp_uvs:
+		var lwp: Vector2 = lo + lu * float(luv[0]) + lv * float(luv[1])
+		var ly: float = TerrainHeight.active_height(lwp.x, lwp.y)
+		var lxf: Transform3D = _frame_xform(lwp, lu, lv, ly)
+		_add_cyl_xf(st, lxf, 0.075, 3.6, Vector3(0.0, 1.8, 0.0), 6, col_black_metal)
+		for fork: float in [-1.0, 1.0]:
+			_add_box_xf(st, lxf, Vector3(0.055, 0.72, 0.055), Vector3(fork * 0.22, 3.85, 0.0), col_black_metal)
+		_add_cyl_xf(st, lxf, 0.34, 0.08, Vector3(0.0, 4.24, 0.0), 10, col_black_metal)
+		_add_cyl_xf(st, lxf, 0.26, 0.04, Vector3(0.0, 4.19, 0.0), 10, col_lamp_glow)
+
+	# 3e) L-kanat avlu cephesi boyunca antrasit dikdörtgen saksılarda defne/çalı dizisi (lib_gal_11.jpg!)
+	for pi: int in 7:
+		var pu: float = 22.0 + float(pi) * 4.4
+		var pwp: Vector2 = lo + lu * pu + lv * 19.6
+		var py: float = TerrainHeight.active_height(pwp.x, pwp.y)
+		var pxf: Transform3D = _frame_xform(pwp, lu, lv, py)
+		_add_box_xf(st, pxf, Vector3(1.15, 0.52, 0.55), Vector3(0.0, 0.26, 0.0), col_black_metal)
+		_add_foliage_blob_xf(st, pxf, Vector3(0.0, 1.25, 0.0), 0.52, 0.85, col_planter_leaf)
+		_add_foliage_blob_xf(st, pxf, Vector3(0.18, 1.55, 0.05), 0.36, 0.52, col_planter_hi)
+
+	# 3f) Minimalist modern "MERKEZ KÜTÜPHANESİ" giriş monoliti (Yemekhane & Tarihi Hamam çapraz yaklaşımına dönük!)
+	var m_wp: Vector2 = lo + lu * 55.5 + lv * 69.5
+	var m_out: Vector2 = (lu + lv).normalized()  # GD/G giriş meydanına 45° dönük
+	var m_right: Vector2 = Vector2(m_out.y, -m_out.x)
+	var m_y: float = TerrainHeight.active_height(m_wp.x, m_wp.y)
+	var mxf: Transform3D = _frame_xform(m_wp, m_right, m_out, m_y)
+	_add_box_xf(st, mxf, Vector3(4.6, 0.26, 0.72), Vector3(0.0, 0.13, 0.0), col_basalt)
+	_add_box_xf(st, mxf, Vector3(4.2, 2.35, 0.36), Vector3(0.0, 0.26 + 1.175, 0.0), col_black_metal)
+	_add_box_xf(st, mxf, Vector3(4.2, 0.28, 0.38), Vector3(0.0, 2.50, 0.0), col_white_lin)
+	_add_3d_sign(mxf, Vector3(0.0, 1.55, 0.24), "MerkezKutuphaneSign", "MERKEZ KÜTÜPHANESİ", 0.28, COL_WHITE)
+	var mcol: CollisionShape3D = CollisionShape3D.new()
+	mcol.name = "MerkezKutuphaneMonolithCollider"
+	var msh: BoxShape3D = BoxShape3D.new()
+	msh.size = Vector3(4.6, 2.6, 0.72)
+	mcol.shape = msh
+	mcol.transform = mxf * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.3, 0.0))
+	col_body.add_child(mcol)
+	# Meydan kenarında modern ahşap çalışma bankları
+	_add_bench(st, col_body, lo + lu * 58.0 + lv * 42.0, lv, lu)
+	_add_bench(st, col_body, lo + lu * 58.0 + lv * 52.0, lv, lu)
 
 
 ## 4) Fen-Edebiyat Fakültesi (b#9): giriş alınlığı, çift cam kapı ve YTÜ fakülte totemi.
@@ -637,6 +753,159 @@ func _build_buyuk_ev_terrace(st: SurfaceTool, col_body: StaticBody3D) -> void:
 		_add_box_xf(st, fxf, Vector3(0.06, 0.92, 0.06), Vector3(-2.2, 0.46, 0.0), COL_ANTHRACITE)
 
 
+## 15) YTÜ Davutpaşa Kampüsü Lojmanları (11 blok — Yapı Dergisi Munsell Renk Tasarımı & Mimari Görünüşler):
+##     - 3 renk grubu (Tablo 2 & Şekil 8):
+##       * Grup 1 (C1, J3, K1, L2): Çakıl Sinterflex (32,5-9/2) + Sarı (25,8-8,1/5,4) dikey sirkülasyon kuleleri
+##       * Grup 2 (C2, F, J2, L3):  Beyaz Sinterflex (35-9/1) + Yeşil (35,7-8,1/3,9) dikey sirkülasyon kuleleri
+##       * Grup 3 (J1, K2, L1):     Çimento Sinterflex (30-5/2) + Turuncu (13,1-7,5/7,7) dikey sirkülasyon kuleleri
+##     - Her blokta OSM'deki birebir 3.8 m merdiven kulesi konumlarında yerden 21.3 m'ye yükselen
+##       yüksek doymuşluklu dikey sirkülasyon kuleleri (her katta siyah doğramalı merdiven pencereli) +
+##       kuleler arasında Sinterflex kaplı kademeli çatı/teras katı kütleleri + ince teras korkulukları.
+func _build_lojmanlar(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	# sRGB -> lineer (CampusLandmarks vertex_color_use_as_albedo lineer çalışır; shader source_color ile birebir eşleşir!)
+	var palettes: Dictionary = {
+		"cakil": {
+			"tower": Color(0.80, 0.64, 0.28).srgb_to_linear(),  # Munsell 25,8-8,1/5,4 Sarı
+			"stone": Color(0.84, 0.83, 0.76).srgb_to_linear(),  # Munsell 32,5-9/2 Çakıl
+		},
+		"beyaz": {
+			"tower": Color(0.55, 0.65, 0.39).srgb_to_linear(),  # Munsell 35,7-8,1/3,9 Yeşil
+			"stone": Color(0.87, 0.88, 0.85).srgb_to_linear(),  # Munsell 35-9/1 Beyaz
+		},
+		"cimento": {
+			"tower": Color(0.81, 0.47, 0.32).srgb_to_linear(),  # Munsell 13,1-7,5/7,7 Turuncu
+			"stone": Color(0.57, 0.57, 0.53).srgb_to_linear(),  # Munsell 30-5/2 Çimento
+		},
+	}
+	var col_win: Color = Color(0.10, 0.14, 0.19).srgb_to_linear()
+	var col_frame: Color = Color(0.13, 0.14, 0.16).srgb_to_linear()
+	var col_rail: Color = Color(0.72, 0.74, 0.76).srgb_to_linear()
+	var col_cap: Color = Color(0.24, 0.25, 0.27).srgb_to_linear()
+
+	# 11 blok kesin OSM merkezleri, doğrultuları, yarı boyutları, sirkülasyon cephesi yönü (circ_sign)
+	# ve her bloğun kesin 3.8 m merdiven kulesi u merkezleri (Şekil 3-7 & kampus_greybox.json b#20..b#30):
+	var blocks: Array = [
+		["cimento", Vector2(-277.60, -444.38), Vector2(-0.8541, 0.5202), 28.20, 6.26, 1.0, [-19.9, 3.2, 20.0]],
+		["cakil",   Vector2(-222.54, -477.92), Vector2(-0.8541, 0.5201), 26.88, 6.26, 1.0, [-12.35, 8.0, 18.7]],
+		["beyaz",   Vector2(-156.28, -518.27), Vector2(-0.8540, 0.5203), 41.31, 6.26, 1.0, [-33.05, -16.6, 0.0, 16.4, 33.1]],
+		["beyaz",   Vector2(-238.12, -416.03), Vector2(-0.5745, 0.8185), 28.13, 6.28, 1.0, [-19.9, 3.2, 20.0]],
+		["cakil",   Vector2(-201.26, -389.82), Vector2(-0.7399, 0.6728), 28.17, 6.27, 1.0, [-19.9, 3.2, 20.0]],
+		["cimento", Vector2(-169.54, -471.25), Vector2(-0.8481, 0.5299), 25.26, 6.26, 1.0, [-17.0, 0.1, 17.1]],
+		["beyaz",   Vector2(-141.94, -445.47), Vector2(-0.8054, 0.5927), 26.87, 6.26, 1.0, [-12.3, 8.0, 18.7]],
+		["cakil",   Vector2(-115.24, -491.08), Vector2(-0.5257, -0.8506), 25.18, 6.28, 1.0, [-17.0, 0.0, 16.95]],
+		["cimento", Vector2(-108.41, -427.07), Vector2(0.7101, -0.7041), 34.65, 6.31, -1.0, [-26.5, -6.3, 10.1, 26.4]],
+		["cakil",   Vector2(-91.70, -390.56),  Vector2(0.9077, -0.4197), 34.73, 6.29, -1.0, [-26.5, -6.3, 10.1, 26.5]],
+		["beyaz",   Vector2(-64.12, -371.52),  Vector2(0.7209, -0.6931), 34.66, 6.31, -1.0, [-26.5, -6.3, 10.1, 26.4]],
+	]
+
+	var main_h: float = 17.5
+	var tower_h: float = 21.35  # Ana çatı üstünde +3.85 m yüksek renkli merdiven kulesi (Resim 3 & 4!)
+	var pent_h: float = 19.75   # Kademeli çatı/teras katı (+2.25 m)
+
+	for blk: Array in blocks:
+		var grp: String = str(blk[0])
+		var pal: Dictionary = palettes[grp]
+		var col_tower: Color = pal["tower"]
+		var col_stone: Color = pal["stone"]
+		var ctr: Vector2 = blk[1] as Vector2
+		var u: Vector2 = (blk[2] as Vector2).normalized()
+		var v: Vector2 = Vector2(-u.y, u.x)
+		var hu: float = float(blk[3])
+		var hv: float = float(blk[4])
+		var cs: float = float(blk[5])  # sirkülasyon cephesi v işareti (+1 veya -1)
+		var towers: Array = blk[6] as Array
+
+		# GreyboxBuilder._polygon_avg_height ile birebir eşleşen ortalama taban kotu
+		var ref_y: float = 0.0
+		var sample_pts: Array[Vector2] = [
+			ctr,
+			ctr + u * hu + v * hv,
+			ctr + u * hu - v * hv,
+			ctr - u * hu + v * hv,
+			ctr - u * hu - v * hv,
+		]
+		for sp: Vector2 in sample_pts:
+			ref_y += TerrainHeight.active_height(sp.x, sp.y)
+		ref_y /= float(sample_pts.size())
+		var xf: Transform3D = _frame_xform(ctr, u, v, ref_y)
+
+		# 1) Renkli dikey sirkülasyon / merdiven kuleleri (yerden 21.35 m tepeye kesintisiz renkli kütle!)
+		var t_w: float = 3.92
+		var t_depth: float = 5.60
+		var t_z_outer: float = cs * (hv + 0.40)  # sirkülasyon cephesinden +0.40 m dışa çıkmalı!
+		var t_z_center: float = t_z_outer - cs * (t_depth * 0.5)
+		var t_base: float = -2.2
+		var t_total_h: float = tower_h - t_base
+
+		for tu_var: Variant in towers:
+			var tu: float = float(tu_var)
+			# Ana renkli merdiven kulesi gövdesi
+			_add_box_xf(st, xf, Vector3(t_w, t_total_h, t_depth), Vector3(tu, t_base + t_total_h * 0.5, t_z_center), col_tower)
+			# Tepe ince renkli/açık parapet harpuştası (Resim 3 & 4: koyu siyah kapak yok, kule rengiyle uyumlu!)
+			_add_box_xf(st, xf, Vector3(t_w + 0.08, 0.10, t_depth + 0.08), Vector3(tu, tower_h + 0.04, t_z_center), col_tower * 0.84)
+			# Sirkülasyon yüzünde her katta (zemin + 4 normal + çatı kulesi = 6 seviye) siyah çerçeveli cam merdiven penceresi
+			var face_z: float = t_z_outer + cs * 0.03
+			for fl: int in 6:
+				var wy: float = 1.65 + float(fl) * 3.50
+				var wh: float = 2.45 if fl == 0 else (1.90 if fl == 5 else 2.20)
+				var ww: float = 2.45 if fl == 0 else 2.15
+				_add_box_xf(st, xf, Vector3(ww + 0.22, wh + 0.20, 0.08), Vector3(tu, wy, face_z), col_frame)
+				_add_box_xf(st, xf, Vector3(ww, wh, 0.10), Vector3(tu, wy, face_z + cs * 0.015), col_win)
+				# İnce 2x2 siyah pencere kayıtı
+				_add_box_xf(st, xf, Vector3(0.08, wh, 0.12), Vector3(tu, wy, face_z + cs * 0.02), col_frame)
+				_add_box_xf(st, xf, Vector3(ww, 0.08, 0.12), Vector3(tu, wy, face_z + cs * 0.02), col_frame)
+
+		# 2) Kuleler arasında Sinterflex kaplı kademeli çatı / dubleks teras katı kütleleri (17.35 -> 19.75 m — Resim 3 & 4!)
+		#    Her blokta merdiven kulelerinin arasındaki açıklıklara ve kısa uçlara kademeli teras kutuları yerleştir.
+		var sorted_t: Array[float] = []
+		for tu_v: Variant in towers:
+			sorted_t.append(float(tu_v))
+		sorted_t.sort()
+		var spans: Array = []
+		# Sol uç -> ilk kule
+		spans.append([-hu + 0.15, sorted_t[0] - 2.10])
+		# Kuleler arası açıklıklar
+		for ti: int in sorted_t.size() - 1:
+			spans.append([sorted_t[ti] + 2.10, sorted_t[ti + 1] - 2.10])
+		# Son kule -> sağ uç
+		spans.append([sorted_t[sorted_t.size() - 1] + 2.10, hu - 0.15])
+
+		var p_depth: float = hv * 1.32  # teras bırakmak için kısmen geri çekilmiş çatı katı
+		var p_z: float = -cs * (hv - p_depth * 0.5 - 0.10)  # yaşam/teras cephesine yaslı, sirkülasyon tarafında teraslı
+		var p_h: float = pent_h - (main_h - 0.15)
+		var p_yc: float = (main_h - 0.15) + p_h * 0.5
+		for sp_idx: int in spans.size():
+			var sa: float = float(spans[sp_idx][0])
+			var sb: float = float(spans[sp_idx][1])
+			var slen: float = sb - sa
+			if slen < 4.5:
+				continue
+			# Uçlarda ve geniş orta aralıklarda kademeli Sinterflex çatı dairesi (arada açık teras boşluğu bırak)
+			var box_len: float = slen if (sp_idx == 0 or sp_idx == spans.size() - 1) else slen * 0.64
+			var box_c: float = (sa + sb) * 0.5
+			_add_box_xf(st, xf, Vector3(box_len, p_h, p_depth), Vector3(box_c, p_yc, p_z), col_stone)
+			# Açık gri-taş çatı membran harpuştası (Resim 3 & 4'teki gibi doğal açık ton, kara kapak değil!)
+			_add_box_xf(st, xf, Vector3(box_len + 0.08, 0.10, p_depth + 0.08), Vector3(box_c, pent_h + 0.04, p_z), col_stone * 0.84)
+			# Çatı katı küçük koyu teras pencereleri (her iki uzun yüzde)
+			var n_pw: int = clampi(int(box_len / 4.2), 1, 3)
+			for wi: int in n_pw:
+				var wu: float = box_c - box_len * 0.30 + (box_len * 0.60 * float(wi) / maxf(1.0, float(n_pw - 1))) if n_pw > 1 else box_c
+				for side_p: float in [-1.0, 1.0]:
+					var pw_z: float = p_z + side_p * (p_depth * 0.5 + 0.04)
+					_add_box_xf(st, xf, Vector3(1.55, 1.15, 0.07), Vector3(wu, main_h + 1.15, pw_z), col_win)
+		# Çatı parapet teras korkuluk şeridi (her iki uzun kenar boyunca ince gümüş-gri küpeşte — Resim 4!)
+		for side_r: float in [-1.0, 1.0]:
+			var rz: float = side_r * (hv - 0.18)
+			_add_box_xf(st, xf, Vector3(hu * 2.0 - 0.9, 0.06, 0.06), Vector3(0.0, main_h + 0.96, rz), col_rail)
+			_add_box_xf(st, xf, Vector3(hu * 2.0 - 0.9, 0.04, 0.04), Vector3(0.0, main_h + 0.52, rz), col_rail)
+
+	# 3) Lojmanlar ana giriş meydanında (L1 / L2 / C2 arası yaya meydanı) YTÜ Lojmanlar yönlendirme totemi
+	var tot_wp: Vector2 = Vector2(-124.0, -402.0)
+	var tot_out: Vector2 = Vector2(0.55, 0.84).normalized()
+	var tot_right: Vector2 = Vector2(tot_out.y, -tot_out.x)
+	_build_ytu_totem(st, col_body, tot_wp, tot_right, tot_out, "LojmanlarTotem", "YTÜ DAVUTPAŞA\nLOJMANLARI\n\n• C1-C2 • F Blok\n• J1-J3 • K1-K2\n• L1-L3 Blokları")
+
+
 func _build_ytu_totem(st: SurfaceTool, col_body: StaticBody3D, wp: Vector2, right_dir: Vector2, out: Vector2, node_name: String, body_text: String) -> void:
 	var ty: float = TerrainHeight.active_height(wp.x, wp.y)
 	var xf: Transform3D = _frame_xform(wp, right_dir, out, ty)
@@ -817,3 +1086,28 @@ static func _add_foliage_blob_xf(st: SurfaceTool, xf: Transform3D, local_pos: Ve
 		st.add_vertex(top)
 		st.add_vertex(ring_pts[2][j])
 		st.add_vertex(ring_pts[2][i])
+
+
+## Arazi eğimine birebir yapışan yukarı bakan tek renkli taş/drenaj dörtgeni (çim sızmasız meydan kaplaması).
+static func _add_terrain_quad(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, d: Vector2, y_off: float, color: Color) -> void:
+	var va: Vector3 = Vector3(a.x, TerrainHeight.active_height(a.x, a.y) + y_off, a.y)
+	var vb: Vector3 = Vector3(b.x, TerrainHeight.active_height(b.x, b.y) + y_off, b.y)
+	var vc: Vector3 = Vector3(c.x, TerrainHeight.active_height(c.x, c.y) + y_off, c.y)
+	var vd: Vector3 = Vector3(d.x, TerrainHeight.active_height(d.x, d.y) + y_off, d.y)
+	st.set_color(color)
+	# Godot sağ-el +Y yukarı normal sarma yönü ((v2 - v0) x (v1 - v0)).y > 0
+	var n1: Vector3 = (vc - va).cross(vb - va)
+	if n1.y >= 0.0:
+		st.add_vertex(va)
+		st.add_vertex(vb)
+		st.add_vertex(vc)
+		st.add_vertex(va)
+		st.add_vertex(vc)
+		st.add_vertex(vd)
+	else:
+		st.add_vertex(va)
+		st.add_vertex(vc)
+		st.add_vertex(vb)
+		st.add_vertex(va)
+		st.add_vertex(vd)
+		st.add_vertex(vc)

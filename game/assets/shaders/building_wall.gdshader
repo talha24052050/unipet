@@ -5,13 +5,17 @@ uniform vec4 wall_color : source_color = vec4(0.91, 0.93, 0.94, 1.0);
 uniform vec4 window_color : source_color = vec4(0.18, 0.24, 0.32, 1.0);
 uniform vec4 frame_color : source_color = vec4(0.78, 0.82, 0.85, 1.0);
 uniform vec4 roof_color : source_color = vec4(0.68, 0.71, 0.74, 1.0);
-uniform int style : hint_range(0, 4) = 0;
+uniform int style : hint_range(0, 6) = 0;
 // Kışla dış cephesi (Street View 2025): sıvasız kaba taş örgü + pencere kemerleri tuğla. Avlu tarafı krem sıva kalır.
 // outer_stone açıkken, normali avlu merkezinden DIŞARI bakan duvarlar taş çizilir.
 uniform bool outer_stone = false;
 // Davutpaşa Kışlası Mescidi: neredeyse tamamen masif eskitilmiş kesme kireçtaşı duvar, yalnızca birkaç küçük dikdörtgen pencere.
 uniform bool sparse_stone = false;
 uniform vec2 courtyard_center = vec2(0.0);
+// Yeni Merkez Kütüphanesi (style == 6): L-kanat beyaz çerçeve + dev cam vs. çıkmalı siyah cam küp yerel koordinatları.
+uniform vec2 lib_origin = vec2(-74.33, -236.71);
+uniform vec2 lib_u = vec2(0.8099, 0.5866);
+uniform vec2 lib_v = vec2(-0.5866, 0.8099);
 uniform vec4 rubble_color : source_color = vec4(0.60, 0.56, 0.49, 1.0);
 uniform vec4 brick_arch_color : source_color = vec4(0.62, 0.30, 0.22, 1.0);
 // Tarihi binalar: pilastır (dikey taş şerit) ve kaide rengi (gerçek Kışla cephesi: krem duvar, gri-bej taş pilastırlar).
@@ -240,6 +244,183 @@ void fragment() {
 				bool fr = floor_y <= 1.1 || floor_y >= 2.6 || u3 <= 0.7 || u3 >= 2.7 || abs(u3 - 1.7) < 0.04;
 				col = fr ? frame_color.rgb : window_color.rgb;
 				roughness = fr ? 0.8 : 0.25;
+			}
+		}
+		if (style == 5) {
+			// 5: YTÜ Davutpaşa Lojmanları (Yapı Dergisi renk & cephe tasarımı):
+			// Büyük ebatlı Sinterflex seramik kaplama derz ızgarası + geniş sürgülü balkon camları +
+			// gümüş-gri yatay metal korkuluklar + Fransız balkon pencereleri.
+			float p_u5 = fract(wall_u / 1.35);
+			float p_y5 = fract(local_y / 0.88);
+			float tile_var = 0.965 + 0.06 * hash12(vec2(floor(wall_u / 1.35), floor(local_y / 0.88)));
+			col = wall_color.rgb * tile_var;
+			if (p_u5 < 0.022 || p_y5 < 0.028) {
+				col *= 0.82;  // Sinterflex seramik derzi
+			}
+			roughness = 0.78;
+			float fl_idx = floor(local_y / FLOOR_HEIGHT);
+			// Kat silmesi / beton balkon döşeme şeridi
+			if (floor_y < 0.26) {
+				col = wall_color.rgb * 0.90;
+				roughness = 0.88;
+			} else {
+				// Katlar arası hafif şaşırtmalı 5.4 m modül (geniş salon balkonu + dar oda penceresi)
+				float shift_u = mod(fl_idx, 2.0) * 1.15;
+				float u5 = mod(wall_u + shift_u, 5.4);
+				bool in_wide = (u5 >= 0.45 && u5 <= 3.15) && (floor_y >= 0.36 && floor_y <= 2.80);
+				bool in_narrow = (u5 >= 3.85 && u5 <= 4.95) && (floor_y >= 0.72 && floor_y <= 2.80);
+				// Alt çıkıntılı açık beton denizlik/balkon tablası
+				if ((u5 >= 0.38 && u5 <= 3.22 && floor_y >= 0.26 && floor_y < 0.38) ||
+					(u5 >= 3.78 && u5 <= 5.02 && floor_y >= 0.60 && floor_y < 0.74)) {
+					col = wall_color.rgb * 1.06;
+					roughness = 0.85;
+				} else if (in_wide || in_narrow) {
+					float u_lo = in_wide ? 0.45 : 3.85;
+					float u_hi = in_wide ? 3.15 : 4.95;
+					float y_lo = in_wide ? 0.36 : 0.72;
+					float y_hi = 2.80;
+					bool outer_f = (u5 <= u_lo + 0.09 || u5 >= u_hi - 0.09 || floor_y <= y_lo + 0.08 || floor_y >= y_hi - 0.09);
+					bool mull_v = in_wide && (abs(u5 - 1.35) < 0.045 || abs(u5 - 2.25) < 0.045);
+					bool mull_h = abs(floor_y - 2.28) < 0.04;
+					// Alt kısımda ince açık-gri metal balkon korkuluğu (yatay küpeşte + dikey parmaklık)
+					bool in_rail = floor_y >= y_lo + 0.08 && floor_y <= 1.36;
+					bool rail_top = abs(floor_y - 1.32) < 0.036;
+					bool rail_bars = in_rail && (fract((u5 - u_lo) / 0.22) < 0.15 || abs(floor_y - 0.84) < 0.025);
+					if (rail_top || rail_bars) {
+						col = vec3(0.54, 0.56, 0.58);  // mat gümüş-gri korkuluk (uzaktan parlamasın)
+						roughness = 0.48;
+						metallic = 0.35;
+					} else if (outer_f || mull_v || mull_h) {
+						col = frame_color.rgb;  // koyu antrasit doğrama
+						roughness = 0.50;
+						metallic = 0.25;
+					} else {
+						float sky_g = clamp((floor_y - y_lo) / (y_hi - y_lo), 0.0, 1.0);
+						col = mix(window_color.rgb * 0.72, window_color.rgb * 1.45 + vec3(0.06, 0.09, 0.11), sky_g);
+						roughness = 0.16;
+						metallic = 0.32;
+					}
+				}
+			}
+		}
+		if (style == 6) {
+			// 6: YTÜ Yeni Merkez Kütüphanesi (TEB Mimarlık 2024):
+			// - Kare özel kullanımlar küpü (u ∈ [24.8, 50.8], v ∈ [34.8, 70.4]): altta beyaz kaide / cam, üstte tamamen siyah cam giydirme
+			// - İki kütleyi bağlayan üst cam köprü (u ∈ [18.1, 25.5], v ∈ [55.2, 66.2]): beyaz kiriş + siyah kafesli cam
+			// - L-formlu ana kütüphane kanatları: kalın beyaz dikey kolonlar + kat döşemesi + dev siyah kayıtlı şeffaf perde camlar
+			vec2 rel = world_pos.xz - lib_origin;
+			float lu = dot(rel, lib_u);
+			float lv = dot(rel, lib_v);
+			bool in_cube = (lu >= 24.8 && lu <= 51.0 && lv >= 34.8 && lv <= 70.6);
+			bool in_bridge = (!in_cube) && (lu >= 18.0 && lu <= 25.6 && lv >= 55.0 && lv <= 66.4);
+			if (in_cube) {
+				if (local_y >= 4.15) {
+					// Tamamen siyah reflekte giydirme cam küp (lib_mim_1.jpg & lib_gal_19.jpg)
+					float gm_u = mod(wall_u, 1.95);
+					float gm_y = mod(local_y - 4.15, 1.50);
+					bool is_mull = (gm_u < 0.075 || gm_u > 1.875 || gm_y < 0.065 || gm_y > 1.435 || local_y > 9.95 || local_y < 4.28);
+					if (is_mull) {
+						col = vec3(0.08, 0.09, 0.11);
+						roughness = 0.42;
+						metallic = 0.38;
+					} else {
+						float sky_c = clamp((local_y - 4.2) / 6.0, 0.0, 1.0);
+						col = mix(vec3(0.045, 0.065, 0.095), vec3(0.11, 0.17, 0.23), sky_c);
+						roughness = 0.12;
+						metallic = 0.52;
+					}
+				} else {
+					// Alt kat: dış güney/meydan yüzleri temiz beyaz beton (lib_mim_1.jpg), avlu/geçit yüzleri siyah çerçeveli cam
+					bool outer_white = (lv > 68.8 || lu > 49.4);
+					if (outer_white) {
+						float cu = fract(wall_u / 2.4);
+						float cy = fract(local_y / 1.4);
+						col = wall_color.rgb * (0.97 + 0.03 * hash12(vec2(floor(wall_u / 2.4), floor(local_y / 1.4))));
+						if (cu < 0.02 || cy < 0.02) {
+							col *= 0.90;
+						}
+						roughness = 0.82;
+					} else {
+						float gm_u = mod(wall_u, 1.65);
+						float gm_y = mod(local_y, 1.45);
+						bool is_mull = (gm_u < 0.08 || gm_y < 0.07 || local_y < 0.22 || local_y > 3.95);
+						col = is_mull ? vec3(0.09, 0.10, 0.12) : vec3(0.07, 0.11, 0.15);
+						roughness = is_mull ? 0.48 : 0.15;
+						metallic = is_mull ? 0.35 : 0.40;
+					}
+				}
+			} else if (in_bridge) {
+				// Üst kat siyah kafes kirişli cam köprü (lib_gal_20.jpg)
+				if (local_y < 4.25) {
+					col = vec3(0.035, 0.040, 0.048);  // alt açık geçit derin gölge tonu
+					roughness = 0.95;
+				} else if (local_y < 5.05) {
+					col = wall_color.rgb;  // beyaz köprü tabliyesi
+					roughness = 0.80;
+				} else if (local_y > 9.15) {
+					col = vec3(0.10, 0.11, 0.13);
+					roughness = 0.48;
+				} else {
+					float bu = mod(wall_u, 1.6);
+					float by = local_y - 5.05;
+					bool truss = abs(mod(wall_u + by * 0.85, 2.6) - 1.3) < 0.11 || abs(mod(wall_u - by * 0.85, 2.6) - 1.3) < 0.11;
+					bool fr_b = bu < 0.08 || abs(by - 2.05) < 0.06 || truss;
+					col = fr_b ? vec3(0.09, 0.10, 0.12) : vec3(0.08, 0.13, 0.18);
+					roughness = fr_b ? 0.45 : 0.15;
+					metallic = 0.38;
+				}
+			} else if (lv > 72.8 && lu < 18.6) {
+				// Arm B GB kalkan ucu (lib_mim_1.jpg sol uç): masif temiz beyaz duvar + tek dikey siyah cam yarık
+				bool in_slit = (lu >= 11.4 && lu <= 15.2 && local_y >= 0.25 && local_y <= 8.95);
+				if (in_slit) {
+					bool fm = (lu <= 11.55 || lu >= 15.05 || abs(lu - 13.3) < 0.07 || mod(local_y, 1.6) < 0.07);
+					col = fm ? vec3(0.08, 0.09, 0.11) : vec3(0.07, 0.11, 0.16);
+					roughness = fm ? 0.45 : 0.15;
+					metallic = 0.40;
+				} else {
+					col = wall_color.rgb * 0.99;
+					roughness = 0.82;
+				}
+			} else {
+				// L-kanat ana kütüphane cephesi (lib_ytu_1.jpg & lib_gal_11.jpg):
+				// Kalın beyaz dikey taşıyıcı kolonlar (6.8 m ritim) + beyaz kat bandı + üst beyaz friz +
+				// aralarında dev siyah kayıtlı şeffaf perde camlar (içte hafif sıcak çalışma katı parıltısı).
+				float bay_u = mod(wall_u, 6.8);
+				bool white_pier = (bay_u < 0.92);
+				bool white_band = (local_y < 0.18) || (local_y >= 3.38 && local_y <= 4.18) || (local_y >= 9.35);
+				if (white_pier || white_band) {
+					float j_u = fract(wall_u / 1.7);
+					float j_y = fract(local_y / 1.3);
+					col = wall_color.rgb * 0.99;
+					if (j_u < 0.018 || j_y < 0.018) {
+						col *= 0.92;  // ince beyaz prekast panel derzi
+					}
+					roughness = 0.80;
+				} else {
+					float in_u = bay_u - 0.92;
+					float mu = mod(in_u, 1.47);
+					float my = local_y < 3.38 ? mod(local_y - 0.18, 1.60) : mod(local_y - 4.18, 1.30);
+					bool mull_l = (mu < 0.075 || mu > 1.395 || my < 0.065 || my > 1.235 ||
+						in_u < 0.08 || in_u > 5.80 || abs(local_y - 6.76) < 0.09);
+					if (mull_l) {
+						col = vec3(0.09, 0.10, 0.12);
+						roughness = 0.46;
+						metallic = 0.35;
+					} else {
+						// Cam içinde hafif gökyüzü yansıması + orta okuma katında sıcak kırmızı-turuncu masa bölücü ipucu
+						float sky_l = clamp(local_y / 9.5, 0.0, 1.0);
+						vec3 glass_c = mix(vec3(0.08, 0.13, 0.18), vec3(0.16, 0.25, 0.33), sky_l);
+						// İnce sıcak çalışma salonu derinlik tonu (lib_ytu_1.jpg)
+						if (local_y > 5.35 && local_y < 5.95) {
+							glass_c = mix(glass_c, vec3(0.42, 0.21, 0.14), 0.32);
+						} else if (local_y > 6.85 && local_y < 7.45) {
+							glass_c = mix(glass_c, vec3(0.32, 0.28, 0.20), 0.22);
+						}
+						col = glass_c;
+						roughness = 0.14;
+						metallic = 0.42;
+					}
+				}
 			}
 		}
 		ALBEDO = col;

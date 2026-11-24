@@ -62,6 +62,12 @@ COLORS = {
     "buyukev_flagstone": (0.67, 0.69, 0.68),
     "hedge_green": (0.18, 0.40, 0.16),
     "warm_glow": (0.90, 0.72, 0.44),
+    "lib_roof_dark": (0.24, 0.26, 0.30),
+    "lib_roof_seam": (0.31, 0.33, 0.37),
+    "lib_skylight": (0.48, 0.62, 0.74),
+    "lib_white": (0.94, 0.94, 0.93),
+    "lib_glass_black": (0.18, 0.25, 0.33),
+    "lib_frame_black": (0.11, 0.12, 0.14),
 }
 
 
@@ -289,8 +295,12 @@ def write_glb(path, name, builder, single_surface=False):
                 "baseColorFactor": [1.0, 1.0, 1.0, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.9}})
         else:
             r, g, b = COLORS[color]
+            is_glossy = color in ("lib_glass_black", "lib_skylight", "glass_dark")
+            is_frame = color in ("lib_frame_black", "lib_roof_dark")
             mats.append({"name": "lm_" + color, "pbrMetallicRoughness": {
-                "baseColorFactor": [r ** 2.2, g ** 2.2, b ** 2.2, 1.0], "metallicFactor": 0.0, "roughnessFactor": 0.9}})
+                "baseColorFactor": [r ** 2.2, g ** 2.2, b ** 2.2, 1.0],
+                "metallicFactor": 0.42 if is_glossy else (0.25 if is_frame else 0.0),
+                "roughnessFactor": 0.15 if is_glossy else (0.55 if is_frame else 0.9)}})
         prims.append({"attributes": attrs, "material": len(mats) - 1})
     while len(blob) % 4:
         blob.append(0)
@@ -848,7 +858,163 @@ def recipe_gable_hall(b, poly, h, spec, rng):
         b.box(ex, ez, 0.12, 3.05, 0.20, wg_h - 0.22, "glass_dark", yaw_u)
 
 
-RECIPES = {"gable_hall": recipe_gable_hall, "library": recipe_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
+def recipe_new_library(b, poly, h, spec, rng):
+    """YTÜ Yeni Merkez Kütüphanesi (TEB Mimarlık 2024 — yildiz.edu.tr & mimarizm.com referansları):
+    - L-formlu ana kütüphane kütlesi (Arm A: 67.5x18.1m, Arm B: 73.5x18.5m) üstünde köşede 45° gönye birleşimli
+      koyu antrasit kenet metal beşik çatı + her iki eğimde sıralı dikdörtgen çatı ışıklıkları +
+      iki uçta beyaz üçgen alınlık çerçeveleri (Tarihi Hamam ucunda 2 dev camlı üçgen cephe).
+    - Kare planlı özel kullanımlar küpü (25x34.3m): 2. katta +1.15m dışa çıkmalı (konsol) tamamen siyah
+      giydirme cam cephe + altta beyaz konsol tavanı + düz beyaz parapetli çatıda 3x3 ışıklık ızgarası.
+    - İki kütleyi bağlayan üst kat siyah çelik çapraz kafesli cam köprü (lib_gal_20.jpg)."""
+    # b#139 kesin yerel eksenleri (v13 = (-74.33, -236.71)):
+    # u = (+0.8099, +0.5866) (GD, Tarihi Hamam'a doğru), v = (-0.5866, +0.8099) (GB, Yemekhane'ye doğru)
+    ox, oz = -74.33, -236.71
+    ux, uz = 0.8099, 0.5866
+    vx, vz = -0.5866, 0.8099
+    yaw_u = math.atan2(uz, ux)
+    y0 = h  # 10.5 m
+
+    def P(lu, lv, y):
+        return (ox + ux * lu + vx * lv, y, oz + uz * lu + vz * lv)
+
+    def quad_box(u0, u1, v0, v1, ya, yb, color):
+        pts = [(P(u0, v0, 0)[0], P(u0, v0, 0)[2]), (P(u1, v0, 0)[0], P(u1, v0, 0)[2]),
+               (P(u1, v1, 0)[0], P(u1, v1, 0)[2]), (P(u0, v1, 0)[0], P(u0, v1, 0)[2])]
+        b.prism(pts, ya, yb, color)
+
+    def slope_slab(a0, a1, r1, r0, thick, color, cen):
+        up = lambda q: (q[0], q[1] + thick, q[2])
+        b._add_faces(color, [
+            [up(a0), up(a1), up(r1), up(r0)],
+            [a0, r0, r1, a1],
+            [a0, a1, up(a1), up(a0)],
+            [r0, up(r0), up(r1), r1],
+            [a0, up(a0), up(r0), r0],
+            [a1, r1, up(r1), up(a1)],
+        ], None, center=cen)
+
+    def beam_3d(p0, p1, half_t, color):
+        dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+        L_ = math.sqrt(dx * dx + dy * dy + dz * dz) or 1.0
+        tx, ty, tz = dx / L_, dy / L_, dz / L_
+        ref = (0.0, 1.0, 0.0) if abs(ty) < 0.9 else (1.0, 0.0, 0.0)
+        ax, ay, az = norm(cross((tx, ty, tz), ref))
+        bx, by, bz = norm(cross((tx, ty, tz), (ax, ay, az)))
+        offs = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        r0 = [(p0[0] + (ax * ox_ + bx * oy_) * half_t, p0[1] + (ay * ox_ + by * oy_) * half_t, p0[2] + (az * ox_ + bz * oy_) * half_t) for ox_, oy_ in offs]
+        r1 = [(p1[0] + (ax * ox_ + bx * oy_) * half_t, p1[1] + (ay * ox_ + by * oy_) * half_t, p1[2] + (az * ox_ + bz * oy_) * half_t) for ox_, oy_ in offs]
+        faces = [list(reversed(r0)), r1] + [[r0[i], r0[(i + 1) % 4], r1[(i + 1) % 4], r1[i]] for i in range(4)]
+        b._add_faces(color, faces, None, center=((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2))
+
+    # 1) L-kanat koyu antrasit kenet metal beşik çatı (lib_ytu_2.jpg!)
+    #    Arm A: u ∈ [-0.55, 67.65], v ∈ [-0.20, 18.30], mahya v = 9.05
+    #    Arm B: u ∈ [-0.55, 18.50], v ∈ [-0.20, 73.70], mahya u = 9.05
+    #    45° köşe birleşimi: dış köşe (-0.55, -0.20) -> mahya köşesi (9.05, 9.05) -> iç dere (18.50, 18.30)
+    ye = y0 - 0.10
+    yr = y0 + 2.75
+    T = 0.24
+    # Arm A dış (KD) eğimi
+    slope_slab(P(-0.55, -0.20, ye), P(67.65, -0.20, ye), P(67.65, 9.05, yr), P(9.05, 9.05, yr), T, "lib_roof_dark", P(34.0, 4.4, ye + 1.2))
+    # Arm A iç (avlu) eğimi
+    slope_slab(P(18.50, 18.30, ye), P(67.65, 18.30, ye), P(67.65, 9.05, yr), P(9.05, 9.05, yr), T, "lib_roof_dark", P(40.0, 13.7, ye + 1.2))
+    # Arm B dış (KB) eğimi
+    slope_slab(P(-0.55, -0.20, ye), P(-0.55, 73.70, ye), P(9.05, 73.70, yr), P(9.05, 9.05, yr), T, "lib_roof_dark", P(4.2, 36.0, ye + 1.2))
+    # Arm B iç (avlu) eğimi
+    slope_slab(P(18.50, 18.30, ye), P(18.50, 73.70, ye), P(9.05, 73.70, yr), P(9.05, 9.05, yr), T, "lib_roof_dark", P(13.8, 44.0, ye + 1.2))
+
+    # Beyaz üçgen kalkan duvarları (Arm A u=67.53 Tarihi Hamam ucu + Arm B v=73.54 GB ucu — lib_ytu_2.jpg & lib_mim_1.jpg!)
+    # Arm A ucu: beyaz üçgen çerçeve + içinde koyu üçgen cam alınlık + orta beyaz taşıyıcı dikme
+    for u_g, u_in in ((67.58, 67.15),):
+        t0, t1, t2 = P(u_g, -0.10, ye), P(u_g, 18.20, ye), P(u_g, 9.05, yr)
+        b0, b1, b2 = P(u_in, -0.10, ye), P(u_in, 18.20, ye), P(u_in, 9.05, yr)
+        b._add_faces("lib_white", [[t0, t1, t2], [b0, b2, b1], [t0, b0, b2, t2], [t2, b2, b1, t1]], None, center=P(67.35, 9.05, ye + 0.8))
+        # Gable içi 2 büyük koyu cam üçgen boşluğu (lib_ytu_2.jpg sağ alt!)
+        for v_lo, v_hi in ((1.0, 8.2), (9.9, 17.1)):
+            y_lo = ye + 0.05
+            y_hi_l = ye + (yr - ye) * (1.0 - abs(v_lo - 9.05) / 9.15) - 0.35
+            y_hi_r = ye + (yr - ye) * (1.0 - abs(v_hi - 9.05) / 9.15) - 0.35
+            gf = [P(u_g + 0.05, v_lo, y_lo), P(u_g + 0.05, v_hi, y_lo), P(u_g + 0.05, v_hi, y_hi_r), P(u_g + 0.05, v_lo, y_hi_l)]
+            b._add_faces("lib_glass_black", [gf], None, center=P(u_g - 0.3, (v_lo + v_hi) / 2, ye + 0.8))
+    # Arm B ucu (v=73.54): saf beyaz üçgen alınlık (lib_mim_1.jpg sol uç!)
+    t0, t1, t2 = P(-0.50, 73.60, ye), P(18.42, 73.60, ye), P(9.05, 73.60, yr)
+    b0, b1, b2 = P(-0.50, 73.15, ye), P(18.42, 73.15, ye), P(9.05, 73.15, yr)
+    b._add_faces("lib_white", [[t0, t1, t2], [b0, b2, b1], [t0, b0, b2, t2], [t2, b2, b1, t1]], None, center=P(9.0, 73.35, ye + 0.8))
+
+    # Çatı eğimleri boyunca sıralı çatı ışıklıkları (lib_ytu_2.jpg!)
+    # Arm A eğimleri (v = 4.6 ve v = 13.5 hizasında, u = 18..62 boyunca)
+    for lu in (20.0, 29.0, 38.0, 47.0, 56.0, 63.0):
+        for lv_s in (4.5, 13.6):
+            y_s = ye + (yr - ye) * (1.0 - abs(lv_s - 9.05) / 9.25) + T
+            quad_box(lu - 1.6, lu + 1.6, lv_s - 1.15, lv_s + 1.15, y_s - 0.20, y_s + 0.30, "lib_frame_black")
+            quad_box(lu - 1.35, lu + 1.35, lv_s - 0.90, lv_s + 0.90, y_s + 0.28, y_s + 0.36, "lib_skylight")
+    # Arm B eğimleri (u = 4.5 ve u = 13.6 hizasında, v = 22..68 boyunca)
+    for lv in (23.0, 32.0, 41.0, 50.0, 59.0, 67.5):
+        for lu_s in (4.5, 13.6):
+            y_s = ye + (yr - ye) * (1.0 - abs(lu_s - 9.05) / 9.50) + T
+            quad_box(lu_s - 1.15, lu_s + 1.15, lv - 1.6, lv + 1.6, y_s - 0.20, y_s + 0.30, "lib_frame_black")
+            quad_box(lu_s - 0.90, lu_s + 0.90, lv - 1.35, lv + 1.35, y_s + 0.28, y_s + 0.36, "lib_skylight")
+
+    # 2) Kare Özel Kullanımlar Küpü: 2. katta +1.15m dışa çıkmalı (konsol) SİYAH CAM KÜP + düz beyaz çatı + 3x3 ışıklık ızgarası!
+    #    Taban footprint: u ∈ [25.35, 50.30], v ∈ [35.48, 69.78]
+    cu0, cu1 = 24.30, 51.45
+    cv0, cv1 = 34.40, 70.90
+    # Konsol alt beyaz tavan tablası (lib_mim_1.jpg & lib_gal_19.jpg karakteristik beyaz alt çıkma!)
+    quad_box(cu0, cu1, cv0, cv1, 4.10, 4.42, "lib_white")
+    # Üst kat koyu reflekte cam küp kabuğu (4.42 -> 10.40 m, taban kutunun 1.1m dışına çıkmalı)
+    # 4 dış cam şerit duvarı (içi zaten greybox gövdesi; dış konsol yakası gerçek 3B çıkma oluşturur)
+    quad_box(cu0, cu1, cv1 - 1.25, cv1, 4.42, 10.42, "lib_glass_black")  # GB ön yüz
+    quad_box(cu0, cu1, cv0, cv0 + 1.25, 4.42, 10.42, "lib_glass_black")  # KD avlu yüzü
+    quad_box(cu1 - 1.25, cu1, cv0, cv1, 4.42, 10.42, "lib_glass_black")  # GD meydan yüzü
+    quad_box(cu0, cu0 + 1.25, cv0, cv1, 4.42, 10.42, "lib_glass_black")  # KB köprü yüzü
+    # Siyah cam küp ince yatay + dikey giydirme cam profilleri (lib_mim_1.jpg & lib_gal_19.jpg!)
+    quad_box(cu0 - 0.08, cu1 + 0.08, cv0 - 0.08, cv1 + 0.08, 10.22, 10.52, "lib_frame_black")  # üst siyah alınlık
+    for y_rib in (4.42, 5.92, 7.42, 8.92):
+        # 4 kenar boyunca yatay ince kayıt şeridi
+        quad_box(cu0 - 0.05, cu1 + 0.05, cv1 - 0.05, cv1 + 0.05, y_rib, y_rib + 0.09, "lib_frame_black")
+        quad_box(cu0 - 0.05, cu1 + 0.05, cv0 - 0.05, cv0 + 0.05, y_rib, y_rib + 0.09, "lib_frame_black")
+        quad_box(cu1 - 0.05, cu1 + 0.05, cv0 - 0.05, cv1 + 0.05, y_rib, y_rib + 0.09, "lib_frame_black")
+        quad_box(cu0 - 0.05, cu0 + 0.05, cv0 - 0.05, cv1 + 0.05, y_rib, y_rib + 0.09, "lib_frame_black")
+    for k in range(10):
+        lu_m = cu0 + (cu1 - cu0) * k / 9.0
+        for lv_m in (cv0, cv1):
+            mx, _, mz = P(lu_m, lv_m, 0)
+            b.box(mx, mz, 0.10, 0.14, 4.42, 10.42, "lib_frame_black", yaw_u)
+    for k in range(12):
+        lv_m = cv0 + (cv1 - cv0) * k / 11.0
+        for lu_m in (cu0, cu1):
+            mx, _, mz = P(lu_m, lv_m, 0)
+            b.box(mx, mz, 0.14, 0.10, 4.42, 10.42, "lib_frame_black", yaw_u)
+
+    # Düz beyaz çatı membranı + beyaz parapet kenarı + MERKEZİ 3x3 IŞIKLIK PLATFORMU (lib_ytu_2.jpg sol!)
+    quad_box(cu0 + 0.15, cu1 - 0.15, cv0 + 0.15, cv1 - 0.15, 10.42, 10.62, "lib_white")
+    # Parapet çerçevesi
+    quad_box(cu0, cu1, cv0, cv0 + 0.45, 10.52, 10.92, "lib_white")
+    quad_box(cu0, cu1, cv1 - 0.45, cv1, 10.52, 10.92, "lib_white")
+    quad_box(cu0, cu0 + 0.45, cv0, cv1, 10.52, 10.92, "lib_white")
+    quad_box(cu1 - 0.45, cu1, cv0, cv1, 10.52, 10.92, "lib_white")
+    # Merkezi yükseltilmiş koyu metal ışıklık platformu (3x3 kare ışıklıklar — lib_ytu_2.jpg & lib_gal_12/13!)
+    quad_box(31.5, 44.2, 44.5, 59.5, 10.62, 11.15, "lib_roof_dark")
+    for iu in range(3):
+        for iv in range(3):
+            su = 33.6 + iu * 4.2
+            sv = 47.0 + iv * 5.0
+            quad_box(su - 1.35, su + 1.35, sv - 1.55, sv + 1.55, 11.15, 11.42, "lib_frame_black")
+            quad_box(su - 1.10, su + 1.10, sv - 1.30, sv + 1.30, 11.40, 11.48, "lib_skylight")
+    # İkinci küçük çatı ışıklık / tesisat bacası (lib_ytu_2.jpg sol ön)
+    quad_box(35.8, 40.0, 62.0, 66.0, 10.62, 11.25, "lib_roof_seam")
+    quad_box(36.3, 39.5, 62.5, 65.5, 11.25, 11.34, "lib_skylight")
+
+    # 3) Üst kat siyah çelik çapraz kafesli cam köprü (u ∈ [18.2, 24.4], v ∈ [55.7, 65.7] — lib_gal_20.jpg!)
+    quad_box(18.1, 24.5, 55.6, 65.8, 4.30, 4.98, "lib_white")
+    quad_box(18.1, 24.5, 55.6, 65.8, 8.95, 9.48, "lib_frame_black")
+    for lv_b in (55.65, 65.75):
+        # Çapraz çelik kafes diyagonalleri (lib_gal_20.jpg!)
+        beam_3d(P(18.4, lv_b, 5.0), P(20.4, lv_b, 8.9), 0.11, "lib_frame_black")
+        beam_3d(P(20.4, lv_b, 8.9), P(22.4, lv_b, 5.0), 0.11, "lib_frame_black")
+        beam_3d(P(22.4, lv_b, 5.0), P(24.3, lv_b, 8.9), 0.11, "lib_frame_black")
+
+
+RECIPES = {"gable_hall": recipe_gable_hall, "library": recipe_library, "new_library": recipe_new_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
 
 
 def main():
