@@ -50,6 +50,20 @@ const BUILDING_FOUNDATION_M: float = 2.5
 const GROUND_MARGIN: float = 30.0
 const CampusMap := preload("res://src/ui/campus_map.gd")
 const LANDMARKS_PATH: String = "res://data/landmarks.json"
+## Kendi 3D mimari alınlık tabelası bulunan ikonik binalarda otomatik küçük mavi kutu tabela üretilmez.
+const CUSTOM_SIGN_BUILDINGS: PackedStringArray = [
+	"Yıldız Store",
+	"Yemekhane",
+	"Elektrik Elektronik Fakültesi",
+	"Şehit Prof. Dr. İlhan Varank Kütüphanesi",
+	"Merkez Kütüphanesi",
+	"A Blok - Fen Edebiyat Fakültesi Dekanlığı",
+	"Eğitim Fakültesi",
+	"Yabancı Diller Yüksekokulu",
+	"E Blok - İnşaat Mühendisliği",
+	"YTÜ Merkez Laboratuvarı",
+	"Kapalı Yüzme Havuzu",
+]
 static var _landmarks: Dictionary = {}
 ## Cephe tabelası.
 const SIGN_HEIGHT_M: float = 3.6
@@ -210,7 +224,9 @@ static func extrude_polygon(poly: PackedVector2Array, height: float, paths: Arra
 	for i: int in range(0, tris.size(), 3):
 		for k: int in [0, 1, 2]:
 			var v: Vector2 = poly[tris[i + k]]
-			st.add_vertex(Vector3(v.x, height, v.y))
+			var v3: Vector3 = Vector3(v.x, height, v.y)
+			st.set_uv(Vector2(2.0, v3.y))
+			st.add_vertex(v3)
 	# Duvarlar
 	var n: int = poly.size()
 	for i: int in n:
@@ -224,6 +240,7 @@ static func extrude_polygon(poly: PackedVector2Array, height: float, paths: Arra
 		var a1: Vector3 = Vector3(a.x, height, a.y)
 		var b1: Vector3 = Vector3(b.x, height, b.y)
 		for v: Vector3 in [a0, b1, a1, a0, b0, b1]:
+			st.set_uv(Vector2(2.0, v.y))
 			st.add_vertex(v)
 	st.generate_normals()
 	return st.commit()
@@ -238,6 +255,7 @@ static func _add_wall_piece(st: SurfaceTool, a: Vector2, b: Vector2, t0: float, 
 	var p1: Vector3 = Vector3(p.x, y1, p.y)
 	var q1: Vector3 = Vector3(q.x, y1, q.y)
 	for v: Vector3 in [p0, q1, p1, p0, q0, q1]:
+		st.set_uv(Vector2(2.0, v.y))
 		st.add_vertex(v)
 
 
@@ -528,7 +546,7 @@ func _build_building(b: Dictionary) -> void:
 			roof_mi.mesh = roof_mesh
 			body.add_child(roof_mi)
 
-	if show_labels and not name_text.is_empty() and min_h <= 0.0 and name_text != "Yıldız Store":
+	if show_labels and not name_text.is_empty() and min_h <= 0.0 and not CUSTOM_SIGN_BUILDINGS.has(name_text):
 		# Havada asılı yazı yerine cepheye tabela: yola en yakın duvara, kapı hizasının üstüne.
 		var sign: Node3D = build_sign(poly, height, near_paths, CampusMap.short_name(name_text), style == BuildingStyle.STYLE_HISTORIC)
 		if sign != null:

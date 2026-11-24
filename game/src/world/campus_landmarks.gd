@@ -16,6 +16,10 @@ const COL_GLASS: Color = Color(0.20, 0.30, 0.36)
 const COL_YTU_BLUE: Color = Color(0.06, 0.16, 0.48)
 const COL_SILVER: Color = Color(0.84, 0.86, 0.89)
 const COL_PAVER: Color = Color(0.45, 0.47, 0.49)
+const COL_CEREMONY_RED: Color = Color(0.56, 0.12, 0.14)
+const COL_TURQUOISE: Color = Color(0.08, 0.48, 0.56)
+const COL_CANOPY_GREEN: Color = Color(0.14, 0.34, 0.20)
+const COL_PLANT_GREEN: Color = Color(0.24, 0.44, 0.19)
 
 
 func _ready() -> void:
@@ -39,6 +43,13 @@ func build() -> void:
 	_build_yabanci_diller(st, col_body)
 	_build_ring_bus_stop(st, col_body)
 	_build_metro_gate_b(st, col_body)
+	_build_kongre_merkezi(st, col_body)
+	_build_insaat_fakultesi(st, col_body)
+	_build_kimya_metalurji(st, col_body)
+	_build_merkez_laboratuvari(st, col_body)
+	_build_yildiz_teknopark(st, col_body)
+	_build_spor_kompleksi(st, col_body)
+	_build_buyuk_ev_terrace(st, col_body)
 
 	st.generate_normals()
 	var mesh: ArrayMesh = st.commit()
@@ -109,7 +120,7 @@ func _build_ilhan_varank_library(st: SurfaceTool, col_body: StaticBody3D) -> voi
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
 
-	_add_box_xf(st, xf, Vector3(14.0, 0.12, 7.5), Vector3(0.0, 0.06, 3.8), COL_PAVER)
+	_add_paver_xf(st, xf, 14.0, 7.5, 3.8)
 	_add_box_xf(st, xf, Vector3(11.6, 1.10, 0.35), Vector3(0.0, 3.85, 0.20), COL_ALUCOBOND)
 	_add_box_xf(st, xf, Vector3(9.6, 0.18, 3.4), Vector3(0.0, 3.45, 1.75), COL_ANTHRACITE)
 	for sx: float in [-4.2, 4.2]:
@@ -132,7 +143,7 @@ func _build_merkez_library(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
 
-	_add_box_xf(st, xf, Vector3(16.0, 0.12, 8.0), Vector3(0.0, 0.06, 4.1), COL_PAVER)
+	_add_paver_xf(st, xf, 16.0, 8.0, 4.1)
 	_add_box_xf(st, xf, Vector3(12.2, 1.15, 0.35), Vector3(0.0, 3.95, 0.20), COL_WHITE)
 	_add_box_xf(st, xf, Vector3(10.8, 0.22, 3.6), Vector3(0.0, 3.55, 1.85), COL_ANTHRACITE)
 	for sx: float in [-4.8, 4.8]:
@@ -155,7 +166,7 @@ func _build_fen_edebiyat(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
 
-	_add_box_xf(st, xf, Vector3(11.0, 0.10, 5.5), Vector3(0.0, 0.05, 2.8), COL_PAVER)
+	_add_paver_xf(st, xf, 11.0, 5.5, 2.8)
 	_add_box_xf(st, xf, Vector3(10.0, 1.05, 0.30), Vector3(0.0, 3.45, 0.16), COL_ALUCOBOND)
 	_add_box_xf(st, xf, Vector3(6.8, 2.85, 0.20), Vector3(0.0, 1.425, 0.12), COL_ANTHRACITE)
 	_add_box_xf(st, xf, Vector3(6.2, 2.65, 0.10), Vector3(0.0, 1.40, 0.20), COL_GLASS)
@@ -174,7 +185,7 @@ func _build_egitim_fakultesi(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
 
-	_add_box_xf(st, xf, Vector3(11.5, 0.10, 6.0), Vector3(0.0, 0.05, 3.0), COL_PAVER)
+	_add_paver_xf(st, xf, 11.5, 6.0, 3.0)
 	_add_box_xf(st, xf, Vector3(10.2, 1.05, 0.30), Vector3(0.0, 3.45, 0.16), COL_ALUCOBOND)
 	_add_box_xf(st, xf, Vector3(7.0, 2.85, 0.20), Vector3(0.0, 1.425, 0.12), COL_ANTHRACITE)
 	_add_box_xf(st, xf, Vector3(6.4, 2.65, 0.10), Vector3(0.0, 1.40, 0.20), COL_GLASS)
@@ -194,7 +205,7 @@ func _build_yabanci_diller(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
 	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
 
-	_add_box_xf(st, xf, Vector3(12.0, 0.12, 6.5), Vector3(0.0, 0.06, 3.3), COL_PAVER)
+	_add_paver_xf(st, xf, 12.0, 6.5, 3.3)
 	_add_box_xf(st, xf, Vector3(11.0, 1.05, 0.32), Vector3(0.0, 3.65, 0.18), COL_ALUCOBOND)
 	_add_box_xf(st, xf, Vector3(8.8, 0.18, 2.8), Vector3(0.0, 3.25, 1.45), COL_ANTHRACITE)
 	for sx: float in [-3.8, 3.8]:
@@ -246,6 +257,199 @@ func _build_metro_gate_b(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	var out: Vector2 = Vector2(-0.35, 0.94).normalized()
 	var right_dir: Vector2 = Vector2(out.y, -out.x)
 	_build_ytu_totem(st, col_body, wp, right_dir, out, "MetroGateBSign", "DAVUTPAŞA KAMPÜSÜ\nB KAPISI (METRO)\n\nHoş Geldiniz")
+
+
+## 9) Kongre ve Kültür Merkezi (b#82): e9 köşesine (7.4m) tam oturan protokol kanopisi, tören halısı, bayrak direkleri ve totem.
+func _build_kongre_merkezi(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(544.5, 247.1)
+	var out: Vector2 = Vector2(0.85, -0.53).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_paver_xf(st, xf, 7.6, 3.8, 1.95)
+	# Protokol yürüyüş halısı (bordo-kiremit)
+	_add_box_xf(st, xf, Vector3(3.4, 0.04, 3.5), Vector3(0.0, 0.12, 1.85), COL_CEREMONY_RED)
+	_add_box_xf(st, xf, Vector3(7.4, 1.05, 0.34), Vector3(0.0, 3.95, 0.18), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(7.0, 0.20, 2.5), Vector3(0.0, 3.55, 1.30), COL_ANTHRACITE)
+	for sx: float in [-3.1, 3.1]:
+		_add_box_xf(st, xf, Vector3(0.24, 3.55, 0.24), Vector3(sx, 1.775, 2.35), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(5.8, 3.2, 0.20), Vector3(0.0, 1.60, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(5.2, 2.95, 0.10), Vector3(0.0, 1.56, 0.20), COL_GLASS)
+	for mx: float in [-1.6, 0.0, 1.6]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.95, 0.15), Vector3(mx, 1.56, 0.22), COL_WHITE)
+	_add_box_xf(st, xf, Vector3(5.2, 0.08, 0.15), Vector3(0.0, 2.32, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.98, 0.38), "KongreMerkeziSign", "KONGRE VE KÜLTÜR MERKEZİ", 0.28, COL_ANTHRACITE)
+
+	# 3 tören bayrak direği (e8 önü çim şeridinde, yol ve ağaçlardan açık)
+	var flag_cols: Array[Color] = [COL_CEREMONY_RED, COL_YTU_BLUE, COL_GOLD]
+	for idx: int in 3:
+		var fp: Vector2 = Vector2(540.0 - float(idx) * 2.2, 240.0)
+		var fy: float = TerrainHeight.active_height(fp.x, fp.y)
+		var fxf: Transform3D = _frame_xform(fp, right_dir, out, fy)
+		_add_cyl_xf(st, fxf, 0.22, 0.30, Vector3(0.0, 0.10, 0.0), 8, COL_STONE_DARK)
+		_add_cyl_xf(st, fxf, 0.07, 6.4, Vector3(0.0, 3.3, 0.0), 8, COL_SILVER)
+		_add_box_xf(st, fxf, Vector3(1.55, 0.96, 0.05), Vector3(0.80, 5.95, 0.0), flag_cols[idx])
+
+	# Protokol totemi (giriş sağı e10 önünde, ağaçtan ve döner kavşaktan tamamen açık)
+	_build_ytu_totem(st, col_body, Vector2(548.2, 253.8), right_dir, out, "KongreTotem", "DAVUTPAŞA\nKONGRE VE KÜLTÜR\nMERKEZİ\n\n• Ana Oditoryum\n• Seminer Salonları")
+	_add_bench(st, col_body, Vector2(547.0, 257.5), Vector2(0.24, 0.97), Vector2(0.97, -0.24))
+
+
+## 10) İnşaat Fakültesi (b#55, E Blok): modern Alucobond giriş alınlığı, çift cam kapı, 3D tabela ve YTÜ totemi.
+func _build_insaat_fakultesi(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(-87.9, 297.5)
+	var out: Vector2 = Vector2(0.78, 0.63).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_paver_xf(st, xf, 12.0, 6.0, 3.0)
+	_add_box_xf(st, xf, Vector3(10.6, 1.05, 0.32), Vector3(0.0, 3.55, 0.18), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(7.2, 2.95, 0.20), Vector3(0.0, 1.475, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.6, 2.75, 0.10), Vector3(0.0, 1.45, 0.20), COL_GLASS)
+	for mx: float in [-1.9, 0.0, 1.9]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.75, 0.15), Vector3(mx, 1.45, 0.22), COL_WHITE)
+	_add_box_xf(st, xf, Vector3(6.6, 0.08, 0.15), Vector3(0.0, 2.20, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.58, 0.36), "InsaatFakSign", "İNŞAAT FAKÜLTESİ", 0.36, COL_ANTHRACITE)
+	_build_ytu_totem(st, col_body, mid + out * 9.0 + right_dir * 5.2, right_dir, out, "InsaatFakTotem", "İNŞAAT FAKÜLTESİ\n\n• İnşaat Mühendisliği\n• Harita Mühendisliği\n• Çevre Mühendisliği")
+	_add_bench(st, col_body, mid + out * 4.8 - right_dir * 4.6, right_dir, out)
+
+
+## 11) Kimya-Metalurji Fakültesi (b#14, D Blok): giriş alınlığı, çift cam kapı, 3D tabela ve YTÜ totemi.
+func _build_kimya_metalurji(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(242.8, -233.2)
+	var out: Vector2 = Vector2(-0.78, -0.62).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_paver_xf(st, xf, 12.0, 6.0, 3.0)
+	_add_box_xf(st, xf, Vector3(11.4, 1.05, 0.32), Vector3(0.0, 3.55, 0.18), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(7.2, 2.95, 0.20), Vector3(0.0, 1.475, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.6, 2.75, 0.10), Vector3(0.0, 1.45, 0.20), COL_GLASS)
+	for mx: float in [-1.9, 0.0, 1.9]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.75, 0.15), Vector3(mx, 1.45, 0.22), COL_WHITE)
+	_add_box_xf(st, xf, Vector3(6.6, 0.08, 0.15), Vector3(0.0, 2.20, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.58, 0.36), "KimyaMetalurjiSign", "KİMYA - METALURJİ FAKÜLTESİ", 0.31, COL_ANTHRACITE)
+	_build_ytu_totem(st, col_body, mid + out * 9.0 + right_dir * 5.4, right_dir, out, "KimyaMetalurjiTotem", "KİMYA - METALURJİ\nFAKÜLTESİ\n\n• Kimya Müh. • Metalurji\n• Biyomühendislik\n• Gıda Mühendisliği")
+	_add_bench(st, col_body, mid + out * 4.8 - right_dir * 4.6, right_dir, out)
+
+
+## 12) YTÜ Merkez Laboratuvarı (b#103): koyu çelik kanopi, cam giriş ve laboratuvar totemi.
+func _build_merkez_laboratuvari(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(-25.3, 538.7)
+	var out: Vector2 = Vector2(0.86, 0.51).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_paver_xf(st, xf, 11.5, 6.2, 3.1)
+	_add_box_xf(st, xf, Vector3(10.8, 1.05, 0.32), Vector3(0.0, 3.70, 0.18), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(8.6, 0.18, 2.6), Vector3(0.0, 3.30, 1.35), COL_ANTHRACITE)
+	for sx: float in [-3.7, 3.7]:
+		_add_box_xf(st, xf, Vector3(0.22, 3.30, 0.22), Vector3(sx, 1.65, 2.45), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.8, 2.95, 0.20), Vector3(0.0, 1.475, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.2, 2.75, 0.10), Vector3(0.0, 1.45, 0.20), COL_GLASS)
+	for mx: float in [-1.8, 0.0, 1.8]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.75, 0.15), Vector3(mx, 1.45, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.72, 0.36), "MerkezLabSign", "YTÜ MERKEZ LABORATUVARI", 0.32, COL_ANTHRACITE)
+	_build_ytu_totem(st, col_body, mid + out * 9.0 + right_dir * 5.0, right_dir, out, "MerkezLabTotem", "YTÜ MERKEZ\nLABORATUVARI\n\n• Bilim ve Teknoloji\n• İleri Araştırma")
+
+
+## 13) Yıldız Teknopark Yönetim Binası (b#93): teknoloji portali, 3D tabela ve turkuaz-antrasit Teknopark totemi.
+func _build_yildiz_teknopark(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(-157.6, 533.9)
+	var out: Vector2 = Vector2(-0.69, -0.72).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_paver_xf(st, xf, 13.0, 7.0, 3.5)
+	# Modern koyu antrasit-gümüş teknoloji portali
+	_add_box_xf(st, xf, Vector3(10.6, 1.15, 0.42), Vector3(0.0, 3.95, 0.24), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(10.6, 0.12, 0.46), Vector3(0.0, 4.55, 0.26), COL_TURQUOISE)
+	for sx: float in [-4.8, 4.8]:
+		_add_box_xf(st, xf, Vector3(0.55, 3.65, 0.42), Vector3(sx, 1.825, 0.24), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(8.4, 3.25, 0.14), Vector3(0.0, 1.625, 0.18), COL_GLASS)
+	for mx: float in [-2.6, 0.0, 2.6]:
+		_add_box_xf(st, xf, Vector3(0.09, 3.25, 0.18), Vector3(mx, 1.625, 0.20), COL_SILVER)
+	_add_3d_sign(xf, Vector3(0.0, 3.98, 0.48), "TeknoparkSign", "YILDIZ TEKNOPARK", 0.38, COL_SILVER)
+
+	# Teknopark özel turkuaz-antrasit totemi
+	var tp: Vector2 = mid + out * 9.5 + right_dir * 5.6
+	var ty: float = TerrainHeight.active_height(tp.x, tp.y)
+	var txf: Transform3D = _frame_xform(tp, right_dir, out, ty)
+	_add_box_xf(st, txf, Vector3(1.55, 0.22, 0.52), Vector3(0.0, 0.11, 0.0), COL_STONE_DARK)
+	_add_box_xf(st, txf, Vector3(1.42, 2.05, 0.26), Vector3(0.0, 0.22 + 1.025, 0.0), COL_ANTHRACITE)
+	_add_box_xf(st, txf, Vector3(1.42, 1.02, 0.26), Vector3(0.0, 2.27 + 0.51, 0.0), COL_TURQUOISE)
+	_add_label(txf, Vector3(0.0, 2.75, 0.15), "TeknoparkTotemTitle", "YILDIZ TEKNOPARK", 28, 0.0028, COL_WHITE, Color(0.05, 0.14, 0.18))
+	_add_label(txf, Vector3(0.0, 1.38, 0.15), "TeknoparkTotemBody", "YÖNETİM BİNASI\n\n• Ar-Ge Merkezleri\n• Kuluçka & İnovasyon", 28, 0.0026, COL_SILVER, Color.TRANSPARENT)
+	var tcol: CollisionShape3D = CollisionShape3D.new()
+	var tsh: BoxShape3D = BoxShape3D.new()
+	tsh.size = Vector3(1.55, 3.4, 0.52)
+	tcol.shape = tsh
+	tcol.transform = txf * Transform3D(Basis.IDENTITY, Vector3(0.0, 1.7, 0.0))
+	col_body.add_child(tcol)
+	_add_bench(st, col_body, mid + out * 5.4 - right_dir * 4.8, right_dir, out)
+
+
+## 14) Spor Kompleksi & Kapalı Yüzme Havuzu (b#95): giriş kanopisi, cam kapı, 3D tabela, YTÜ totemi ve bisiklet parkı.
+func _build_spor_kompleksi(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(-282.1, -232.9)
+	var out: Vector2 = Vector2(0.65, -0.76).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	_add_paver_xf(st, xf, 14.0, 7.0, 3.5)
+	_add_box_xf(st, xf, Vector3(12.4, 1.08, 0.34), Vector3(0.0, 3.65, 0.18), COL_ALUCOBOND)
+	_add_box_xf(st, xf, Vector3(9.6, 0.18, 2.8), Vector3(0.0, 3.25, 1.45), COL_YTU_BLUE)
+	for sx: float in [-4.2, 4.2]:
+		_add_box_xf(st, xf, Vector3(0.24, 3.25, 0.24), Vector3(sx, 1.625, 2.65), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(7.4, 2.95, 0.20), Vector3(0.0, 1.475, 0.12), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(6.8, 2.75, 0.10), Vector3(0.0, 1.45, 0.20), COL_GLASS)
+	for mx: float in [-2.0, 0.0, 2.0]:
+		_add_box_xf(st, xf, Vector3(0.08, 2.75, 0.15), Vector3(mx, 1.45, 0.22), COL_WHITE)
+	_add_3d_sign(xf, Vector3(0.0, 3.68, 0.38), "SporKompleksiSign", "SPOR KOMPLEKSİ • YÜZME HAVUZU", 0.30, COL_ANTHRACITE)
+	_build_ytu_totem(st, col_body, mid + out * 9.5 + right_dir * 5.6, right_dir, out, "SporKompleksiTotem", "SPOR KOMPLEKSİ\n\n• Kapalı Yüzme Havuzu\n• Fitness & Basketbol")
+	# Giriş sol yanında 4 bisiklet park kemeri
+	for i: int in 4:
+		var rx: float = -4.2 - float(i) * 0.9
+		_add_box_xf(st, xf, Vector3(0.07, 0.07, 1.05), Vector3(rx, 0.78, 5.2), COL_SILVER)
+		for sz: float in [-0.48, 0.48]:
+			_add_box_xf(st, xf, Vector3(0.07, 0.78, 0.07), Vector3(rx, 0.39, 5.2 + sz), COL_SILVER)
+
+
+## 15) Büyük Ev Kafe Terası (b#43): vitrin önü ahşap teras platformu, çiçeklikler ve yeşil şemsiyeli açık hava masaları.
+func _build_buyuk_ev_terrace(st: SurfaceTool, col_body: StaticBody3D) -> void:
+	var mid: Vector2 = Vector2(-8.8, -69.3)
+	var out: Vector2 = Vector2(0.78, 0.63).normalized()
+	var right_dir: Vector2 = Vector2(out.y, -out.x)
+	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
+	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+
+	# Ahşap güneşlenme/oturma terası platformu (eğimli arazide havada kalmasın diye -0.31m etekli)
+	_add_box_xf(st, xf, Vector3(16.0, 0.45, 5.5), Vector3(0.0, -0.085, 2.85), COL_WOOD)
+	for sx: float in [-7.85, 7.85]:
+		_add_box_xf(st, xf, Vector3(0.45, 0.42, 5.5), Vector3(sx, 0.35, 2.85), COL_STONE_DARK)
+		_add_box_xf(st, xf, Vector3(0.35, 0.35, 5.1), Vector3(sx, 0.62, 2.85), COL_PLANT_GREEN)
+	for i: int in 4:
+		var tx: float = -5.4 + float(i) * 3.6
+		var tz: float = 2.85
+		_add_box_xf(st, xf, Vector3(1.35, 0.08, 0.90), Vector3(tx, 0.88, tz), COL_WOOD)
+		_add_box_xf(st, xf, Vector3(0.14, 0.74, 0.14), Vector3(tx, 0.51, tz), COL_ANTHRACITE)
+		for sz: float in [-0.70, 0.70]:
+			_add_box_xf(st, xf, Vector3(1.25, 0.07, 0.32), Vector3(tx, 0.56, tz + sz), COL_WOOD)
+		_add_box_xf(st, xf, Vector3(0.08, 2.55, 0.08), Vector3(tx, 1.41, tz), COL_ANTHRACITE)
+		_add_box_xf(st, xf, Vector3(2.35, 0.20, 2.35), Vector3(tx, 2.66, tz), COL_CANOPY_GREEN)
+		_add_box_xf(st, xf, Vector3(1.25, 0.16, 1.25), Vector3(tx, 2.82, tz), COL_CANOPY_GREEN)
+		var ccol: CollisionShape3D = CollisionShape3D.new()
+		var csh: BoxShape3D = BoxShape3D.new()
+		csh.size = Vector3(1.4, 1.2, 1.6)
+		ccol.shape = csh
+		ccol.transform = xf * Transform3D(Basis.IDENTITY, Vector3(tx, 0.65, tz))
+		col_body.add_child(ccol)
 
 
 func _build_ytu_totem(st: SurfaceTool, col_body: StaticBody3D, wp: Vector2, right_dir: Vector2, out: Vector2, node_name: String, body_text: String) -> void:
@@ -320,6 +524,11 @@ func _add_label(xf: Transform3D, local_pos: Vector3, node_name: String, text: St
 	lbl.visibility_range_end = 95.0
 	lbl.transform = xf * Transform3D(Basis.IDENTITY, local_pos)
 	add_child(lbl)
+
+
+## Eğimli arazide kenarları havada kalmayan, -0.40 m etekli taş döşeme platformu (+0.10 m yüzey kotu).
+static func _add_paver_xf(st: SurfaceTool, xf: Transform3D, w: float, depth: float, z_center: float) -> void:
+	_add_box_xf(st, xf, Vector3(w, 0.50, depth), Vector3(0.0, -0.15, z_center), COL_PAVER)
 
 
 static func _frame_xform(origin_xz: Vector2, axis_x: Vector2, axis_z: Vector2, y: float) -> Transform3D:

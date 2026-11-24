@@ -31,7 +31,9 @@ const float FLOOR_HEIGHT = 3.5;
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
-	local_y = VERTEX.y;
+	// Greybox extrude mesh'leri UV.x = 2.0 ve UV.y = bina tabanina gore yerel yukseklik tasir
+	// (batched mesh'lerde VERTEX.y dunya kotuna kaydigi icin kat hizasi buradan okunur).
+	local_y = UV.x > 1.5 ? UV.y : VERTEX.y;
 }
 
 void fragment() {
