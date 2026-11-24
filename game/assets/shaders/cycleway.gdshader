@@ -3,7 +3,7 @@ render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_s
 
 // YTÜ Davutpaşa kampüs bisiklet yolları (cycleway): mavi boyalı asfalt, ince beyaz kenar çizgisi
 // ve kesikli beyaz orta ayırıcı.
-uniform vec4 lane_color : source_color = vec4(0.18, 0.42, 0.64, 1.0);
+uniform vec4 lane_color : source_color = vec4(0.22, 0.56, 0.86, 1.0);
 uniform vec4 stripe_color : source_color = vec4(0.92, 0.93, 0.94, 1.0);
 
 varying vec3 world_pos;

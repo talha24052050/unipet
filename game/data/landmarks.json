@@ -16,14 +16,6 @@
     "Davutpaşa Kışlası Mesciti": 4.6,
     "BÜYÜK EV": 4.2
   },
-  "signs": {
-    "BÜYÜK EV": [
-      -35.18,
-      5.29,
-      -50.24,
-      -0.6815
-    ]
-  },
   "free": [
     "res://assets/buildings/kapi_b.glb",
     "res://assets/buildings/kapi_a.glb"

@@ -76,6 +76,7 @@ const LANDMARKS_PATH: String = "res://data/landmarks.json"
 const CUSTOM_SIGN_BUILDINGS: PackedStringArray = [
 	"Yıldız Store",
 	"Yemekhane",
+	"BÜYÜK EV",
 	"Davutpaşa Kışlası Mesciti",
 	"Elektrik Elektronik Fakültesi",
 	"Şehit Prof. Dr. İlhan Varank Kütüphanesi",
@@ -119,6 +120,9 @@ var _path_lines: Array[PackedVector2Array] = []
 var _path_boxes: Array[Rect2] = []
 ## Kavşak / bölünmüş OSM yolu düğüm sayacı (uç kapakların yolu kesmesini önler).
 var _path_node_counts: Dictionary = {}
+## Paralel zıt yönlü tek şeritli (residential_oneway) bulvar segmentleri — arada sahte çim boşluk kalmasın.
+var _oneway_segs: Array = []  # [{"a": Vector2, "b": Vector2, "dir": Vector2, "idx": int}]
+var _current_path_idx: int = -1
 
 
 ## true ise data_path yerine Services.current_zone'un greybox verisi yüklenir (ana sahne bunu kullanır).
@@ -144,11 +148,14 @@ func _ready() -> void:
 		_build_area(a)
 	var all_paths: Array = data.get("paths", [])
 	_index_path_nodes(all_paths)
-	for p: Dictionary in all_paths:
+	for pi: int in all_paths.size():
+		var p: Dictionary = all_paths[pi]
+		_current_path_idx = pi
 		_build_path(p)
 		var line: PackedVector2Array = to_polygon(p.get("points", []))
 		_path_lines.append(line)
 		_path_boxes.append(_poly_box(line))
+	_current_path_idx = -1
 	for b: Dictionary in data.get("buildings", []):
 		_build_building(b)
 	_flush_batches()
@@ -719,35 +726,63 @@ func _build_path(p: Dictionary) -> void:
 	var kind: String = str(p.get("kind", "footway"))
 	var is_road: bool = is_road_kind(kind)
 	var is_cycle: bool = kind == "cycleway"
-	var width: float = PATH_WIDTHS.get(kind, 2.2)
-	var half_w: float = width * 0.5
+	var base_w: float = PATH_WIDTHS.get(kind, 2.2)
+	var half_w: float = base_w * 0.5
 	var y_off: float = _path_y_for(kind)
 	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 
-	# Her segment için yön, yan vektör ve uzunluk
+	# Her segment için yön, sol/sağ yarı-genişlik ve uzunluk.
+	# Paralel zıt yönlü ana bulvarlarda (residential_oneway) iç kenar (UV.x=0) tam orta eksene genişler
+	# (arada sahte çim şeridi kalmaz; iki yarı çift düz beyaz orta çizgide sıfır boşlukla birleşir).
 	var seg_dirs: Array[Vector2] = []
-	var seg_sides: Array[Vector2] = []
+	var seg_lefts: Array[Vector2] = []
+	var seg_rights: Array[Vector2] = []
+	var seg_widths: Array[float] = []
 	var seg_lens: Array[float] = []
 	var cum_s: Array[float] = [0.0]
+	var is_boulevard_half: bool = false
+	if kind == "residential_oneway" and not _oneway_segs.is_empty():
+		var paired_segs: int = 0
+		for i: int in m - 1:
+			var d0: Vector2 = pts[i + 1] - pts[i]
+			var L0: float = d0.length()
+			var dn0: Vector2 = d0 / maxf(L0, 0.0001)
+			var mid0: Vector2 = (pts[i] + pts[i + 1]) * 0.5
+			var opp_d: float = _nearest_opposite_oneway(mid0, dn0, _current_path_idx)
+			if opp_d >= 3.6 and opp_d <= 9.6:
+				paired_segs += 1
+		is_boulevard_half = paired_segs > 0
+
 	for i: int in m - 1:
 		var d: Vector2 = pts[i + 1] - pts[i]
 		var L: float = d.length()
 		var dn: Vector2 = d / maxf(L, 0.0001)
+		var ortho: Vector2 = dn.orthogonal()  # sürücü solu (+UV.x=0 -> iç eksen)
+		var w_l: float = half_w
+		var w_r: float = half_w
+		if is_boulevard_half:
+			var mid0: Vector2 = (pts[i] + pts[i + 1]) * 0.5
+			var opp_d: float = _nearest_opposite_oneway(mid0, dn, _current_path_idx)
+			w_l = clampf(opp_d * 0.5, 2.3, 4.15) if (opp_d >= 3.6 and opp_d <= 9.6) else 3.2
+			w_r = 2.60
 		seg_dirs.append(dn)
-		seg_sides.append(dn.orthogonal() * half_w)
+		seg_lefts.append(ortho * w_l)
+		seg_rights.append(ortho * w_r)
+		seg_widths.append(w_l + w_r)
 		seg_lens.append(L)
 		cum_s.append(cum_s[i] + L)
 
+	var width: float = seg_widths[0]
 	# Segment uç kenar noktaları (yumuşak dönüşlerde sınırlandırılmış miter birleşimi, sert dönüşte köşe yelpazesi)
 	var start_l: Array[Vector2] = []
 	var start_r: Array[Vector2] = []
 	var end_l: Array[Vector2] = []
 	var end_r: Array[Vector2] = []
 	for i: int in m - 1:
-		start_l.append(pts[i] + seg_sides[i])
-		start_r.append(pts[i] - seg_sides[i])
-		end_l.append(pts[i + 1] + seg_sides[i])
-		end_r.append(pts[i + 1] - seg_sides[i])
+		start_l.append(pts[i] + seg_lefts[i])
+		start_r.append(pts[i] - seg_rights[i])
+		end_l.append(pts[i + 1] + seg_lefts[i])
+		end_r.append(pts[i + 1] - seg_rights[i])
 
 	var st: SurfaceTool = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -756,14 +791,15 @@ func _build_path(p: Dictionary) -> void:
 		var d_prev: Vector2 = seg_dirs[i - 1]
 		var d_next: Vector2 = seg_dirs[i]
 		var dot_v: float = d_prev.dot(d_next)
+		var wl_avg: float = (seg_lefts[i - 1].length() + seg_lefts[i].length()) * 0.5
+		var wr_avg: float = (seg_rights[i - 1].length() + seg_rights[i].length()) * 0.5
 		if dot_v > 0.25:
-			var sum_s: Vector2 = seg_sides[i - 1] + seg_sides[i]
+			var sum_s: Vector2 = seg_lefts[i - 1].normalized() + seg_lefts[i].normalized()
 			if sum_s.length_squared() > 0.0001:
 				var bis: Vector2 = sum_s.normalized()
-				var denom: float = maxf(0.55, bis.dot(seg_sides[i - 1].normalized()))
-				var miter: Vector2 = bis * minf(half_w / denom, half_w * 1.35)
-				var ml: Vector2 = pts[i] + miter
-				var mr: Vector2 = pts[i] - miter
+				var denom: float = maxf(0.55, bis.dot(seg_lefts[i - 1].normalized()))
+				var ml: Vector2 = pts[i] + bis * minf(wl_avg / denom, wl_avg * 1.35)
+				var mr: Vector2 = pts[i] - bis * minf(wr_avg / denom, wr_avg * 1.35)
 				end_l[i - 1] = ml
 				start_l[i] = ml
 				end_r[i - 1] = mr
@@ -775,11 +811,13 @@ func _build_path(p: Dictionary) -> void:
 			var outer_a: Vector2 = end_r[i - 1] if turn_cross < 0.0 else end_l[i - 1]
 			var outer_b: Vector2 = start_r[i] if turn_cross < 0.0 else start_l[i]
 			var edge_u: float = 1.0 if turn_cross < 0.0 else 0.0
-			_emit_path_corner_fan(st, pts[i], outer_a, outer_b, half_w, edge_u, cum_s[i], width, y_off, has_terrain)
+			var r_fan: float = wr_avg if turn_cross < 0.0 else wl_avg
+			_emit_path_corner_fan(st, pts[i], outer_a, outer_b, r_fan, edge_u, cum_s[i], seg_widths[i], y_off, has_terrain)
 
 	# Segment şeritleri (eğime göre 3 m alt-bölüm, UV.y = gerçek metre)
 	for i: int in m - 1:
 		var seg_len: float = seg_lens[i]
+		var seg_w: float = seg_widths[i]
 		var subdiv: int = maxi(1, ceili(seg_len / PATH_SUBDIV_M)) if has_terrain else 1
 		var s0_base: float = cum_s[i]
 		for s: int in subdiv:
@@ -791,20 +829,23 @@ func _build_path(p: Dictionary) -> void:
 			var p3: Vector2 = start_l[i].lerp(end_l[i], t1)
 			var sy0: float = s0_base + seg_len * t0
 			var sy1: float = s0_base + seg_len * t1
-			_emit_path_tri(st, p0, p2, p1, Vector2(0.0, sy0), Vector2(1.0, sy1), Vector2(1.0, sy0), width, y_off, has_terrain)
-			_emit_path_tri(st, p0, p3, p2, Vector2(0.0, sy0), Vector2(0.0, sy1), Vector2(1.0, sy1), width, y_off, has_terrain)
+			_emit_path_tri(st, p0, p2, p1, Vector2(0.0, sy0), Vector2(1.0, sy1), Vector2(1.0, sy0), seg_w, y_off, has_terrain)
+			_emit_path_tri(st, p0, p3, p2, Vector2(0.0, sy0), Vector2(0.0, sy1), Vector2(1.0, sy1), seg_w, y_off, has_terrain)
 
 	# Başlangıç ve bitiş yuvarlak uç kapakları: kavşak/birleşim düğümünde saf asfalt/parke ve alçak kot,
 	# çıkmaz uçlarda bordürlü yuvarlak kapak.
 	var layer: int = _path_layer(kind)
-	_emit_path_end_cap(st, pts[0], -seg_dirs[0], seg_sides[0], half_w, cum_s[0], width, y_off, has_terrain, _is_shared_path_node(pts[0], layer), layer)
-	_emit_path_end_cap(st, pts[m - 1], seg_dirs[m - 2], seg_sides[m - 2], half_w, cum_s[m - 1], width, y_off, has_terrain, _is_shared_path_node(pts[m - 1], layer), layer)
+	var cap_r0: float = seg_rights[0].length()
+	var cap_r1: float = seg_rights[m - 2].length()
+	_emit_path_end_cap(st, pts[0], -seg_dirs[0], seg_lefts[0], cap_r0, cum_s[0], seg_widths[0], y_off, has_terrain, _is_shared_path_node(pts[0], layer) or is_boulevard_half, layer)
+	_emit_path_end_cap(st, pts[m - 1], seg_dirs[m - 2], seg_lefts[m - 2], cap_r1, cum_s[m - 1], seg_widths[m - 2], y_off, has_terrain, _is_shared_path_node(pts[m - 1], layer) or is_boulevard_half, layer)
 
 	var mesh: ArrayMesh = st.commit()
 	if mesh.get_surface_count() == 0:
 		return
 	var mid: Vector2 = pts[m / 2]
-	var mat: Material = _get_asphalt_material(kind) if is_road \
+	var asphalt_kind: String = "boulevard_half" if is_boulevard_half else kind
+	var mat: Material = _get_asphalt_material(asphalt_kind) if is_road \
 		else (_get_cycleway_material() if is_cycle \
 		else _get_cobble_material(PATTERN_PINK_CONCRETE if in_courtyard(mid) else PATTERN_COBBLE))
 	if _batching:
@@ -819,15 +860,46 @@ func _build_path(p: Dictionary) -> void:
 
 func _index_path_nodes(paths: Array) -> void:
 	_path_node_counts.clear()
-	for p: Dictionary in paths:
-		var layer: int = _path_layer(str(p.get("kind", "footway")))
+	_oneway_segs.clear()
+	for pi: int in paths.size():
+		var p: Dictionary = paths[pi]
+		var kind: String = str(p.get("kind", "footway"))
+		var layer: int = _path_layer(kind)
 		var seen: Dictionary = {}
-		for pt: Array in p.get("points", []):
+		var pts_arr: Array = p.get("points", [])
+		for pt: Array in pts_arr:
 			var key: Vector3i = Vector3i(layer, roundi(float(pt[0]) * 4.0), roundi(float(pt[1]) * 4.0))
 			if seen.has(key):
 				continue
 			seen[key] = true
 			_path_node_counts[key] = int(_path_node_counts.get(key, 0)) + 1
+		if kind == "residential_oneway":
+			for k: int in pts_arr.size() - 1:
+				var a: Vector2 = Vector2(float(pts_arr[k][0]), float(pts_arr[k][1]))
+				var b: Vector2 = Vector2(float(pts_arr[k + 1][0]), float(pts_arr[k + 1][1]))
+				var d: Vector2 = b - a
+				var L: float = d.length()
+				if L >= 1.0:
+					_oneway_segs.append({"a": a, "b": b, "dir": d / L, "idx": pi})
+
+
+func _nearest_opposite_oneway(pt: Vector2, dir: Vector2, own_idx: int) -> float:
+	var best: float = INF
+	var left_dir: Vector2 = dir.orthogonal()
+	for s: Dictionary in _oneway_segs:
+		if int(s["idx"]) == own_idx:
+			continue
+		if dir.dot(s["dir"] as Vector2) > -0.65:
+			continue
+		var cp: Vector2 = Geometry2D.get_closest_point_to_segment(pt, s["a"] as Vector2, s["b"] as Vector2)
+		var rel: Vector2 = cp - pt
+		# Yalnızca sürücünün SOLUNDA (iç eksende) duran karşı şeridi eşleştir
+		if rel.dot(left_dir) <= 0.5:
+			continue
+		var dist: float = rel.length()
+		if dist < best:
+			best = dist
+	return best
 
 
 func _is_shared_path_node(pt: Vector2, layer: int) -> bool:
@@ -1019,11 +1091,14 @@ static var _parking_material: ShaderMaterial
 
 
 static func _get_asphalt_material(kind: String = "service") -> ShaderMaterial:
-	var variant: String = "two_way" if kind == "residential" \
-		else ("aisle" if kind == "parking_aisle" else "single")
+	var variant: String = "boulevard_half" if kind == "boulevard_half" \
+		else ("two_way" if kind == "residential" \
+		else ("aisle" if kind == "parking_aisle" else "single"))
 	if not _asphalt_materials.has(variant):
 		var mat: ShaderMaterial = ShaderMaterial.new()
 		mat.shader = ROAD_ASPHALT_SHADER
+		mat.set_shader_parameter("is_boulevard_half", variant == "boulevard_half")
+		mat.set_shader_parameter("yellow_white_curb", variant == "two_way")
 		mat.set_shader_parameter("draw_center_line", variant == "two_way")
 		mat.set_shader_parameter("draw_curbs", variant != "aisle")
 		_asphalt_materials[variant] = mat

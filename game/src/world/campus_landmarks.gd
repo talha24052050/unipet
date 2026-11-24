@@ -421,35 +421,220 @@ func _build_spor_kompleksi(st: SurfaceTool, col_body: StaticBody3D) -> void:
 			_add_box_xf(st, xf, Vector3(0.07, 0.78, 0.07), Vector3(rx, 0.39, 5.2 + sz), COL_SILVER)
 
 
-## 15) Büyük Ev Kafe Terası (b#43): vitrin önü ahşap teras platformu, çiçeklikler ve yeşil şemsiyeli açık hava masaları.
+## 15) Büyük Ev & Yemekhane–Büyük Ev Bulvarı (Google Haritalar 4 fotoğraf referansı):
+## - Ön alınlıkta kırmızı çatı ikonuyla ışıklı "BÜYÜK EV — RESTAURANT • CAFE —" tabelası
+## - Sundurma altında kafe masa/sandalyeleri + siyah ayaklı menü panosu
+## - Bulvar boyunca pembe beton kaldırım, pembe çiçekli erguvan/süs eriği ağaçları, siyah lale başlı YTÜ lambaları,
+##   yeşil YTÜ çöp kutuları ve Yemekhane–Büyük Ev arası beyaz yaya geçitleri (zebra crosswalk).
 func _build_buyuk_ev_terrace(st: SurfaceTool, col_body: StaticBody3D) -> void:
-	var mid: Vector2 = Vector2(-8.8, -69.3)
-	var out: Vector2 = Vector2(0.78, 0.63).normalized()
-	var right_dir: Vector2 = Vector2(out.y, -out.x)
-	var base_y: float = TerrainHeight.active_height(mid.x, mid.y)
-	var xf: Transform3D = _frame_xform(mid, right_dir, out, base_y)
+	# 1) Büyük Ev ön cephe ekseni (edge 0: [-39.21,-58.72] -> [-25.91,-48.23], dışa bakan yön GB)
+	var p0: Vector2 = Vector2(-39.21, -58.72)
+	var p1: Vector2 = Vector2(-25.91, -48.23)
+	var right_dir: Vector2 = (p1 - p0).normalized()         # soldan sağa (+X)
+	var out: Vector2 = Vector2(-right_dir.y, right_dir.x)   # cepheden dışarı GB (+Z)
+	var front_mid: Vector2 = (p0 + p1) * 0.5                # (-32.56, -53.48)
+	var porch_mid: Vector2 = front_mid + out * 4.4
+	var base_y: float = TerrainHeight.active_height(front_mid.x, front_mid.y)
+	var xf: Transform3D = _frame_xform(porch_mid, right_dir, out, base_y)
 
-	# Ahşap güneşlenme/oturma terası platformu (eğimli arazide havada kalmasın diye -0.31m etekli)
-	_add_box_xf(st, xf, Vector3(16.0, 0.45, 5.5), Vector3(0.0, -0.085, 2.85), COL_WOOD)
-	for sx: float in [-7.85, 7.85]:
-		_add_box_xf(st, xf, Vector3(0.45, 0.42, 5.5), Vector3(sx, 0.35, 2.85), COL_STONE_DARK)
-		_add_box_xf(st, xf, Vector3(0.35, 0.35, 5.1), Vector3(sx, 0.62, 2.85), COL_PLANT_GREEN)
-	for i: int in 4:
-		var tx: float = -5.4 + float(i) * 3.6
-		var tz: float = 2.85
-		_add_box_xf(st, xf, Vector3(1.35, 0.08, 0.90), Vector3(tx, 0.88, tz), COL_WOOD)
-		_add_box_xf(st, xf, Vector3(0.14, 0.74, 0.14), Vector3(tx, 0.51, tz), COL_ANTHRACITE)
-		for sz: float in [-0.70, 0.70]:
-			_add_box_xf(st, xf, Vector3(1.25, 0.07, 0.32), Vector3(tx, 0.56, tz + sz), COL_WOOD)
-		_add_box_xf(st, xf, Vector3(0.08, 2.55, 0.08), Vector3(tx, 1.41, tz), COL_ANTHRACITE)
-		_add_box_xf(st, xf, Vector3(2.35, 0.20, 2.35), Vector3(tx, 2.66, tz), COL_CANOPY_GREEN)
-		_add_box_xf(st, xf, Vector3(1.25, 0.16, 1.25), Vector3(tx, 2.82, tz), COL_CANOPY_GREEN)
-		var ccol: CollisionShape3D = CollisionShape3D.new()
-		var csh: BoxShape3D = BoxShape3D.new()
-		csh.size = Vector3(1.4, 1.2, 1.6)
-		ccol.shape = csh
-		ccol.transform = xf * Transform3D(Basis.IDENTITY, Vector3(tx, 0.65, tz))
-		col_body.add_child(ccol)
+	# Işıklı "^ BÜYÜK EV / — RESTAURANT • CAFE —" alınlık tabelası (link1.jpg & link2.jpg)
+	# (z=+0.34: buyukev.glb koyu arka plakasının tam önüne net oturur)
+	var sign_root: Node3D = Node3D.new()
+	sign_root.name = "BuyukEvSign"
+	sign_root.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, 5.12, 0.34))
+	add_child(sign_root)
+
+	var red_neon: StandardMaterial3D = StandardMaterial3D.new()
+	red_neon.albedo_color = Color(0.96, 0.20, 0.18)
+	red_neon.emission_enabled = true
+	red_neon.emission = Color(0.98, 0.22, 0.18)
+	red_neon.emission_energy_multiplier = 0.85
+	# Üstte kırmızı çatı chevron '^' (sol ve sağ eğik bar — BÜYÜK EV üstünde temiz boşluklu)
+	for side: float in [-1.0, 1.0]:
+		var bar_mi: MeshInstance3D = MeshInstance3D.new()
+		var bm: BoxMesh = BoxMesh.new()
+		bm.size = Vector3(1.48, 0.10, 0.08)
+		bm.material = red_neon
+		bar_mi.mesh = bm
+		bar_mi.position = Vector3(side * 0.67, 0.49, 0.0)
+		bar_mi.rotation.z = -side * 0.19
+		bar_mi.visibility_range_end = 130.0
+		sign_root.add_child(bar_mi)
+	# Alt iki kısa kırmızı çizgi (— RESTAURANT • CAFE —)
+	for side: float in [-1.0, 1.0]:
+		var d_mi: MeshInstance3D = MeshInstance3D.new()
+		var dbm: BoxMesh = BoxMesh.new()
+		dbm.size = Vector3(0.42, 0.055, 0.06)
+		dbm.material = red_neon
+		d_mi.mesh = dbm
+		d_mi.position = Vector3(side * 1.40, -0.40, 0.0)
+		d_mi.visibility_range_end = 110.0
+		sign_root.add_child(d_mi)
+
+	# Parlak beyaz 3D "BÜYÜK EV" + altta "RESTAURANT • CAFE"
+	var main_tm: TextMesh = TextMesh.new()
+	main_tm.text = "BÜYÜK EV"
+	main_tm.font_size = 64
+	main_tm.pixel_size = 0.45 / 48.0
+	main_tm.depth = 0.08
+	main_tm.curve_step = 2.5
+	var wmat: StandardMaterial3D = StandardMaterial3D.new()
+	wmat.albedo_color = Color(0.99, 0.99, 1.0)
+	wmat.emission_enabled = true
+	wmat.emission = Color(0.99, 0.99, 1.0)
+	wmat.emission_energy_multiplier = 0.45
+	main_tm.material = wmat
+	var main_mi: MeshInstance3D = MeshInstance3D.new()
+	main_mi.mesh = main_tm
+	main_mi.position = Vector3(0.0, -0.05, 0.02)
+	main_mi.visibility_range_end = 130.0
+	sign_root.add_child(main_mi)
+
+	var sub_lbl: Label3D = Label3D.new()
+	sub_lbl.text = "RESTAURANT • CAFE"
+	sub_lbl.font_size = 38
+	sub_lbl.pixel_size = 0.0044
+	sub_lbl.modulate = Color(0.98, 0.98, 1.0)
+	sub_lbl.outline_size = 4
+	sub_lbl.outline_modulate = Color(0.10, 0.10, 0.14)
+	sub_lbl.position = Vector3(0.0, -0.40, 0.06)
+	sub_lbl.visibility_range_end = 100.0
+	sign_root.add_child(sub_lbl)
+
+	# 2) Sundurma altı kafe masa/sandalyeleri + siyah ayaklı menü panosu (link1.jpg & link2.jpg)
+	var chair_col: Color = Color(0.76, 0.68, 0.56)
+	var tbl_col: Color = Color(0.24, 0.22, 0.20)
+	for tx: float in [-5.6, -4.0, 0.6, 4.2, 5.8]:
+		var tz: float = -2.2
+		_add_box_xf(st, xf, Vector3(1.15, 0.07, 0.78), Vector3(tx, 1.22, tz), tbl_col)
+		_add_box_xf(st, xf, Vector3(0.10, 0.72, 0.10), Vector3(tx, 0.84, tz), COL_ANTHRACITE)
+		for cs: float in [-0.58, 0.58]:
+			_add_box_xf(st, xf, Vector3(0.42, 0.44, 0.42), Vector3(tx, 0.70, tz + cs), chair_col)
+	# Girişte siyah ayaklı menü panosu
+	_add_box_xf(st, xf, Vector3(0.58, 0.92, 0.08), Vector3(-0.65, 0.94, -0.85), COL_ANTHRACITE)
+	_add_box_xf(st, xf, Vector3(0.46, 0.76, 0.02), Vector3(-0.65, 0.96, -0.80), Color(0.86, 0.84, 0.80))
+
+	# 3) Yemekhane–Büyük Ev orta bulvarı koridor detayları (link3.jpg & link4.jpg):
+	#    - Büyük Ev tarafında pembe-kiremit beton kaldırım, pembe çiçekli süs eriği/erguvan ağaçları,
+	#      siyah lale başlı YTÜ lambaları ve yeşil YTÜ çöp kutuları
+	#    - Orta asfalt bulvar üzerinde iki beyaz yaya geçidi (zebra crosswalk) + dur çizgileri
+	var b_a: Vector2 = Vector2(-68.11, -45.68)  # Mescit/Yemekhane köşesi (along = 0)
+	var b_b: Vector2 = Vector2(-16.94, -127.76) # EEF tarafı (along = 96.7)
+	var along: Vector2 = (b_b - b_a).normalized()          # KD bulvar ekseni
+	var to_bev: Vector2 = Vector2(-along.y, along.x)       # GD Büyük Ev yönü (+across)
+	var pink_walk: Color = Color(0.60, 0.34, 0.30)
+	var pink_blossom: Color = Color(0.86, 0.56, 0.68)
+	var pink_blossom_hi: Color = Color(0.93, 0.72, 0.80)
+	var pink_blossom_lo: Color = Color(0.74, 0.43, 0.56)
+	var ytu_bin_green: Color = Color(0.14, 0.44, 0.22)
+	var lamp_glow: Color = Color(0.95, 0.96, 0.92)
+	var curb_yel: Color = Color(0.90, 0.74, 0.14)
+	var curb_wht: Color = Color(0.91, 0.91, 0.89)
+	# p#332 (Büyük Ev kenarı tek yön bulvar) gerçek eğri ekseni across(s):
+	# (-0.4, 3.89) -> (26.3, 5.56) -> (51.1, 5.55) -> (96.7, 3.92)
+	var a332 := func(s: float) -> float:
+		if s <= 26.3:
+			return lerpf(3.89, 5.56, clampf((s + 0.4) / 26.7, 0.0, 1.0))
+		if s <= 51.1:
+			return 5.56
+		return lerpf(5.56, 3.92, clampf((s - 51.1) / 45.6, 0.0, 1.0))
+
+	# 3a) Büyük Ev & Mescit boyunca pürüzsüz pembe-kiremit kaldırım şeridi (link3.jpg & link4.jpg)
+	#     p#332 yol eğrisini birebir izler; mavi bisiklet yolunun hemen dışından başlayarak p#193 gri
+	#     parke şeridini tamamen kapatır. Yemekhane (sol) bordürünü road_asphalt.gdshader eğriye tam boyar.
+	for seg_i: int in 20:
+		var s0: float = 2.0 + float(seg_i) * 4.8
+		var s1: float = s0 + 4.8
+		var sp0: Vector2 = b_a + along * s0 + to_bev * (a332.call(s0) + 3.32)
+		var sp1: Vector2 = b_a + along * s1 + to_bev * (a332.call(s1) + 3.32)
+		var seg_dir: Vector2 = (sp1 - sp0).normalized()
+		var seg_out: Vector2 = Vector2(-seg_dir.y, seg_dir.x)
+		var wp: Vector2 = 0.5 * (sp0 + sp1)
+		var wy: float = TerrainHeight.active_height(wp.x, wp.y)
+		var sxf: Transform3D = _frame_xform(wp, seg_dir, seg_out, wy)
+		_add_box_xf(st, sxf, Vector3(sp0.distance_to(sp1) + 0.14, 0.06, 3.10), Vector3(0.0, 0.122, 0.0), pink_walk)
+
+	# Büyük Ev bulvar kenarında (mavi bisiklet yolu ile pembe kaldırım sınırında) eğriyi izleyen
+	# gerçek 3D sarı-beyaz dönüşümlü bordür taşları (link3.jpg & link4.jpg!)
+	for ci: int in 94:
+		var cs: float = 3.0 + float(ci) * 0.96
+		if absf(cs - 28.5) < 2.2:
+			continue  # yaya geçidi ağzı açık kalsın
+		var c_col: Color = curb_yel if (ci % 2 == 0) else curb_wht
+		var cp0: Vector2 = b_a + along * (cs - 0.48) + to_bev * (a332.call(cs - 0.48) + 1.78)
+		var cp1: Vector2 = b_a + along * (cs + 0.48) + to_bev * (a332.call(cs + 0.48) + 1.78)
+		var cdir: Vector2 = (cp1 - cp0).normalized()
+		var cout: Vector2 = Vector2(-cdir.y, cdir.x)
+		var rp: Vector2 = 0.5 * (cp0 + cp1)
+		var ry: float = TerrainHeight.active_height(rp.x, rp.y)
+		var rxf: Transform3D = _frame_xform(rp, cdir, cout, ry)
+		_add_box_xf(st, rxf, Vector3(0.92, 0.16, 0.24), Vector3(0.0, 0.095, 0.0), c_col)
+
+	# 3b) Siyah lale başlı modern YTÜ sokak lambaları + yeşil çöp kutuları + pembe çiçekli ağaçlar
+	for idx: int in 7:
+		var s_pos: float = 6.0 + float(idx) * 14.0
+		var road_a: float = a332.call(s_pos)
+		# Siyah modern YTÜ lale lamba (kaldırımın yol kenarı tarafında, link3.jpg & link4.jpg!)
+		var lp: Vector2 = b_a + along * s_pos + to_bev * (road_a + 2.25)
+		var ly: float = TerrainHeight.active_height(lp.x, lp.y)
+		var lxf: Transform3D = _frame_xform(lp, along, to_bev, ly)
+		_add_cyl_xf(st, lxf, 0.075, 3.6, Vector3(0.0, 1.8, 0.0), 6, COL_ANTHRACITE)
+		# İki kollu lale/çatal başlık + üst disk LED armatür (link3.jpg & link4.jpg!)
+		for fork: float in [-1.0, 1.0]:
+			_add_box_xf(st, lxf, Vector3(0.055, 0.72, 0.055), Vector3(fork * 0.22, 3.85, 0.0), COL_ANTHRACITE)
+		_add_cyl_xf(st, lxf, 0.34, 0.08, Vector3(0.0, 4.24, 0.0), 10, COL_ANTHRACITE)
+		_add_cyl_xf(st, lxf, 0.26, 0.04, Vector3(0.0, 4.19, 0.0), 10, lamp_glow)
+
+		# Her 2 lambada bir yeşil YTÜ çöp kutusu (pembe kaldırımın dış çim kenarında)
+		if idx % 2 == 0:
+			var gp_a: float = a332.call(s_pos + 3.2)
+			var gp: Vector2 = b_a + along * (s_pos + 3.2) + to_bev * (gp_a + 5.10)
+			var gy: float = TerrainHeight.active_height(gp.x, gp.y)
+			var gxf: Transform3D = _frame_xform(gp, along, to_bev, gy)
+			_add_box_xf(st, gxf, Vector3(0.46, 0.88, 0.40), Vector3(0.0, 0.44, 0.0), ytu_bin_green)
+			_add_box_xf(st, gxf, Vector3(0.24, 0.24, 0.04), Vector3(0.0, 0.56, -0.21), COL_WHITE)
+
+		# Büyük Ev kış bahçesi önünde organik çok-yüzlü pembe çiçekli erguvan / süs eriği ağaçları (link3.jpg!)
+		if s_pos >= 18.0 and s_pos <= 86.0:
+			var tp_a: float = a332.call(s_pos + 5.0)
+			var tp: Vector2 = b_a + along * (s_pos + 5.0) + to_bev * (tp_a + 6.45)
+			var ty: float = TerrainHeight.active_height(tp.x, tp.y)
+			var txf: Transform3D = _frame_xform(tp, along, to_bev, ty)
+			_add_cyl_xf(st, txf, 0.11, 2.45, Vector3(0.0, 1.22, 0.0), 6, Color(0.42, 0.35, 0.31))
+			_add_foliage_blob_xf(st, txf, Vector3(0.0, 3.25, 0.0), 1.55, 1.35, pink_blossom)
+			_add_foliage_blob_xf(st, txf, Vector3(0.65, 3.65, -0.35), 1.05, 0.95, pink_blossom_hi)
+			_add_foliage_blob_xf(st, txf, Vector3(-0.62, 2.95, 0.38), 1.00, 0.90, pink_blossom_lo)
+
+	# 3c) Orta asfalt bulvar üzerinde 2 adet net beyaz yaya geçidi (zebra crosswalk — link4.jpg!)
+	#     y = +0.126 (tüm yol şeritlerinin üstünde kesintisiz parlak beyaz şeritler, bisiklet yollarına taşmadan)
+	for cross_s: float in [0.5, 28.5]:
+		var center_across: float = 0.0 if cross_s < 10.0 else 1.64
+		var cwp: Vector2 = b_a + along * cross_s + to_bev * center_across
+		var cy: float = TerrainHeight.active_height(cwp.x, cwp.y)
+		var cxf: Transform3D = _frame_xform(cwp, along, to_bev, cy)
+		# Yalnızca ön yaya geçidinde (cross_s = 0.5) altındaki p#115 parke şeridini road_asphalt ile
+		# aynı koyulukta lineer asfalt tonuyla (0.055, 0.063, 0.076) kapat; cross_s = 28.5 zaten saf asfalt!
+		if cross_s < 10.0:
+			_add_box_xf(st, cxf, Vector3(3.6, 0.02, 9.2), Vector3(0.0, 0.118, 0.0), Color(0.055, 0.063, 0.076))
+		# 8 beyaz zebra şeridi (sadece araç şeritleri arasında, mavi bisiklet yollarına taşmadan — link4.jpg!)
+		for zi: int in 8:
+			var z_off: float = -3.5 + float(zi) * 1.00
+			var sp_pt: Vector2 = cwp + to_bev * z_off
+			var dy: float = TerrainHeight.active_height(sp_pt.x, sp_pt.y) - cy
+			_add_box_xf(st, cxf, Vector3(2.95, 0.022, 0.52), Vector3(0.0, dy + 0.128, z_off), Color(0.95, 0.95, 0.93))
+		# İki yanda kendi şeridi içinde kalan beyaz dur çizgileri (orta çift çizgiyi geçmeden)
+		for side_stop: float in [-2.35, 2.35]:
+			_add_box_xf(st, cxf, Vector3(0.28, 0.022, 3.6), Vector3(side_stop, 0.126, -2.2 if side_stop < 0.0 else 2.2), Color(0.93, 0.93, 0.91))
+
+	# 3d) Sol tarafta (Yemekhane önü çim sınırı) alçak siyah demir korkuluk çiti (link4.jpg sol taraf!)
+	for fi: int in 10:
+		var fs: float = 4.0 + float(fi) * 4.5
+		var fp: Vector2 = b_a + along * fs + to_bev * (-8.2)
+		var fy: float = TerrainHeight.active_height(fp.x, fp.y)
+		var fxf: Transform3D = _frame_xform(fp, along, to_bev, fy)
+		_add_box_xf(st, fxf, Vector3(4.5, 0.05, 0.05), Vector3(0.0, 0.82, 0.0), COL_ANTHRACITE)
+		_add_box_xf(st, fxf, Vector3(4.5, 0.05, 0.05), Vector3(0.0, 0.26, 0.0), COL_ANTHRACITE)
+		_add_box_xf(st, fxf, Vector3(0.06, 0.92, 0.06), Vector3(-2.2, 0.46, 0.0), COL_ANTHRACITE)
 
 
 func _build_ytu_totem(st: SurfaceTool, col_body: StaticBody3D, wp: Vector2, right_dir: Vector2, out: Vector2, node_name: String, body_text: String) -> void:
@@ -587,3 +772,48 @@ static func _add_cyl_xf(st: SurfaceTool, xf: Transform3D, radius: float, height:
 		st.add_vertex(bot_c)
 		st.add_vertex(p10)
 		st.add_vertex(p00)
+
+
+## Organik çok-yüzlü (low-poly) ağaç tacı kümesi (pembe çiçekli süs ağaçları için).
+static func _add_foliage_blob_xf(st: SurfaceTool, xf: Transform3D, local_pos: Vector3, rx: float, ry: float, color: Color) -> void:
+	var segs: int = 7
+	var rings: Array = [
+		[rx * 0.78, -ry * 0.42, 0.25],
+		[rx, 0.05 * ry, 0.0],
+		[rx * 0.72, ry * 0.56, 0.35],
+	]
+	st.set_color(color)
+	var bot: Vector3 = xf * (local_pos + Vector3(0.0, -ry, 0.0))
+	var top: Vector3 = xf * (local_pos + Vector3(0.0, ry, 0.0))
+	var ring_pts: Array = []
+	for r_def: Array in rings:
+		var rad: float = float(r_def[0])
+		var yy: float = float(r_def[1])
+		var ph: float = float(r_def[2])
+		var pts: Array[Vector3] = []
+		for i: int in segs:
+			var ang: float = TAU * float(i) / float(segs) + ph
+			pts.append(xf * (local_pos + Vector3(cos(ang) * rad, yy, sin(ang) * rad)))
+		ring_pts.append(pts)
+	for i: int in segs:
+		var j: int = (i + 1) % segs
+		# Alt koni (dışa bakan sarma yönü)
+		st.add_vertex(bot)
+		st.add_vertex(ring_pts[0][i])
+		st.add_vertex(ring_pts[0][j])
+		# Orta şeritler
+		for k: int in 2:
+			var a: Vector3 = ring_pts[k][i]
+			var b: Vector3 = ring_pts[k][j]
+			var c: Vector3 = ring_pts[k + 1][j]
+			var d: Vector3 = ring_pts[k + 1][i]
+			st.add_vertex(a)
+			st.add_vertex(d)
+			st.add_vertex(c)
+			st.add_vertex(a)
+			st.add_vertex(c)
+			st.add_vertex(b)
+		# Üst koni
+		st.add_vertex(top)
+		st.add_vertex(ring_pts[2][j])
+		st.add_vertex(ring_pts[2][i])

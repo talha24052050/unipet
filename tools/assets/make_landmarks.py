@@ -54,6 +54,14 @@ COLORS = {
     "mescit_cap": (0.48, 0.50, 0.45),
     "corten": (0.48, 0.30, 0.19),
     "glass_dark": (0.14, 0.18, 0.21),
+    "buyukev_grey": (0.68, 0.70, 0.66),
+    "buyukev_roof_edge": (0.44, 0.46, 0.45),
+    "buyukev_tile": (0.62, 0.34, 0.23),
+    "buyukev_stone": (0.58, 0.56, 0.50),
+    "buyukev_wood": (0.58, 0.38, 0.22),
+    "buyukev_flagstone": (0.67, 0.69, 0.68),
+    "hedge_green": (0.18, 0.40, 0.16),
+    "warm_glow": (0.90, 0.72, 0.44),
 }
 
 
@@ -668,9 +676,11 @@ def gate_simple(b, c, u, half_open):
 GATES = {"portal": gate_portal, "simple": gate_simple}
 
 def recipe_gable_hall(b, poly, h, spec, rng):
-    """Büyük Ev (Google Haritalar 2019 fotoğrafı): uzun salon, alçak beşik çatı (mahya uzun eksende), ön uçta derin
-    saçak — beyaz direkler + X çaprazlar —, önünde taş döşeli teras ve iki basamak. Ön uç: spec['front'] noktasına
-    en yakın kısa kenar (Google konum iğnesi)."""
+    """Büyük Ev (Google Haritalar 4 fotoğraf referansı):
+    - Ön cephe (GB): açık gri-adaçayı üçgen alınlıklı 3 gözlü sundurma, sol & sağ gözlerde kalın SİYAH çelik X çaprazlar,
+      altta doğal taş kaplama kaide, ortada ahşap/taş giriş basamakları + engelli rampası + çapraz ahşap kolon + cam kapı.
+    - Üst çatı: kiremit kaplı beşik çatı + koyu gri metal saçak çerçevesi.
+    - Uzun KB (bulvar) cephesi: 46 m boyunca siyah çelik-cam kış bahçesi + iç yeşil çit bandı."""
     import sys as _sys
     _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import make_greenery as G
@@ -678,56 +688,164 @@ def recipe_gable_hall(b, poly, h, spec, rng):
     v = (-u[1], u[0])
     fx, fz = spec["front"]
     front_sign = 1 if (fx - c[0]) * u[0] + (fz - c[1]) * u[1] > 0 else -1
-    rise, side_over, porch = 2.6, 0.8, 4.0
+    # Bulvar tarafı (KB, Yemekhane yönü = (-103, -95)) v işaretini belirle
+    road_sign = 1 if ((-60.0 - c[0]) * v[0] + (-95.0 - c[1]) * v[1]) > 0 else -1
+    rise, side_over, porch = 2.45, 0.65, 4.4
     y0 = h
+    yaw_u = math.atan2(u[1], u[0])
 
     def P(a, s, y):
         return (c[0] + u[0] * a + v[0] * s, y, c[1] + u[1] * a + v[1] * s)
-    back = -front_sign * (hu + 0.6)
+
+    def beam_3d(p0, p1, half_t, color):
+        # İki nokta arasında kalın dikdörtgen çelik/ahşap kiriş
+        dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+        L_ = math.sqrt(dx * dx + dy * dy + dz * dz) or 1.0
+        tx, ty, tz = dx / L_, dy / L_, dz / L_
+        # Birim dik eksenler
+        ref = (0.0, 1.0, 0.0) if abs(ty) < 0.9 else (1.0, 0.0, 0.0)
+        ax, ay, az = norm(cross((tx, ty, tz), ref))
+        bx, by, bz = norm(cross((tx, ty, tz), (ax, ay, az)))
+        offs = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        r0 = [(p0[0] + (ax * ox + bx * oy) * half_t, p0[1] + (ay * ox + by * oy) * half_t, p0[2] + (az * ox + bz * oy) * half_t) for ox, oy in offs]
+        r1 = [(p1[0] + (ax * ox + bx * oy) * half_t, p1[1] + (ay * ox + by * oy) * half_t, p1[2] + (az * ox + bz * oy) * half_t) for ox, oy in offs]
+        faces = [list(reversed(r0)), r1] + [[r0[i], r0[(i + 1) % 4], r1[(i + 1) % 4], r1[i]] for i in range(4)]
+        b._add_faces(color, faces, None, center=((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2))
+
+    back = -front_sign * (hu + 0.5)
     front = front_sign * (hu + porch)
     w = hv + side_over
-    # çatı: iki eğik yüz (alt yüzleriyle birlikte ince tabla), mahya ortada
-    T = 0.25
+    T = 0.26
+
+    # 1) Beşik çatı (kiremit kaplı uzun yan yüzeyler + koyu gri metal kenar alınlığı)
     for side in (-1, 1):
-        e0, e1 = P(back, side * w, y0 - 0.3), P(front, side * w, y0 - 0.3)
+        e0, e1 = P(back, side * w, y0 - 0.15), P(front, side * w, y0 - 0.15)
         r0, r1 = P(back, 0, y0 + rise), P(front, 0, y0 + rise)
         up = lambda q: (q[0], q[1] + T, q[2])
-        faces = [[e0, e1, r1, r0], [up(e0), up(r0), up(r1), up(e1)], [e0, up(e0), up(e1), e1],
-                 [e0, r0, up(r0), up(e0)], [e1, up(e1), up(r1), r1]]
         cen = P((back + front) / 2, side * w * 0.5, y0 + rise * 0.45 + T * 0.5)
-        b._add_faces("hall_roof", faces, None, center=cen)
-    # ön üçgen alın (saçağın ucunda, açık beyaz)
-    ft = [P(front_sign * (hu + porch - 0.1), -hv, y0), P(front_sign * (hu + porch - 0.1), hv, y0),
-          P(front_sign * (hu + porch - 0.1), 0, y0 + rise - 0.2)]
-    b._add_faces("post_white", [ft], None, center=P(front_sign * hu, 0, y0 + 0.6))
-    # saçak direkleri + X çaprazlar (yan yüzlerde)
-    for s in (-1, 1):
-        for a in (front_sign * (hu + porch - 0.3),):
-            x, _, z = P(a, s * (hv - 0.2), 0)
-            b.box(x, z, 0.35, 0.35, 0.0, y0, "post_white")
-        mid_a = front_sign * (hu + porch / 2)
-        x, _, z = P(mid_a, s * (hv - 0.2), 0)
-        ang = math.atan2(u[1], u[0])
-        for tilt in (-1, 1):  # X: iki ince eğik çubuk (ince prizma, yaklaşık)
-            pts = []
-            for k in range(6):
-                t = k / 5
-                aa = mid_a + front_sign * tilt * (t - 0.5) * porch * 0.8
-                yy = 0.3 + t * (y0 - 0.6)
-                pts.append(P(aa, s * (hv - 0.2), yy))
-            for k in range(5):
-                p0, p1 = pts[k], pts[k + 1]
-                b.tube(p0[0], p0[2], p0[1], 0.07, p1[0], p1[2], p1[1], 0.07, "post_white", seg=4)
-    # taş teras (saçak altı + önü) ve iki basamak
-    terrace = [(q[0], q[2]) for q in (P(front_sign * hu, -hv - 1.5, 0), P(front_sign * (hu + porch + 3.0), -hv - 1.5, 0),
-                                      P(front_sign * (hu + porch + 3.0), hv + 1.5, 0), P(front_sign * hu, hv + 1.5, 0))]
-    b.prism(terrace, 0.0, 0.32, "terrace")
-    step = [(q[0], q[2]) for q in (P(front_sign * (hu + porch + 3.0), -hv - 1.5, 0), P(front_sign * (hu + porch + 3.6), -hv - 1.5, 0),
-                                   P(front_sign * (hu + porch + 3.6), hv + 1.5, 0), P(front_sign * (hu + porch + 3.0), hv + 1.5, 0))]
-    b.prism(step, 0.0, 0.16, "terrace")
-    # tabela: ön alının ortası (fotoğraftaki gibi), dışa bakar
-    sx, sy, sz = P(front_sign * (hu + porch + 0.05), 0, y0 + rise * 0.42)
-    spec["_sign"] = [round(sx, 2), round(sy, 2), round(sz, 2), round(math.atan2(u[0] * front_sign, u[1] * front_sign), 4)]
+        b._add_faces("buyukev_tile", [[up(e0), up(r0), up(r1), up(e1)]], None, center=cen)
+        b._add_faces("buyukev_roof_edge", [
+            [e0, e1, r1, r0], [e0, up(e0), up(e1), e1],
+            [e0, r0, up(r0), up(e0)], [e1, up(e1), up(r1), r1],
+        ], None, center=cen)
+
+    # 2) Ön cephe üçgen alınlık çerçevesi (sol-sağ kalın açık gri duvar ayakları + üst alınlık kirişi)
+    fa = front_sign * (hu + porch - 0.18)
+    fa_in = front_sign * (hu + porch - 0.85)
+    # Üst alınlık üçgeni (ön ve arka yüz)
+    for a_pos in (fa, fa_in):
+        tri = [P(a_pos, -hv - 0.35, y0 - 0.1), P(a_pos, hv + 0.35, y0 - 0.1), P(a_pos, 0, y0 + rise - 0.05)]
+        b._add_faces("buyukev_grey", [tri], None, center=P((fa + fa_in) / 2, 0, y0 + 0.4))
+    # Alınlık altında kalın yatay gri üst kiriş
+    beam_3d(P(fa - front_sign * 0.3, -hv - 0.25, y0 - 0.18), P(fa - front_sign * 0.3, hv + 0.25, y0 - 0.18), 0.30, "buyukev_grey")
+    # 4 kalın açık gri dikey cephe kolonu (sol dış, orta-sol, orta-sağ, sağ dış → 3 göz!)
+    col_s = [-hv + 0.35, -2.55, 2.55, hv - 0.35]
+    for s_col in col_s:
+        qx, _, qz = P(fa - front_sign * 0.32, s_col, 0)
+        b.box(qx, qz, 0.72, 1.02, -0.4, y0, "buyukev_grey", yaw_u)
+        b.box(qx, qz, 0.78, 1.08, -0.4, 0.60, "buyukev_stone", yaw_u)  # alt doğal taş kaide
+
+    # 3) Sol ve sağ gözlerde KALIN SİYAH ÇELİK X ÇAPRAZLAR + alt doğal taş kaide duvarı (link2.jpg!)
+    x_a = fa - front_sign * 0.32
+    for s0, s1 in ((-hv + 0.80, -3.00), (3.00, hv - 0.80)):
+        # Alt taş duvar kaidesi
+        sm = (s0 + s1) / 2
+        qx, _, qz = P(x_a, sm, 0)
+        b.box(qx, qz, 0.52, abs(s1 - s0), -0.4, 0.58, "buyukev_stone", yaw_u)
+        # Siyah çelik üst/alt yatay kirişler + kalın X çaprazlar
+        y_lo, y_hi = 0.62, y0 - 0.28
+        beam_3d(P(x_a, s0, y_lo), P(x_a, s1, y_hi), 0.14, "dark")
+        beam_3d(P(x_a, s1, y_lo), P(x_a, s0, y_hi), 0.14, "dark")
+        beam_3d(P(x_a, s0, y_lo), P(x_a, s1, y_lo), 0.08, "dark")
+        beam_3d(P(x_a, s0, y_hi), P(x_a, s1, y_hi), 0.08, "dark")
+        # Arka kısım sıcak ışıklı cam cephe (veranda içi)
+        gx, _, gz = P(front_sign * (hu + 0.35), sm, 0)
+        b.box(gx, gz, 0.12, abs(s1 - s0) + 0.5, 0.50, y0 - 0.2, "glass_dark", yaw_u)
+
+    # 4) Orta giriş gözü (link1.jpg): sıcak tavan ahşap kirişleri, çapraz ahşap iç kolon, siyah sürgülü cam kapı,
+    #    önünde 3 geniş kahverengi taş basamak + sağda engelli rampası
+    for s_beam in (-1.2, 0.0, 1.2):
+        beam_3d(P(front_sign * (hu + 0.2), s_beam, y0 - 0.18), P(fa - front_sign * 0.3, s_beam, y0 - 0.18), 0.10, "buyukev_wood")
+    # Çapraz ahşap kaplamalı dekoratif iç kolon (link1.jpg ortada kapı yanında)
+    wx, _, wz = P(front_sign * (hu + 1.15), -0.35, 0)
+    b.box(wx, wz, 0.55, 0.62, 0.45, y0 - 0.2, "buyukev_wood", yaw_u)
+    # Siyah çerçeveli sürgülü cam giriş kapısı + siyah kayıtlı sıcak vitrin (link1.jpg!)
+    dx, _, dz = P(front_sign * (hu + 0.35), -1.45, 0)
+    b.box(dx, dz, 0.22, 2.35, 0.45, 3.05, "dark", yaw_u)
+    dx2, _, dz2 = P(front_sign * (hu + 0.45), -1.45, 0)
+    b.box(dx2, dz2, 0.08, 1.95, 0.52, 2.82, "warm_glow", yaw_u)
+    # Kapı ortasında ince siyah dikey kayıt + üst yatay kayıt
+    b.box(dx2, dz2, 0.14, 0.08, 0.52, 2.82, "dark", yaw_u)
+    b.box(dx2, dz2, 0.14, 1.98, 2.15, 2.24, "dark", yaw_u)
+    # Sağ yarım cam vitrin (sıcak kafe içi + siyah cam kayıt ızgarası)
+    dx3, _, dz3 = P(front_sign * (hu + 0.35), 1.35, 0)
+    b.box(dx3, dz3, 0.14, 2.30, 0.50, 3.15, "warm_glow", yaw_u)
+    b.box(dx3, dz3, 0.20, 0.08, 0.50, 3.15, "dark", yaw_u)
+    b.box(dx3, dz3, 0.20, 2.32, 1.75, 1.84, "dark", yaw_u)
+    b.box(dx3, dz3, 0.20, 2.32, 3.06, 3.18, "dark", yaw_u)
+    # Koyu koyu antrasit BÜYÜK EV tabela arka plakası (alınlık tepesinde)
+    sx_p, _, sz_p = P(fa + front_sign * 0.06, 0.0, 0)
+    b.box(sx_p, sz_p, 0.16, 4.4, y0 + 0.35, y0 + 1.48, "dark", yaw_u)
+
+    # 5) Giriş terası (doğal taş taban) + 3 basamak + sağda engelli rampası + ön kayrak taş meydan (link2.jpg!)
+    porch_floor = [(q[0], q[2]) for q in (
+        P(front_sign * hu, -hv, 0), P(front_sign * (hu + porch), -hv, 0),
+        P(front_sign * (hu + porch), hv, 0), P(front_sign * hu, hv, 0),
+    )]
+    b.prism(porch_floor, -0.35, 0.48, "buyukev_stone")
+    # 3 kahverengi basamak (orta giriş açıklığı boyunca)
+    for k in range(3):
+        a0 = front_sign * (hu + porch + k * 0.42)
+        a1 = front_sign * (hu + porch + (k + 1) * 0.42)
+        st_poly = [(q[0], q[2]) for q in (P(a0, -2.15, 0), P(a1, -2.15, 0), P(a1, 1.15, 0), P(a0, 1.15, 0))]
+        b.prism(st_poly, -0.25, 0.44 - k * 0.13, "buyukev_wood")
+    # Sağda engelli rampası (eğimli prizma)
+    r_a0, r_a1 = front_sign * (hu + porch), front_sign * (hu + porch + 1.65)
+    rp = [P(r_a0, 1.15, 0.46), P(r_a0, 2.25, 0.46), P(r_a1, 2.25, 0.12), P(r_a1, 1.15, 0.12)]
+    rb = [P(r_a0, 1.15, -0.2), P(r_a0, 2.25, -0.2), P(r_a1, 2.25, -0.2), P(r_a1, 1.15, -0.2)]
+    b._add_faces("buyukev_wood", [
+        rp, list(reversed(rb)),
+        [rb[0], rb[1], rp[1], rp[0]], [rb[1], rb[2], rp[2], rp[1]],
+        [rb[2], rb[3], rp[3], rp[2]], [rb[3], rb[0], rp[0], rp[3]],
+    ], None, center=P((r_a0 + r_a1) / 2, 1.7, 0.1))
+    # Ön kayrak taş döşeli düz teras meydanı
+    flag_poly = [(q[0], q[2]) for q in (
+        P(front_sign * (hu + porch - 0.1), -hv - 1.4, 0), P(front_sign * (hu + porch + 3.6), -hv - 1.4, 0),
+        P(front_sign * (hu + porch + 3.6), hv + 1.4, 0), P(front_sign * (hu + porch - 0.1), hv + 1.4, 0),
+    )]
+    b.prism(flag_poly, -0.25, 0.12, "buyukev_flagstone")
+
+    # 6) Uzun KB (bulvar/Yemekhane) tarafında SİYAH ÇELİK-CAM KIŞ BAHÇESİ (link3.jpg & link4.jpg!)
+    wg_len = hu * 1.78
+    wg_a0 = -wg_len * 0.5
+    wg_a1 = wg_len * 0.5
+    wg_s0 = road_sign * (hv - 0.1)
+    wg_s1 = road_sign * (hv + 3.15)
+    wg_h = 3.10
+    # Kış bahçesi siyah düz çatı tablası ve alınlığı
+    wg_roof = [(q[0], q[2]) for q in (P(wg_a0, wg_s0, 0), P(wg_a1, wg_s0, 0), P(wg_a1, wg_s1, 0), P(wg_a0, wg_s1, 0))]
+    b.prism(wg_roof, wg_h - 0.24, wg_h + 0.08, "dark")
+    # Kış bahçesi zemin kaidesi
+    b.prism(wg_roof, -0.35, 0.18, "buyukev_stone")
+    # Kış bahçesi dış koyu cam cephe şeridi + iç yeşil çit/bitki bandı (link3.jpg!)
+    wg_glass_s = road_sign * (hv + 2.98)
+    gx_w, _, gz_w = P(0.0, wg_glass_s, 0)
+    b.box(gx_w, gz_w, wg_len - 0.2, 0.10, 0.20, wg_h - 0.24, "glass_dark", yaw_u)
+    hx_w, _, hz_w = P(0.0, road_sign * (hv + 2.75), 0)
+    b.box(hx_w, hz_w, wg_len - 0.6, 0.34, 0.72, 1.28, "hedge_green", yaw_u)
+    # Her ~2.4 m'de bir dikey siyah çelik kayıtlar (link3.jpg karakteristik ritmi!)
+    n_mull = max(10, int(wg_len // 2.4))
+    for k in range(n_mull + 1):
+        aa = wg_a0 + wg_len * k / n_mull
+        mx, _, mz = P(aa, road_sign * (hv + 3.05), 0)
+        b.box(mx, mz, 0.14, 0.18, 0.14, wg_h - 0.18, "dark", yaw_u)
+    # Alt yatay siyah kayıt bandı
+    lx, _, lz = P(0.0, road_sign * (hv + 3.06), 0)
+    b.box(lx, lz, wg_len, 0.16, 0.16, 0.34, "dark", yaw_u)
+    # İki kısa uç cam + dikme (kış bahçesi baş/sonu)
+    for aa_end in (wg_a0, wg_a1):
+        ex, _, ez = P(aa_end, road_sign * (hv + 1.55), 0)
+        b.box(ex, ez, 0.12, 3.05, 0.20, wg_h - 0.22, "glass_dark", yaw_u)
 
 
 RECIPES = {"gable_hall": recipe_gable_hall, "library": recipe_library, "domed": recipe_domed, "modern": recipe_modern, "historic": recipe_historic, "mosque": recipe_mosque, "kiosk": recipe_kiosk}
