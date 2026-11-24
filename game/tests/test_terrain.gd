@@ -309,4 +309,27 @@ func test_stadium_is_flat_and_asphalt_shader_valid() -> String:
 					khi = maxf(khi, kh)
 				if (khi - klo) > 0.25:
 					return "Taşbina (Kışla) tabanı düz olmalı, kot farkı %.2f m" % (khi - klo)
+		# A101 karşısındaki otopark (merkez ~(-147, 11)) düz ve Taşbina (0.0 m) ile aynı seviyede olmalı
+		var found_a101_park: bool = false
+		for a: Dictionary in (gb as Dictionary).get("areas", []):
+			if str(a.get("kind", "")) != "parking":
+				continue
+			var pts: Array = a.get("points", [])
+			if pts.is_empty():
+				continue
+			var cx: float = 0.0
+			var cz: float = 0.0
+			for pt: Array in pts:
+				cx += float(pt[0])
+				cz += float(pt[1])
+			cx /= float(pts.size())
+			cz /= float(pts.size())
+			if Vector2(cx, cz).distance_to(Vector2(-147.2, 11.1)) < 20.0:
+				found_a101_park = true
+				for pt: Array in pts:
+					var ph: float = th.height_at(float(pt[0]), float(pt[1]))
+					if absf(ph) > 0.10:
+						return "A101 karşısı otopark Taşbina (0.0 m) kotunda düz olmalı, %.2f m bulundu" % ph
+		if not found_a101_park:
+			return "A101 karşısındaki otopark bulunamadı"
 	return ""

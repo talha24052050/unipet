@@ -267,12 +267,15 @@ def main() -> None:
     grid = smooth_grid(grid, passes=3)
 
     # 1) Stadyum pisti (oval çokgen) ve spor/oyun sahaları önce düzleştirilir
+    stadium_polys_h: list[tuple[list[tuple[float, float]], float]] = []
     if GREENERY_PATH.exists():
         greenery = json.loads(GREENERY_PATH.read_text(encoding="utf-8"))
         for tr in greenery.get("tracks", []):
             pts = [(float(p[0]), float(p[1])) for p in tr.get("outer", [])]
             if len(pts) >= 3:
-                th = flatten_polygon(grid, min_x, min_z, STEP_M, convex_hull(pts), pad=10.0, blend=42.0)
+                shull = convex_hull(pts)
+                th = flatten_polygon(grid, min_x, min_z, STEP_M, shull, pad=10.0, blend=42.0)
+                stadium_polys_h.append((shull, th))
                 print(f"  Stadyum pisti düzleştirildi -> {th:.1f} m")
 
     flat_count = 0
@@ -303,6 +306,27 @@ def main() -> None:
     if len(yem_pts) >= 3:
         yh = flatten_polygon(grid, min_x, min_z, STEP_M, convex_hull(yem_pts), pad=16.0, blend=30.0, target_h=kisla_h)
         print(f"  Yemekhane & Yıldız Store meydanı düzleştirildi -> {yh:.1f} m")
+
+    # 4) A101 karşısındaki otopark ve Taşbina komşu otoparkları: Taşbina (kisla_h) ile birebir aynı düz kotta
+    if kisla_h is not None:
+        kisla_b = next((b for b in greybox.get("buildings", []) if b.get("name") == KISLA_NAME), None)
+        k_pts = [(float(p[0]), float(p[1])) for p in kisla_b["points"]] if kisla_b else []
+        park_flat = 0
+        for a in greybox.get("areas", []):
+            if a.get("kind") != "parking":
+                continue
+            apts = [(float(p[0]), float(p[1])) for p in a.get("points", [])]
+            if len(apts) < 3 or not k_pts:
+                continue
+            d_kisla = min(math.hypot(ap[0] - kp[0], ap[1] - kp[1]) for ap in apts for kp in k_pts)
+            if d_kisla <= 35.0:
+                flatten_polygon(grid, min_x, min_z, STEP_M, convex_hull(apts), pad=14.0, blend=24.0, target_h=kisla_h)
+                park_flat += 1
+        print(f"  {park_flat} Taşbina/A101 komşu otoparkı Taşbina kotuna ({kisla_h:.1f} m) düzleştirildi")
+
+    # Stadyum pistinin iç düzlüğünü koru (komşu otopark geçiş eteği pist kenarına değmesin)
+    for shull, sth in stadium_polys_h:
+        flatten_polygon(grid, min_x, min_z, STEP_M, shull, pad=8.0, blend=10.0, target_h=sth)
 
     origin_h = sample_bilinear(grid, min_x, min_z, STEP_M, 0.0, 0.0)
     heights: list[float] = []
