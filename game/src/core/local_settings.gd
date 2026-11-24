@@ -8,8 +8,8 @@ const DEFAULT_PORT: int = 7350
 var server_address: String = ""
 var sfx_enabled: bool = true
 var sfx_volume_db: float = 0.0
-## Geliştirici modu (Talha 2026-11-22): açıkken giriş ekranı yok (cihaza özel sahte hesapla otomatik giriş);
-## kapalıyken normal mod (mail + kod, Supabase). -1 = varsayılan: Godot'tan (kaynaktan) çalışırken açık, APK'da kapalı.
+## Geliştirici modu (Talha 2026-11-24): açıkken giriş ekranı yok (cihaza özel sahte hesapla otomatik giriş);
+## kapalıyken normal mod (mail + kod, Supabase). -1 = varsayılan: yayın dışı derlemelerde (editör ve test APK) açık.
 ## Yayın (imzalı) sürümünde her zaman kapalı.
 const DEV_MODE_DEFAULT: int = -1
 var dev_mode: int = DEV_MODE_DEFAULT
@@ -36,13 +36,13 @@ func save(path: String = PATH) -> Error:
 	return cfg.save(path)
 
 
-## Bu ayarlarla geliştirici modu açık mı? release: imzalı yayın; editor: Godot'tan kaynakla çalıştırma.
-static func resolve_dev_mode(setting: int, release: bool, editor: bool) -> bool:
+## Bu ayarlarla geliştirici modu açık mı? release: imzalı yayın; _editor: Godot'tan kaynakla çalıştırma.
+static func resolve_dev_mode(setting: int, release: bool, _editor: bool = true) -> bool:
 	if release:
 		return false
 	if setting >= 0:
 		return setting == 1
-	return editor
+	return true
 
 
 ## Kullanılacak sunucu: oyuncunun girdiği adres; boşsa ve yayın derlemesiyse res://secrets.cfg [nakama].
