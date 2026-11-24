@@ -9,6 +9,8 @@ uniform int style : hint_range(0, 4) = 0;
 // Kışla dış cephesi (Street View 2025): sıvasız kaba taş örgü + pencere kemerleri tuğla. Avlu tarafı krem sıva kalır.
 // outer_stone açıkken, normali avlu merkezinden DIŞARI bakan duvarlar taş çizilir.
 uniform bool outer_stone = false;
+// Davutpaşa Kışlası Mescidi: neredeyse tamamen masif eskitilmiş kesme kireçtaşı duvar, yalnızca birkaç küçük dikdörtgen pencere.
+uniform bool sparse_stone = false;
 uniform vec2 courtyard_center = vec2(0.0);
 uniform vec4 rubble_color : source_color = vec4(0.60, 0.56, 0.49, 1.0);
 uniform vec4 brick_arch_color : source_color = vec4(0.62, 0.30, 0.22, 1.0);
@@ -95,6 +97,38 @@ void fragment() {
 					}
 				}
 			} else if (style == 2) {
+				if (sparse_stone) {
+					// Mescit: eskitilmiş açık krem-gri masif kesme taş duvar + seyrek küçük dikdörtgen taş söveli pencereler
+					float srow = floor(local_y / 0.36);
+					float sbu = wall_u / 0.62 + mod(srow, 2.0) * 0.5;
+					vec2 scell = vec2(floor(sbu), srow);
+					float sfu = fract(sbu);
+					float sfy = fract(local_y / 0.36);
+					float stone_var = 0.92 + 0.14 * hash12(scell);
+					float weather = 0.90 + 0.16 * hash12(vec2(floor(wall_u * 0.45), floor(local_y * 0.55)));
+					col = wall_color.rgb * stone_var * weather;
+					if (sfu < 0.04 || sfy < 0.06) {
+						col *= 0.84;  // ince kesme taş derzi
+					}
+					if (local_y < 0.65) {
+						col *= 0.88;  // alt taş kaide
+					}
+					roughness = 0.96;
+					// Yalnızca zemin katta, 5.4 m arayla küçük dikdörtgen pencere (0.86 x 1.35 m)
+					float um = mod(wall_u + 1.8, 5.4);
+					if (local_y >= 1.35 && local_y <= 2.85 && um >= 2.20 && um <= 3.20) {
+						bool in_pane = local_y >= 1.48 && local_y <= 2.72 && um >= 2.32 && um <= 3.08;
+						if (!in_pane) {
+							col = wall_color.rgb * 0.72;  // taş söve
+						} else if (abs(um - 2.70) < 0.03 || abs(local_y - 2.10) < 0.03) {
+							col = vec3(0.32, 0.33, 0.34);  // ince demir parmaklık/kayıt
+						} else {
+							col = window_color.rgb * 0.85;
+							roughness = 0.25;
+							metallic = 0.12;
+						}
+					}
+				} else {
 				// 2: Tarihi Taşbina (Kışla) cephesi — YTÜ resmi fotoğraf referansı:
 				// İç avlu: eskitilmiş gri-bej kireçtaşı sıva, koyu kat silmesi, yağmur oluğu,
 				// taş kemer söveli ve beyaz çok bölmeli (mullion) kemerli pencereler.
@@ -172,6 +206,7 @@ void fragment() {
 							}
 						}
 					}
+				}
 				}
 			}
 		}

@@ -20,7 +20,8 @@ func test_greenery_data_and_build() -> String:
 	var d: Node3D = Decor.new()
 	d.build(data)
 	var bushes: Array = data.get("bushes", [])
-	var ok: bool = d.tree_count == trees.size() and d.bush_count == bushes.size() and d.bush_count > 100 and d.track_count == 1 and d.bed_count > 0 and d.kiosk_count == 1
+	var no_monument: bool = d.get_node_or_null("OrtabahceMonument") == null
+	var ok: bool = no_monument and d.tree_count == trees.size() and d.bush_count == bushes.size() and d.bush_count > 100 and d.track_count == 1 and d.bed_count > 0 and d.kiosk_count == 1
 	d.free()
 	return "" if ok else "kurulum sayıları tutmuyor"
 

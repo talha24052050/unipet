@@ -11,6 +11,7 @@ func test_yemekhane_plaza_builds_with_low_draw_calls() -> String:
 	var solid: MeshInstance3D = p.get_node_or_null("PlazaStructures") as MeshInstance3D
 	var glass: MeshInstance3D = p.get_node_or_null("PlazaGlass") as MeshInstance3D
 	var store_sign: Node3D = p.get_node_or_null("YildizStoreSign") as Node3D
+	var love_panel: Node3D = p.get_node_or_null("StoreLovePanel") as Node3D
 	var a101_sign: Label3D = p.get_node_or_null("A101Sign") as Label3D
 	var col_body: Node = p.get_node_or_null("PlazaCollisions")
 
@@ -23,6 +24,7 @@ func test_yemekhane_plaza_builds_with_low_draw_calls() -> String:
 		solid != null and solid.mesh != null
 		and glass != null and glass.mesh != null
 		and store_sign != null and store_sign.get_child_count() == 3
+		and love_panel != null and love_panel.get_node_or_null("TurkiyeninYildiziTag") != null
 		and a101_sign != null and a101_sign.text.contains("A•101")
 		and col_body != null
 		and col_body.get_node_or_null("YildizStoreStairs") != null

@@ -15,6 +15,7 @@ const ROAD_KINDS: PackedStringArray = ["residential", "residential_oneway", "ser
 const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
 ## Ortabahçe'yi çevreleyen bina (avlu tespiti için).
 const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
+const MESCIT_NAME: String = "Davutpaşa Kışlası Mesciti"
 ## Ortabahçe (Kışla avlusu) yolları gerçekte pembe-kırmızı beton; dışarıdaki yaya yolları parke.
 const PATTERN_COBBLE: int = 0
 const PATTERN_PINK_CONCRETE: int = 1
@@ -75,6 +76,7 @@ const LANDMARKS_PATH: String = "res://data/landmarks.json"
 const CUSTOM_SIGN_BUILDINGS: PackedStringArray = [
 	"Yıldız Store",
 	"Yemekhane",
+	"Davutpaşa Kışlası Mesciti",
 	"Elektrik Elektronik Fakültesi",
 	"Şehit Prof. Dr. İlhan Varank Kütüphanesi",
 	"Merkez Kütüphanesi",
@@ -524,16 +526,20 @@ func _build_building(b: Dictionary) -> void:
 	var wall_color: Color = Color.html(colour) if Color.html_is_valid(colour) else sdata["wall_color"]
 
 	var is_kisla: bool = name_text == KISLA_NAME
+	var is_mescit: bool = name_text == MESCIT_NAME
+	var unique_mat: bool = is_kisla or is_mescit
 	var mat_key: String = "%s|%s" % [style, colour]  # OSM rengi olan binalar kendi (ortak) malzemesini alır
-	var wall_mat: ShaderMaterial = _style_materials.get(mat_key) if not is_kisla and _style_materials.has(mat_key) else ShaderMaterial.new()
-	if not is_kisla:
+	var wall_mat: ShaderMaterial = _style_materials.get(mat_key) if not unique_mat and _style_materials.has(mat_key) else ShaderMaterial.new()
+	if not unique_mat:
 		_style_materials[mat_key] = wall_mat
 	wall_mat.shader = BUILDING_WALL_SHADER
-	wall_mat.set_shader_parameter("wall_color", wall_color)
+	wall_mat.set_shader_parameter("wall_color", Color(0.78, 0.77, 0.71) if is_mescit else wall_color)
 	wall_mat.set_shader_parameter("window_color", sdata["window_color"])
 	wall_mat.set_shader_parameter("frame_color", sdata["frame_color"])
-	wall_mat.set_shader_parameter("roof_color", sdata["roof_color"])
+	wall_mat.set_shader_parameter("roof_color", Color(0.56, 0.54, 0.48) if is_mescit else sdata["roof_color"])
 	wall_mat.set_shader_parameter("style", sdata["shader_style"])
+	if is_mescit:
+		wall_mat.set_shader_parameter("sparse_stone", true)
 	if is_kisla and _courtyard_hull.size() >= 3:
 		var cc: Vector2 = Vector2.ZERO
 		for v: Vector2 in _courtyard_hull:
@@ -551,7 +557,7 @@ func _build_building(b: Dictionary) -> void:
 	var trimesh: ConcavePolygonShape3D = mesh.create_trimesh_shape()
 	trimesh.backface_collision = true
 	shape.shape = trimesh
-	if _batching and not is_kisla and min_h <= 0.0:
+	if _batching and not unique_mat and min_h <= 0.0:
 		_batch_mesh(mesh, wall_mat, _poly_box(poly).get_center(), ref_y, true)  # aynı stil + hücre → tek çizim
 		mi.free()
 	else:
@@ -561,10 +567,10 @@ func _build_building(b: Dictionary) -> void:
 	# Tarihi binalara ve OSM'de roof:shape=hipped/pyramidal olanlara kırma çatı
 	var roof_shape: String = str(b.get("roof", ""))
 	if style == BuildingStyle.STYLE_HISTORIC or roof_shape in ["hipped", "pyramidal"]:
-		var roof_h: float = 2.5 if style == BuildingStyle.STYLE_HISTORIC else clampf(sqrt(area) * 0.12, 1.2, 3.0)
+		var roof_h: float = 1.35 if is_mescit else (2.5 if style == BuildingStyle.STYLE_HISTORIC else clampf(sqrt(area) * 0.12, 1.2, 3.0))
 		var roof_mesh: ArrayMesh = build_hip_roof(poly, height - min_h, roof_h, 2.0)
 		if roof_mesh != null:
-			var roof_mat: StandardMaterial3D = _material(sdata["roof_color"])
+			var roof_mat: StandardMaterial3D = _material(Color(0.56, 0.54, 0.48) if is_mescit else sdata["roof_color"])
 			roof_mesh.surface_set_material(0, roof_mat)
 			var roof_mi: MeshInstance3D = MeshInstance3D.new()
 			roof_mi.name = "Roof"

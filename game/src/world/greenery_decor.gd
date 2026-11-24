@@ -66,8 +66,6 @@ func build(data: Dictionary) -> void:
 		var kx: float = float(k[0])
 		var kz: float = float(k[1])
 		_build_kiosk(Vector3(kx, TerrainHeight.active_height(kx, kz), kz), float(k[2]))
-	if not kiosks.is_empty():
-		_build_ortabahce_monument(Vector2(-2.1, 5.3))
 
 
 func _build_trees(trees: Array) -> void:
@@ -583,55 +581,6 @@ func _build_kiosk(pos: Vector3, yaw: float) -> void:
 	root.add_child(col)
 	add_child(root)
 	kiosk_count += 1
-
-
-## Ortabahçe merkez anıt meydanı (dji_0081 referansı): dairesel basamaklı taş platform + granit kaide + bronz anıt.
-func _build_ortabahce_monument(xz: Vector2) -> void:
-	var base_y: float = TerrainHeight.active_height(xz.x, xz.y)
-	var root: StaticBody3D = StaticBody3D.new()
-	root.name = "OrtabahceMonument"
-	root.position = Vector3(xz.x, base_y, xz.y)
-
-	var st: SurfaceTool = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	st.set_smooth_group(-1)
-
-	var plaza_stone: Color = Color(0.84, 0.82, 0.78)
-	var step_stone: Color = Color(0.74, 0.72, 0.69)
-	var granite: Color = Color(0.56, 0.55, 0.53)
-	var bronze: Color = Color(0.24, 0.22, 0.19)
-	var gold: Color = Color(0.86, 0.68, 0.22)
-
-	# Geniş dairesel taş meydan + 2 basamaklı kaide (yolun üstüne temiz oturur)
-	_add_colored_cyl(st, 3.8, 0.14, Vector3(0.0, 0.07, 0.0), 20, plaza_stone)
-	_add_colored_cyl(st, 2.2, 0.24, Vector3(0.0, 0.14 + 0.12, 0.0), 16, step_stone)
-	_add_colored_box(st, Vector3(1.55, 1.55, 1.55), Vector3(0.0, 0.38 + 0.775, 0.0), granite)
-	_add_colored_box(st, Vector3(1.72, 0.16, 1.72), Vector3(0.0, 1.93 + 0.08, 0.0), step_stone)
-	# Bronz anıt sütun + üstünde oturan altın YTÜ yıldız tacı
-	_add_colored_box(st, Vector3(0.75, 2.05, 0.75), Vector3(0.0, 2.09 + 1.025, 0.0), bronze)
-	_add_colored_box(st, Vector3(0.95, 0.16, 0.95), Vector3(0.0, 4.14 + 0.08, 0.0), bronze)
-	_add_colored_box(st, Vector3(0.24, 0.35, 0.24), Vector3(0.0, 4.30 + 0.175, 0.0), bronze)
-	_add_colored_box(st, Vector3(0.62, 0.62, 0.16), Vector3(0.0, 4.65 + 0.22, 0.0), gold)
-	_add_colored_box(st, Vector3(0.16, 0.62, 0.62), Vector3(0.0, 4.65 + 0.22, 0.0), gold)
-
-	st.generate_normals()
-	var mesh: ArrayMesh = st.commit()
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.72
-	mesh.surface_set_material(0, mat)
-	var mi: MeshInstance3D = MeshInstance3D.new()
-	mi.name = "MonumentMesh"
-	mi.mesh = mesh
-	root.add_child(mi)
-
-	var col: CollisionShape3D = CollisionShape3D.new()
-	var shape: BoxShape3D = BoxShape3D.new()
-	shape.size = Vector3(1.8, 3.0, 1.8)
-	col.shape = shape
-	col.position = Vector3(0.0, 1.5, 0.0)
-	root.add_child(col)
-	add_child(root)
 
 
 static func _add_colored_cyl(st: SurfaceTool, radius: float, height: float, pos: Vector3, segs: int, color: Color) -> void:

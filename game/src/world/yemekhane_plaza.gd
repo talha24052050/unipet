@@ -3,6 +3,8 @@ extends Node3D
 ## Referans: YTÜ Davutpaşa drone ve cephe fotoğrafları (2026-11-24).
 ## Tüm statik kütleler tek köşe-renkli ArrayMesh'te birleştirilir (~4 çizim çağrısı).
 
+const LoveSigns := preload("res://src/world/love_signs.gd")
+
 # Yıldız Store (b#40) köşeleri (kampus_greybox.json)
 const STORE_P0: Vector2 = Vector2(-104.18, -58.13)  # Doğu (Yemekhane tarafı)
 const STORE_P2: Vector2 = Vector2(-151.50, -77.84)  # Batı (A101 yol tarafı)
@@ -94,10 +96,10 @@ func _build_yildiz_store_front(st: SurfaceTool, col_body: StaticBody3D) -> void:
 	_add_box_xf(st, xf, Vector3(w + 0.22, 0.14, 0.26), Vector3(0.0, 5.28, 0.06), COL_ANTHRACITE)
 	# Üst beyaz giriş terası (14.1 m x 2.4 m x 1.65 m yükseklik)
 	_add_box_xf(st, xf, Vector3(w, 1.65, 2.4), Vector3(0.0, 0.825, 1.2), COL_CONCRETE)
-	# 3 giriş açıklığı: y = 1.65..3.85 (tabelanın altında 0.45 m temiz beyaz boşluk kalır!)
-	for ox: float in [-4.5, 0.0, 4.5]:
-		var ow: float = 4.2 if ox == 0.0 else 3.0
-		_add_box_xf(st, xf, Vector3(ow, 2.20, 0.18), Vector3(ox, 1.65 + 1.10, 0.10), COL_OPENING_DARK)
+	# Sol ve sağ mağaza açıklıkları + ortada tabelanın tam altında "I ❤ YTU / #TürkiyeninYıldızı" panosu
+	for ox: float in [-4.75, 4.75]:
+		_add_box_xf(st, xf, Vector3(2.65, 2.18, 0.18), Vector3(ox, 1.65 + 1.09, 0.10), COL_OPENING_DARK)
+	_build_store_love_panel(st, xf)
 
 	# 8 basamaklı geniş amfi-oturma merdiveni (oturma sıralarında sıcak ahşap kaplama şeritleri)
 	var steps: int = 8
@@ -197,6 +199,80 @@ func _build_yildiz_store_sign(st: SurfaceTool, xf: Transform3D) -> void:
 	var store_mi: MeshInstance3D = _make_3d_text("STORE", 0.34, 0.12, navy_sign, 0.45)
 	store_mi.position = Vector3(1.78, -0.20, 0.0)
 	sign_root.add_child(store_mi)
+
+
+## Yıldız Store tabelasının tam altındaki koyu mor-antrasit "I ❤ YTU / #TürkiyeninYıldızı" cephe panosu.
+func _build_store_love_panel(st: SurfaceTool, xf: Transform3D) -> void:
+	var panel_w: float = 4.50
+	var panel_h: float = 2.16
+	var panel_y: float = 1.65 + panel_h * 0.5
+	var panel_col: Color = Color(0.21, 0.19, 0.24)  # fotoğraftaki koyu leylak-füme mat zemin (yüksek kontrast)
+	var frame_col: Color = Color(0.13, 0.12, 0.16)
+
+	# İnce koyu dış çerçeve + ana zemin panosu
+	_add_box_xf(st, xf, Vector3(panel_w + 0.10, panel_h + 0.10, 0.12), Vector3(0.0, panel_y, 0.10), frame_col)
+	_add_box_xf(st, xf, Vector3(panel_w, panel_h, 0.10), Vector3(0.0, panel_y, 0.13), panel_col)
+	# Panonun iki yanındaki dikey koyu duvar aplikleri (fotoğraftaki gibi)
+	for sx: float in [-2.64, 2.64]:
+		_add_box_xf(st, xf, Vector3(0.11, 0.28, 0.10), Vector3(sx, panel_y + 0.52, 0.13), COL_ANTHRACITE)
+
+	var panel_root: Node3D = Node3D.new()
+	panel_root.name = "StoreLovePanel"
+	panel_root.transform = xf * Transform3D(Basis.IDENTITY, Vector3(0.0, panel_y, 0.20))
+	add_child(panel_root)
+
+	# 3D "I" + mercan kırmızı kalp + "YTU" ortalanmış dizilim (fotoğraftaki gibi eşit parlak vinyl/tabela yüzeyi)
+	var white_col: Color = Color(0.98, 0.98, 0.99)
+	var heart_col: Color = Color(0.94, 0.28, 0.26)
+	var letter_h: float = 0.68
+	var i_mi: MeshInstance3D = _make_3d_text("I", letter_h, 0.03, white_col, 0.55)
+	var heart_mi: MeshInstance3D = MeshInstance3D.new()
+	heart_mi.mesh = LoveSigns.heart_mesh(letter_h * 1.18, 0.03)
+	var hmat: StandardMaterial3D = StandardMaterial3D.new()
+	hmat.albedo_color = heart_col
+	hmat.roughness = 0.72
+	hmat.emission_enabled = true
+	hmat.emission = heart_col
+	hmat.emission_energy_multiplier = 0.28
+	heart_mi.material_override = hmat
+	heart_mi.visibility_range_end = 120.0
+	var ytu_mi: MeshInstance3D = _make_3d_text("YTU", letter_h, 0.03, white_col, 0.55)
+	for wmi: MeshInstance3D in [i_mi, ytu_mi]:
+		var wm: StandardMaterial3D = (wmi.mesh as TextMesh).material as StandardMaterial3D
+		wm.emission_enabled = true
+		wm.emission = white_col
+		wm.emission_energy_multiplier = 0.18
+
+	var parts: Array[MeshInstance3D] = [i_mi, heart_mi, ytu_mi]
+	var widths: Array[float] = []
+	for m: MeshInstance3D in parts:
+		var bb: AABB = m.mesh.get_aabb()
+		if m != heart_mi and bb.size.y > 0.001:
+			m.scale = Vector3.ONE * (letter_h / bb.size.y)
+		widths.append(bb.size.x * m.scale.x)
+	var gap: float = 0.10
+	var total_w: float = widths[0] + widths[1] + widths[2] + gap * 2.0
+	var cur_x: float = -total_w * 0.5
+	for k: int in parts.size():
+		var m: MeshInstance3D = parts[k]
+		var bb: AABB = m.mesh.get_aabb()
+		var center_y_off: float = -(bb.position.y + bb.size.y * 0.5) * m.scale.y
+		m.position = Vector3(cur_x - bb.position.x * m.scale.x, center_y_off + 0.12, 0.0)
+		cur_x += widths[k] + gap
+		panel_root.add_child(m)
+
+	# Altında "#TürkiyeninYıldızı" etiketi
+	var tag: Label3D = Label3D.new()
+	tag.name = "TurkiyeninYildiziTag"
+	tag.text = "#TürkiyeninYıldızı"
+	tag.font_size = 44
+	tag.pixel_size = 0.0040
+	tag.modulate = Color(0.96, 0.96, 0.98)
+	tag.outline_size = 4
+	tag.outline_modulate = Color(0.20, 0.18, 0.24)
+	tag.visibility_range_end = 90.0
+	tag.position = Vector3(0.0, -0.36, 0.02)
+	panel_root.add_child(tag)
 
 
 static func _make_3d_text(text: String, height_m: float, depth_m: float, color: Color, roughness: float) -> MeshInstance3D:

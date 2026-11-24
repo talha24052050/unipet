@@ -11,7 +11,8 @@
     {
       "match": "Davutpaşa Kışlası Mesciti",
       "id": "mescit",
-      "recipe": "mosque"
+      "recipe": "mosque",
+      "height": 4.6
     },
     {
       "match": "Yemekhane",

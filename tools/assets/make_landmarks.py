@@ -48,6 +48,12 @@ COLORS = {
     "post_white": (0.9, 0.9, 0.88),
     "terrace": (0.58, 0.56, 0.52),
     "sign_navy": (0.16, 0.20, 0.42),
+    "mescit_stone": (0.78, 0.77, 0.71),
+    "mescit_stone_dark": (0.64, 0.63, 0.57),
+    "mescit_drum": (0.67, 0.66, 0.60),
+    "mescit_cap": (0.48, 0.50, 0.45),
+    "corten": (0.48, 0.30, 0.19),
+    "glass_dark": (0.14, 0.18, 0.21),
 }
 
 
@@ -445,24 +451,56 @@ def pavilion(b, poly, i, pt, h, wall_color, trim_color, roof_color):
 
 
 def recipe_mosque(b, poly, h, spec, rng):
-    bands(b, poly, h, "white", False)
-    cx, cz = centroid(poly)
+    """Davutpaşa Kışlası Mescidi (gerçek fotoğraf referansı): kubbesiz alçak taş yapı,
+    sol köşede kalın kare kesme taş minare kaidesi + kısa silindirik taş petek + konik kurşun külah + alem,
+    ön cephe sol tarafında küçük kahverengi camlı kabin ve gri kutu."""
+    # Çatı saçağında ince taş korniş
+    b.ring(offset(poly, 0.26), offset(poly, -0.05), h - 0.24, h + 0.04, "mescit_stone_dark")
+
+    # Uzun ön cephe (bulvara bakan kenar 1: [-53.99,-13.84] -> [-67.2,-24.2]; genel olarak en uzun dış kenar)
     n = len(poly)
-    # Kenarlara en kısa uzaklık (köşeye değil) -> kubbe gövdeden taşmasın
-    edge_d = min(math.dist((cx, cz), seg_closest((cx, cz), poly[i], poly[(i + 1) % n])) for i in range(n))
-    r = edge_d * 0.7
-    drum = h + 2.6  # Godot'taki kırma çatının (2.5 m) üstünden çıksın
-    b.cylinder(cx, cz, r * 1.04, h, drum, "white", seg=10)
-    b.dome(cx, cz, r, drum, "dome")
-    b.cylinder(cx, cz, 0.08, drum + r - 0.1, drum + r + 1.3, "dark", seg=4)
-    # Minare: gövdeden en uzak köşenin hemen dışında
-    far = max(poly, key=lambda q: math.dist(q, (cx, cz)))
-    d = math.dist(far, (cx, cz)) or 1.0
-    mx, mz = far[0] + (far[0] - cx) / d * 1.6, far[1] + (far[1] - cz) / d * 1.6
-    top = h + 13.0
-    b.cylinder(mx, mz, 1.0, 0.0, top, "white")
-    b.cylinder(mx, mz, 1.45, top - 4.0, top - 3.4, "white")  # şerefe
-    b.cylinder(mx, mz, 1.0, top, top + 4.0, "dome", cone=True)
+    ccw = signed_area(poly) > 0
+    edge_i = 1 if n >= 4 else max(range(n), key=lambda k: math.dist(poly[k], poly[(k + 1) % n]))
+    p1, p2 = poly[edge_i], poly[(edge_i + 1) % n]
+    L_ = math.dist(p1, p2) or 1.0
+    ux, uz = (p2[0] - p1[0]) / L_, (p2[1] - p1[1]) / L_
+    nx, nz = edge_normal(p1, p2, ccw)
+    yaw = math.atan2(uz, ux)
+
+    # 1) Kalın kare kesme taş minare kulesi (p1 köşesine bitişik, hafif dışa taşan)
+    mx = p1[0] - ux * 0.70 + nx * 0.55
+    mz = p1[1] - uz * 0.70 + nz * 0.55
+    b.box(mx, mz, 3.20, 3.20, -1.2, 1.35, "mescit_stone_dark", yaw)   # alt taş kaide
+    b.box(mx, mz, 2.85, 2.85, 1.35, 8.35, "mescit_stone", yaw)        # ana kare taş gövde
+    # Üst gövdede küçük dikey mazgal delikleri
+    for side_n in (-1, 1):
+        b.box(mx + nx * side_n * 1.44, mz + nz * side_n * 1.44, 0.14, 0.08, 6.55, 7.25, "dark", yaw)
+    for side_u in (-1, 1):
+        b.box(mx + ux * side_u * 1.44, mz + uz * side_u * 1.44, 0.08, 0.14, 6.55, 7.25, "dark", yaw)
+    # Üstte kademeli çıkıntılı kare taş korniş / başlık
+    b.box(mx, mz, 3.04, 3.04, 8.35, 8.60, "mescit_stone_dark", yaw)
+    b.box(mx, mz, 3.26, 3.26, 8.60, 9.05, "mescit_stone", yaw)
+    # Kısa silindirik taş petek (kareden dar)
+    b.cylinder(mx, mz, 0.96, 9.05, 11.45, "mescit_drum", seg=12)
+    # Konik gri-zeytin külah + ince alem
+    b.cylinder(mx, mz, 1.08, 11.45, 13.45, "mescit_cap", seg=12, cone=True)
+    b.cylinder(mx, mz, 0.06, 13.38, 14.55, "dark", seg=6)
+    b.cylinder(mx, mz, 0.14, 13.72, 13.88, "dark", seg=8)
+    b.cylinder(mx, mz, 0.11, 14.08, 14.20, "dark", seg=8)
+
+    # 2) Minarenin hemen sağında küçük kahverengi camlı kabin + önünde alçak gri kutu (fotoğraftaki gibi)
+    cx_cab = p1[0] + ux * 3.1 + nx * 1.45
+    cz_cab = p1[1] + uz * 3.1 + nz * 1.45
+    b.box(cx_cab, cz_cab, 3.5, 1.8, -0.4, 2.35, "corten", yaw)
+    b.box(cx_cab + nx * 0.91, cz_cab + nz * 0.91, 3.1, 0.06, 1.25, 2.08, "glass_dark", yaw)
+    b.box(cx_cab - ux * 1.76, cz_cab - uz * 1.76, 0.06, 1.35, 1.25, 2.08, "glass_dark", yaw)
+    # Alçak gri beton/tesisat kutusu
+    bx_box = p1[0] + ux * 4.5 + nx * 2.55
+    bz_box = p1[1] + uz * 4.5 + nz * 2.55
+    b.box(bx_box, bz_box, 1.55, 0.95, -0.4, 1.15, "concrete", yaw)
+
+    # 3) Sağ köşede ince yağmur iniş borusu
+    b.cylinder(p2[0] + nx * 0.08, p2[1] + nz * 0.08, 0.06, 0.0, h, "mescit_stone_dark", seg=6)
 
 
 def recipe_kiosk(b, poly, h, spec, rng):
@@ -711,7 +749,8 @@ def main():
         if "height" in spec:
             manifest.setdefault("heights", {})[spec["match"]] = h
         b = Builder()
-        spec = dict(spec, _paths=[[tuple(q) for q in p["points"]] for p in grey.get("paths", []) if p.get("kind") != "service"])
+        road_kinds = ("residential", "residential_oneway", "service", "parking_aisle")
+        spec = dict(spec, _paths=[[tuple(q) for q in p["points"]] for p in grey.get("paths", []) if p.get("kind") not in road_kinds and p.get("kind") != "cycleway"])
         RECIPES[spec["recipe"]](b, poly, h, spec, random.Random(spec["id"]))
         tris = b.tri_count()
         assert tris <= MAX_TRIS, "%s: %d üçgen > %d" % (spec["id"], tris, MAX_TRIS)
@@ -722,10 +761,11 @@ def main():
         print("OK %s: %d üçgen" % (spec["id"], tris))
     paths_all = [(p.get("kind", ""), [tuple(q) for q in p["points"]]) for p in grey.get("paths", [])]
     manifest["free"] = []
+    road_kinds = ("residential", "residential_oneway", "service", "parking_aisle")
     for g in spec_all.get("gates", []):
         c, u, kind = nearest_road(tuple(g["pos"]), paths_all)
         b = Builder()
-        GATES[g["style"]](b, c, u, 5.0 if kind == "service" else 2.5)
+        GATES[g["style"]](b, c, u, 5.0 if kind in road_kinds else 2.5)
         write_glb(os.path.join(out_dir, g["id"] + ".glb"), g["id"], b)
         manifest["free"].append("res://assets/buildings/%s.glb" % g["id"])
         print("OK kapı %s (%s yolu): %d üçgen" % (g["id"], kind, b.tri_count()))
