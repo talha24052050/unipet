@@ -40,9 +40,9 @@ func try_tap(screen_pos: Vector2, camera: Camera3D) -> bool:
 	for n: Node3D in cands:
 		var w_body: Vector3 = n.global_position + Vector3.UP * PICK_HEIGHT
 		var p_body: Vector2 = Vector2.INF if camera.is_position_behind(w_body) else camera.unproject_position(w_body)
-		# Başka oyuncuların kafa üstü nick yazısına dokunulduğunda da profilin kolayca açılmasını sağla
+		# Başka oyuncuların veya kampüs NPC'lerinin kafa üstü yazısına dokunulduğunda da kolayca etkileşim sağla
 		if n != player and not n.is_in_group(&"cats"):
-			var w_lbl: Vector3 = n.global_position + Vector3.UP * 1.32
+			var w_lbl: Vector3 = n.global_position + Vector3.UP * (1.55 if n.is_in_group(&"npcs") else 1.32)
 			var p_lbl: Vector2 = Vector2.INF if camera.is_position_behind(w_lbl) else camera.unproject_position(w_lbl)
 			if p_lbl != Vector2.INF and (p_body == Vector2.INF or p_lbl.distance_to(screen_pos) < p_body.distance_to(screen_pos)):
 				p_body = p_lbl
@@ -56,6 +56,15 @@ func try_tap(screen_pos: Vector2, camera: Camera3D) -> bool:
 	elif best.is_in_group(&"cats"):
 		best.call("pet")
 		spawn_hearts(best, 3)
+	elif best.is_in_group(&"npcs"):
+		if player != null:
+			var to_npc: Vector3 = best.global_position - player.global_position
+			if Vector2(to_npc.x, to_npc.z).length() > 0.1:
+				player.rotation.y = atan2(to_npc.x, to_npc.z)
+			var vis_p: Node = player.get("visual")
+			if vis_p != null:
+				vis_p.call("play_emote", &"emote_wave")
+		best.call("interact")
 	else:
 		var pid: String = str(best.get("player_id"))
 		var dname: String = str(best.get("display_name"))
@@ -93,6 +102,9 @@ func _candidates() -> Array[Node3D]:
 		for c: Node in get_tree().get_nodes_in_group(&"cats"):
 			if (c as Node3D).visible and player != null and (c as Node3D).global_position.distance_to(player.global_position) < GREET_MAX_DIST:
 				out.append(c)
+		for npc: Node in get_tree().get_nodes_in_group(&"npcs"):
+			if (npc as Node3D).visible and player != null and (npc as Node3D).global_position.distance_to(player.global_position) < GREET_MAX_DIST:
+				out.append(npc)
 	return out
 
 
@@ -146,7 +158,11 @@ func spawn_hearts(target: Node3D, count: int) -> void:
 		s.modulate = HEART_COLOR
 		s.no_depth_test = true
 		s.shaded = false
-		get_tree().current_scene.add_child(s)
+		var host: Node = get_tree().current_scene if get_tree().current_scene != null else get_parent()
+		if host == null:
+			s.free()
+			return
+		host.add_child(s)
 		var start: Vector3 = target.global_position + Vector3(randf_range(-0.3, 0.3), top * 0.8, randf_range(-0.3, 0.3))
 		s.global_position = start
 		s.scale = Vector3.ONE * 0.3

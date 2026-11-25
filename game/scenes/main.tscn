@@ -33,6 +33,7 @@
 [ext_resource type="Script" path="res://src/world/cafe_social_zones.gd" id="31"]
 [ext_resource type="Script" path="res://src/world/tarihi_hamam.gd" id="32"]
 [ext_resource type="Script" path="res://src/world/campus_transit.gd" id="33"]
+[ext_resource type="Script" path="res://src/world/sami_npc.gd" id="34"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -349,5 +350,10 @@ chat_menu = NodePath("../UI/ChatMenu")
 
 [node name="CampusTransit" type="Node3D" parent="." node_paths=PackedStringArray("player", "ui")]
 script = ExtResource("33")
+player = NodePath("../Player")
+ui = NodePath("../UI")
+
+[node name="SamiNpc" type="Node3D" parent="." node_paths=PackedStringArray("player", "ui")]
+script = ExtResource("34")
 player = NodePath("../Player")
 ui = NodePath("../UI")
