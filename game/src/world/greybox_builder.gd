@@ -17,6 +17,7 @@ const GreeneryDecor := preload("res://src/world/greenery_decor.gd")
 const KISLA_NAME: String = "Yıldız Teknik Üniversitesi Davutpaşa Kışlası"
 const MESCIT_NAME: String = "Davutpaşa Kışlası Mesciti"
 const MERKEZ_KUTUPHANE_NAME: String = "Merkez Kütüphanesi"
+const TARIHI_HAMAM_NAME: String = "Tarihi Hamam"
 ## YTÜ Davutpaşa Kampüsü Lojmanları (Yapı Dergisi Tablo 2 — Munsell Renk Dizgesi 3 blok grubu):
 ## - Grup 1 (C1, J3, K1, L2): Çakıl Sinterflex seramik kaplama (32,5-9/2) + Sarı merdiven kuleleri
 ## - Grup 2 (C2, F, J2, L3):  Beyaz Sinterflex seramik kaplama (35-9/1) + Yeşil merdiven kuleleri
@@ -96,6 +97,7 @@ const CUSTOM_SIGN_BUILDINGS: PackedStringArray = [
 	"Elektrik Elektronik Fakültesi",
 	"Şehit Prof. Dr. İlhan Varank Kütüphanesi",
 	"Merkez Kütüphanesi",
+	"Tarihi Hamam",
 	"A Blok - Fen Edebiyat Fakültesi Dekanlığı",
 	"Eğitim Fakültesi",
 	"Yabancı Diller Yüksekokulu",
@@ -350,7 +352,10 @@ static func _emit_terrain_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector
 	var bc: float = b.distance_squared_to(c)
 	var ca: float = c.distance_squared_to(a)
 	var max_sq: float = maxf(ab, maxf(bc, ca))
-	if depth < max_depth and max_sq > subdiv_m * subdiv_m:
+	var near_hamam: bool = absf((a.x + b.x + c.x) * 0.3333 - 21.0) < 62.0 and absf((a.y + b.y + c.y) * 0.3333 + 133.0) < 62.0
+	var eff_subdiv: float = minf(subdiv_m, 1.1) if near_hamam else subdiv_m
+	var eff_max_depth: int = maxi(max_depth, 9) if near_hamam else max_depth
+	if depth < eff_max_depth and max_sq > eff_subdiv * eff_subdiv:
 		if ab >= bc and ab >= ca:
 			var m: Vector2 = (a + b) * 0.5
 			_emit_terrain_tri(st, a, m, c, y_off, depth + 1, subdiv_m, max_depth)
@@ -363,6 +368,8 @@ static func _emit_terrain_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector
 			var m: Vector2 = (c + a) * 0.5
 			_emit_terrain_tri(st, a, b, m, y_off, depth + 1, subdiv_m, max_depth)
 			_emit_terrain_tri(st, m, b, c, y_off, depth + 1, subdiv_m, max_depth)
+		return
+	if near_hamam and (_in_hamam_sunk_pit(a.x, a.y) or _in_hamam_sunk_pit(b.x, b.y) or _in_hamam_sunk_pit(c.x, c.y)):
 		return
 	for v: Vector2 in [a, b, c]:
 		st.set_normal(TerrainHeight.active_normal(v.x, v.y))
@@ -436,6 +443,12 @@ const MERKEZ_LIB_V: Vector2 = Vector2(-0.586589, 0.809885)
 const MERKEZ_LIB_UPPER_Y: float = -0.42
 const MERKEZ_LIB_SUNK_Y: float = -3.92
 
+const HAMAM_ORIGIN: Vector2 = Vector2(44.56, -161.98)
+const HAMAM_U: Vector2 = Vector2(-0.630079, 0.776531)
+const HAMAM_N: Vector2 = Vector2(-0.776519, -0.630094)
+const HAMAM_UPPER_Y: float = 0.00
+const HAMAM_SUNK_Y: float = -2.00
+
 
 static func _in_merkez_sunk_pit(wx: float, wz: float) -> bool:
 	var rx: float = wx - MERKEZ_LIB_ORIGIN.x
@@ -445,10 +458,19 @@ static func _in_merkez_sunk_pit(wx: float, wz: float) -> bool:
 	return lu >= 18.42 and lu <= 58.20 and lv >= 18.12 and lv <= 31.25
 
 
+static func _in_hamam_sunk_pit(wx: float, wz: float) -> bool:
+	var rx: float = wx - HAMAM_ORIGIN.x
+	var rz: float = wz - HAMAM_ORIGIN.y
+	var ls: float = rx * HAMAM_U.x + rz * HAMAM_U.y
+	var ld: float = rx * HAMAM_N.x + rz * HAMAM_N.y
+	return ls >= 0.15 and ls <= 75.45 and ld >= -0.45 and ld <= 8.80
+
+
 func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 	# Zemin mesh'ini TerrainHeight ızgarasıyla birebir hizala (yollar ve binalarla 0.0 mm örtüşme).
-	# Yeni Merkez Kütüphanesi'nin -1. kat çökük avlusunda (u=18.42..58.20, v=18.12..31.25) zemin açılır.
+	# Yeni Merkez Kütüphanesi (-3.5 m) ve Tarihi Hamam (-2.0 m) çökük avlularında zemin açılır.
 	var has_merkez_pit: bool = rect.has_point(Vector2(-48.0, -198.0))
+	var has_hamam_pit: bool = rect.has_point(Vector2(21.0, -133.0))
 	var c0: int = clampi(floori((rect.position.x - th.min_x) / th.step), 0, th.cols - 2)
 	var r0: int = clampi(floori((rect.position.y - th.min_z) / th.step), 0, th.rows - 2)
 	var c1: int = clampi(ceili((rect.end.x - th.min_x) / th.step), c0 + 1, th.cols - 1)
@@ -479,7 +501,11 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 		var z0: float = th.min_z + float(r0 + r) * th.step
 		for c: int in nx - 1:
 			var x0: float = th.min_x + float(c0 + c) * th.step
-			if has_merkez_pit and absf(x0 + th.step * 0.5 + 48.0) < 52.0 and absf(z0 + th.step * 0.5 + 198.0) < 52.0:
+			var cx_cell: float = x0 + th.step * 0.5
+			var cz_cell: float = z0 + th.step * 0.5
+			var near_merkez: bool = has_merkez_pit and absf(cx_cell + 48.0) < 52.0 and absf(cz_cell + 198.0) < 52.0
+			var near_hamam: bool = has_hamam_pit and absf(cx_cell - 21.0) < 62.0 and absf(cz_cell + 133.0) < 62.0
+			if near_merkez or near_hamam:
 				var sub: int = 8
 				var ds: float = th.step / float(sub)
 				for sr: int in sub:
@@ -488,7 +514,9 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 					for sc: int in sub:
 						var sx0: float = x0 + float(sc) * ds
 						var sx1: float = sx0 + ds
-						if _in_merkez_sunk_pit(sx0, sz0) or _in_merkez_sunk_pit(sx1, sz0) or _in_merkez_sunk_pit(sx1, sz1) or _in_merkez_sunk_pit(sx0, sz1):
+						if near_merkez and (_in_merkez_sunk_pit(sx0, sz0) or _in_merkez_sunk_pit(sx1, sz0) or _in_merkez_sunk_pit(sx1, sz1) or _in_merkez_sunk_pit(sx0, sz1)):
+							continue
+						if near_hamam and (_in_hamam_sunk_pit(sx0, sz0) or _in_hamam_sunk_pit(sx1, sz0) or _in_hamam_sunk_pit(sx1, sz1) or _in_hamam_sunk_pit(sx0, sz1)):
 							continue
 						var base_vi: int = verts.size()
 						for qpt: Vector2 in [Vector2(sx0, sz0), Vector2(sx1, sz0), Vector2(sx1, sz1), Vector2(sx0, sz1)]:
@@ -534,7 +562,60 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 	body.add_child(mi)
 	if has_merkez_pit:
 		_add_merkez_sunk_ground_colliders(body)
+	if has_hamam_pit:
+		_add_hamam_sunk_ground_colliders(body)
 	add_child(body)
+
+
+static func _add_hamam_sunk_ground_colliders(body: StaticBody3D) -> void:
+	# Tarihi Hamam -2.00 m çökük avlusu + 2 merdiven rampası (20.3°) + istinat/çit bariyerleri.
+	var hxf: Transform3D = Transform3D(
+		Basis(Vector3(HAMAM_U.x, 0.0, HAMAM_U.y), Vector3.UP, Vector3(HAMAM_N.x, 0.0, HAMAM_N.y)),
+		Vector3(HAMAM_ORIGIN.x, 0.0, HAMAM_ORIGIN.y)
+	)
+	var boxes: Array = [
+		# -2.00 m çökük taş avlu tabanı (s=0.15..75.45, d=-0.45..8.80)
+		[Vector3(75.30, 0.50, 9.25), Vector3(37.80, HAMAM_SUNK_Y - 0.25, 4.175)],
+		# Üst yol kenarı yaya kaldırımı sahanlığı (d=8.80..11.40, y=0.00)
+		[Vector3(75.30, 0.50, 2.60), Vector3(37.80, HAMAM_UPPER_Y - 0.25, 10.10)],
+		# Yol kenarı istinat + krem çit bariyerleri (merdiven açıklıkları s=11.2..15.6 ve s=35.8..39.8 hariç)
+		[Vector3(11.05, 3.15, 0.34), Vector3(5.675, HAMAM_SUNK_Y + 1.575, 8.80)],
+		[Vector3(20.20, 3.15, 0.34), Vector3(25.70, HAMAM_SUNK_Y + 1.575, 8.80)],
+		[Vector3(35.65, 3.15, 0.34), Vector3(57.625, HAMAM_SUNK_Y + 1.575, 8.80)],
+		# Sağ uç (s=75.45) ve sol köşe (s=0.15, d=5.2..8.8) yan istinat duvarları
+		[Vector3(0.36, 3.15, 9.00), Vector3(75.45, HAMAM_SUNK_Y + 1.575, 4.30)],
+		[Vector3(0.36, 3.15, 3.65), Vector3(0.15, HAMAM_SUNK_Y + 1.575, 6.98)],
+		# Tarihi Hamam 3 ana bina kütlesi (navmesh engelleri)
+		[Vector3(17.60, 9.20, 14.80), Vector3(8.80, 2.60, -7.40)],
+		[Vector3(18.20, 10.20, 17.43), Vector3(26.70, 3.10, -8.235)],
+		[Vector3(39.65, 6.40, 16.95), Vector3(55.625, 1.20, -8.475)],
+	]
+	for b_def: Array in boxes:
+		var cs: CollisionShape3D = CollisionShape3D.new()
+		var bs: BoxShape3D = BoxShape3D.new()
+		bs.size = b_def[0]
+		cs.shape = bs
+		cs.transform = hxf * Transform3D(Basis.IDENTITY, b_def[1])
+		body.add_child(cs)
+	# ESLAB kahve minibüsü navmesh/fizik engeli (ana kapı solunda: s=5.65, d=3.35)
+	var v_cs: CollisionShape3D = CollisionShape3D.new()
+	var v_bs: BoxShape3D = BoxShape3D.new()
+	v_bs.size = Vector3(2.22, 2.55, 5.25)
+	v_cs.shape = v_bs
+	v_cs.transform = hxf * Transform3D(Basis(Vector3.UP, deg_to_rad(-22.0)), Vector3(5.65, HAMAM_SUNK_Y + 1.28, 3.35))
+	body.add_child(v_cs)
+	# İki adet 20.3° yürüyüş merdiveni rampası (d=3.40 @ -2.00 m -> d=8.80 @ 0.00 m)
+	var r_len: float = sqrt(5.40 * 5.40 + 2.00 * 2.00)
+	var z_dir: Vector3 = Vector3(0.0, 2.00 / r_len, 5.40 / r_len)
+	var y_dir: Vector3 = Vector3(0.0, 5.40 / r_len, -2.00 / r_len)
+	for st_def: Array in [[13.40, 4.40], [37.80, 4.00]]:
+		var r_cs: CollisionShape3D = CollisionShape3D.new()
+		var r_bs: BoxShape3D = BoxShape3D.new()
+		r_bs.size = Vector3(float(st_def[1]), 0.40, r_len)
+		r_cs.shape = r_bs
+		var r_mid: Vector3 = Vector3(float(st_def[0]), -1.00, 6.10) - y_dir * 0.20
+		r_cs.transform = hxf * Transform3D(Basis(Vector3.RIGHT, y_dir, z_dir), r_mid)
+		body.add_child(r_cs)
 
 
 static func _add_merkez_sunk_ground_colliders(body: StaticBody3D) -> void:
@@ -621,9 +702,14 @@ func _build_building(b: Dictionary) -> void:
 		return
 	# OSM building:min_level: binalar arası havada köprü — altı açık (eskiden yerden yükselip yolu kapatıyordu)
 	var name_text: String = str(b.get("name", ""))
+	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
+	# Tarihi Hamam (b#49) ve içindeki isimsiz OSM alt-kütlesi (b#44), kampüs modunda TarihiHamam düğümüyle
+	# -2.0 m çökük avludan yükselen gerçek 3 kütleli Osmanlı almaşık mimarisiyle inşa edilir.
+	if has_terrain and (name_text == TARIHI_HAMAM_NAME or (name_text.is_empty() and poly.size() == 4 and poly[0].distance_to(HAMAM_ORIGIN) < 1.2)):
+		building_count += 1
+		return
 	var is_merkez_lib: bool = name_text == MERKEZ_KUTUPHANE_NAME
 	var min_h: float = clampf(float(b.get("min_height", 0.0)), 0.0, height - 1.0)
-	var has_terrain: bool = TerrainHeight.enabled and TerrainHeight.active != null
 	var ref_y: float = MERKEZ_LIB_UPPER_Y if (has_terrain and is_merkez_lib) else (_polygon_avg_height(poly) if has_terrain else 0.0)
 	var min_y: float = _polygon_min_height(poly) if has_terrain else 0.0
 	var floor_y: float = -((ref_y - min_y) + BUILDING_FOUNDATION_M) if (has_terrain and min_h <= 0.0) else 0.0

@@ -82,6 +82,15 @@ func _build_trees(trees: Array) -> void:
 			continue
 		var tx: float = float(a[1])
 		var tz: float = float(a[2])
+		# Tarihi Hamam -2.0 m çökük avlusu içindeki ağaçları çitin dışındaki üst kaldırım ağaç sırasına (d=10.8 m) taşı
+		var hrx: float = tx - 44.56
+		var hrz: float = tz + 161.98
+		var hls: float = hrx * -0.630079 + hrz * 0.776531
+		var hld: float = hrx * -0.776519 + hrz * -0.630094
+		if hls >= 0.0 and hls <= 75.8 and hld >= -0.6 and hld <= 9.0:
+			var push_d: float = 10.8 - hld
+			tx += -0.776519 * push_d
+			tz += -0.630094 * push_d
 		var ty: float = TerrainHeight.active_height(tx, tz)
 		var pos: Vector3 = Vector3(tx, ty - TREE_ROOT_SINK, tz)
 		var base_s: float = float(a[4]) * float(TREE_SCALES.get(kind, 1.0))
