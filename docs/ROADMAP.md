@@ -67,6 +67,11 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 - [x] 5.12 Canlı kampüs 1: Davutpaşa kedileri — 14 kedi (Yemekhane önü, Hokka, Ortabahçe, Kütüphane, Büyük Ev, Kız yurdu, Eskafe, B Girişi); gezer, oturur, uyur, yanında durunca etrafında dolanır, dokununca miyavlar (sentez ses) + kalpler; kedi başına 3 çizim, uzaktakiler durur
 - [x] 5.13 UI/HUD ince ayar + iOS ön hazırlık: ortak tema (`unipet_theme.tres`), kompakt bakım HUD, çakışmayan yıldız tozu, Safe Area (çentik/alt çubuk), `AppLifecycle`, şeffaflıksız iOS ikon seti + export preset + `docs/IOS.md`
 - [x] 5.14 Gerçek yer şekilleri + görsel gerçekçilik: Davutpaşa 12.5 m DEM arazi (`kampus_terrain.json`), Taşbina/Stadyum/sahalar düzleştirilmiş, eğimli 3D navmesh, bordürlü asfalt yollar, atmosferik derinlik sisi, Teknopark cam stili, piste hizalı Stadyum çizgi/kale/projektör/doğu tribün (2 çizim çağrısı)
+- [x] 5.15 Tarihi Hamam (b#49): almaşık taş-tuğla 3 kütle + kurşun kubbe, yol kotunun 2 m altında çökük avlu + 2 merdiven, ARTLAB Yapay Zeka Zirvesi afişi ("UniPet yakında"), ESLAB kahve minibüsü (agy, 2026-11-25)
+- [x] 5.16 Harita v2: ışınlanma kaldırıldı → hedef işaretleme (🧭) + en yakın durak, kategori filtreleri, arama, canlı oyuncular/arkadaşlar/kafeler/otobüsler (agy)
+- [x] 5.17 Profil v2: ✓ Doğrulanmış YTÜ Öğrencisi (sunucu, oturum değişkeninden) / YKS Adayı-Misafir kartları, sabit statü listesi (agy + düzeltme)
+- [x] 5.18 A Kapısı başlangıç + 3 Mavi Ring + sembolik 41AT, 11 durak, ilk binişte tanıtım turu; otobüsler ortak saatli tarifeyle (her cihazda aynı yerde), durakta "sıradaki otobüs ~N sn" (agy + düzeltme)
+- [x] 5.19 Senkron sağlamlaştırma: hızlı yeniden bağlanmada oyuncu kaybolmuyor (oturum bazlı presence, sunucu+istemci), istek zaman aşımı, 15 sn ping ile ölü soket tespiti, arka plandan dönüşte yoklama, konumsuz oyuncu orijinde belirmiyor
 - [ ] 5.6 Checkpoint
 
 ## Parça 6 — Kapalı test
