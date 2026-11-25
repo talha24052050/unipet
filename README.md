@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="docs/media/unipet_tanitim_v3.mp4"><img src="docs/media/unipet_tanitim_v3.gif" width="260" alt="UniPet tanıtım videosu"></a><br>
-  <sub>Tanıtım videosu (oyun içi çekim) · <a href="docs/media/unipet_tanitim_v3.mp4">sesli izlemek için tıkla</a></sub>
+  <sub>Tanıtım videosu (oyun içi çekim) · <a href="docs/media/unipet_tanitim_v3.mp4">sesli izlemek için tıkla</a> · <a href="docs/media/unipet_tanitim_agy.mp4">ikinci kurgu (agy)</a></sub>
 </p>
 
 ---
