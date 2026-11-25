@@ -408,16 +408,21 @@ var CHAT_PRESET = 0, CHAT_EMOTE = 1, CHAT_FREE = 2;
 var CHAT_MIN_INTERVAL_MS = 1000;
 var ID_PATTERN = /^[a-z0-9_]{1,32}$/;
 var WORLD_LIMIT = 2000;
-// Hareket hile koruması: iki durum arasında bu hızdan (m/s) hızlı yer değiştirme reddedilir (yürüme 4.6, Ring/41AT 12.5).
+// Hareket hile koruması: iki durum arasında bu hızdan (m/s) hızlı yer değiştirme reddedilir (yürüme 4.6, Ring/41AT 14.2).
 var MAX_SPEED = 18;
 var SPEED_TOLERANCE_M = 2;
+var BUS_SNAP_TOLERANCE_M = 22;
+
+function isBusCafeId(cid) {
+  return cid === "iett_41at" || String(cid || "").indexOf("ring_") === 0;
+}
 var NAME_PATTERN = /^[0-9A-Za-zÇĞİÖŞÜçğıöşü _-]{1,16}$/;
 
 // Herkesin gördüğü takma adlar için kaba küfür filtresi. Yakalanan ad "" olur (istemci kimliğin başını gösterir).
 // Kısa kökler sadece tam kelime olarak, uzunlar kelime içinde de aranır (yanlış pozitifi azaltmak için).
-var BAD_WORDS_EXACT = ["amk", "aq", "amq", "oc", "pic", "got", "sg", "siktir", "sik", "yarak", "meme"];
+var BAD_WORDS_EXACT = ["amk", "aq", "amq", "oc", "pic", "got", "sg", "siktir", "sik", "yarak", "meme", "pust"];
 var BAD_WORDS_SUB = ["orospu", "yarrak", "amcik", "sikerim", "sikeyim", "sikik", "siktig", "pezevenk", "kahpe", "ibne",
-  "gavat", "yavsak", "serefsiz", "surtuk", "dalyarak", "kaltak", "amina", "anani", "bacini", "pust"];
+  "gavat", "yavsak", "serefsiz", "surtuk", "dalyarak", "kaltak", "amina", "anani", "bacini"];
 
 function normalizeForFilter(s) {
   var map = { "ç": "c", "ğ": "g", "ı": "i", "i̇": "i", "ö": "o", "ş": "s", "ü": "u", "0": "o", "1": "i", "3": "e",
@@ -469,7 +474,8 @@ function cleanFreeChat(raw, maxLen) {
   return s;
 }
 
-var VALID_CAFES = ["hokka", "kayinti_kafe", "buyuk_ev", "yemekhane", "yildiz_cafe", "eskafe", "academic_lounge"];
+var VALID_CAFES = ["hokka", "kayinti_kafe", "buyuk_ev", "yemekhane", "yildiz_cafe", "eskafe", "academic_lounge",
+  "ring_1", "ring_2", "ring_3", "ring_4", "iett_41at"];
 var SOCIAL_COLLECTION = "social";
 var SOCIAL_KEY = "social_friends";
 
@@ -833,10 +839,12 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         continue;
       }
       var nowMs = Date.now();
+      var snapTol = pl.busSnapAllowance || 0;
+      pl.busSnapAllowance = 0;
       if (typeof pl.lastStateAt === "number") {
         var dt = Math.max(0.1, (nowMs - pl.lastStateAt) / 1000);
         var moved = Math.sqrt(Math.pow(data.p[0] - pl.p[0], 2) + Math.pow(data.p[2] - pl.p[2], 2));
-        if (moved > MAX_SPEED * dt + SPEED_TOLERANCE_M) {
+        if (moved > MAX_SPEED * dt + SPEED_TOLERANCE_M + snapTol) {
           pl.speedRejects = (pl.speedRejects || 0) + 1;
           continue;
         }
@@ -915,11 +923,19 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       } else if (sAct === "enter_cafe") {
         var newCafe = String(data.cafe || "");
         if (VALID_CAFES.indexOf(newCafe) >= 0 && pl.cafe !== newCafe) {
+          if (isBusCafeId(newCafe) && (!pl.lastBusSnapAt || Date.now() - pl.lastBusSnapAt > 2500)) {
+            pl.busSnapAllowance = BUS_SNAP_TOLERANCE_M;
+            pl.lastBusSnapAt = Date.now();
+          }
           pl.cafe = newCafe;
           dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "cafes", cafes: cafeMap(state) }), everyone(state), null, true);
         }
       } else if (sAct === "leave_cafe") {
         if (pl.cafe) {
+          if (isBusCafeId(pl.cafe) && (!pl.lastBusSnapAt || Date.now() - pl.lastBusSnapAt > 2500)) {
+            pl.busSnapAllowance = BUS_SNAP_TOLERANCE_M;
+            pl.lastBusSnapAt = Date.now();
+          }
           pl.cafe = "";
           dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "cafes", cafes: cafeMap(state) }), everyone(state), null, true);
         }

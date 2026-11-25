@@ -49,10 +49,10 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 		transit.free()
 		player.free()
 		return "En az 11 kampüs Ring/41AT durağı olmalıydı: %d" % stops.size()
-	if buses.size() != 4:
+	if buses.size() != 5:
 		transit.free()
 		player.free()
-		return "3 Mavi Ring + 1 adet 41AT olmak üzere 4 otobüs olmalıydı: %d" % buses.size()
+		return "t=0 anında 4 Mavi Ring + 1 sembolik 41AT olmak üzere 5 aktif otobüs olmalıydı: %d" % buses.size()
 	var has_41at: bool = false
 	for b: Dictionary in buses:
 		if bool(b.get("is_41at", false)):
@@ -61,6 +61,13 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 		transit.free()
 		player.free()
 		return "Sembolik 41AT otobüsü filoda bulunamadı"
+
+	# Durakta bekleyen Ring #1'in kayar kapıları açık olmalı
+	var raw_buses: Array = transit.get("_buses")
+	if float(raw_buses[0].get("door_open", 0.0)) < 0.9:
+		transit.free()
+		player.free()
+		return "A Kapısı'nda bekleyen Ring #1'in kapıları açık değil"
 
 	# A Kapısı'nda bekleyen Ring #1'e biniş ve ilk biniş tanıtım turu kontrolü
 	var boarded: bool = transit.call("board_nearest_bus")
@@ -96,7 +103,7 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 
 
 func test_bus_timetable_is_shared_and_periodic() -> String:
-	# Aynı saatte iki ayrı istemci (iki CampusTransit) otobüsleri aynı yerde görmeli.
+	# Aynı saatte iki ayrı istemci (iki CampusTransit) otobüsleri aynı yerde görmeli; 2 tam periyotta tüm filo (41AT dahil) aynı konuma döner.
 	var a: Node3D = CampusTransit.new()
 	var b: Node3D = CampusTransit.new()
 	for t: Node3D in [a, b]:
@@ -109,17 +116,31 @@ func test_bus_timetable_is_shared_and_periodic() -> String:
 		err = "tarife periyodu çok kısa: %.1f" % period
 	if err.is_empty():
 		a.call("_process", 137.3)
-		b.call("_process", 137.3 + period)  # bir tur sonrası = aynı konum
+		b.call("_process", 137.3 + 2.0 * period)  # iki tur sonrası = Mavi Ring + 41AT dahil birebir aynı konum
 		var ba: Array = a.call("get_live_buses")
 		var bb: Array = b.call("get_live_buses")
-		for i: int in ba.size():
-			if (ba[i]["pos"] as Vector2).distance_to(bb[i]["pos"] as Vector2) > 0.5:
-				err = "otobüs %d iki istemcide farklı yerde: %s / %s" % [i, ba[i]["pos"], bb[i]["pos"]]
-				break
+		if ba.size() != bb.size():
+			err = "aktif otobüs sayısı farklı: %d / %d" % [ba.size(), bb.size()]
+		else:
+			for i: int in ba.size():
+				if (ba[i]["pos"] as Vector2).distance_to(bb[i]["pos"] as Vector2) > 0.5:
+					err = "otobüs %d iki istemcide farklı yerde: %s / %s" % [i, ba[i]["pos"], bb[i]["pos"]]
+					break
+	# 41AT döngüsünün şehir seferi yarısında kampüs dışında olmalı (yalnızca 4 Mavi Ring görünür, ama 41AT ETA > 0 döner)
 	if err.is_empty():
-		var eta: float = float(a.call("seconds_until_next_bus", 0))
-		if eta < 0.0 or eta > period:
-			err = "A Kapısı için sıradaki otobüs süresi geçersiz: %.1f" % eta
+		var c: Node3D = CampusTransit.new()
+		c.set("use_wall_clock", false)
+		(Engine.get_main_loop() as SceneTree).root.add_child(c)
+		c.call("build")
+		c.call("_process", 1.15 * period)
+		var bc: Array = c.call("get_live_buses")
+		var eta_ring: float = float(c.call("seconds_until_next_ring", 0))
+		var eta_41at: float = float(c.call("seconds_until_next_41at", 0))
+		c.free()
+		if bc.size() != 4:
+			err = "41AT şehir seferindeyken kampüste 4 Mavi Ring kalmalıydı: %d" % bc.size()
+		elif eta_ring < 0.0 or eta_ring > period or eta_41at <= 0.0 or eta_41at > 2.0 * period:
+			err = "Ring/41AT varış süreleri geçersiz (ring=%.1f, 41at=%.1f)" % [eta_ring, eta_41at]
 	a.free()
 	b.free()
 	return err

@@ -371,4 +371,25 @@ assert.strictEqual(stProf.players["nk-ytu"].ytu, true);
 stProf = M.matchLeave(ctx(), logger, nk, dispatcher, 3, stProf, [PYtuNew]).state;
 assert.ok(!stProf.players["nk-ytu"], "güncel oturum çıkınca oyuncu silinir");
 
+// Otobüs içi canlı yolcu sohbet kanalı (ring_1..ring_4 ve iett_41at) + biniş konum sıçrama toleransı testi
+stProf.freeChat = true;
+stProf.players["nk-yks"].lastChat = 0;
+stProf.players["nk-yks"].p = [764.8, 0.5, 566.5];
+stProf.players["nk-yks"].lastStateAt = Date.now();
+sent = [];
+stProf = M.matchLoop(ctx(), logger, nk, dispatcher, 4, stProf, [
+  msg(PYks, 11, { act: "enter_cafe", cafe: "iett_41at" }),
+  msg(POld, 11, { act: "enter_cafe", cafe: "iett_41at" }),
+  msg(PYks, 1, { p: [775.5, 1.7, 569.0], y: 0.4, a: "idle" }),
+  msg(PYks, 2, { k: 2, p: "41AT efsanesi kampüste!", ch: "cafe:iett_41at" })
+]).state;
+assert.strictEqual(stProf.players["nk-yks"].cafe, "iett_41at");
+assert.strictEqual(stProf.players["nk-old"].cafe, "iett_41at");
+assert.strictEqual(stProf.players["nk-yks"].p[0], 775.5, "otobüse biniş koltuk sıçraması speedhack sayılmamalı");
+var busChatMsgs = sent.filter(function (m) { return m.op === 2 && m.data.ch === "cafe:iett_41at"; });
+assert.strictEqual(busChatMsgs.length, 1, "aynı otobüsteki yolculara 41AT kanal mesajı iletilmeli");
+assert.deepEqual(busChatMsgs[0].to.sort(), ["nk-old", "nk-yks"], "otobüs sohbeti sadece o otobüsteki yolculara gitmeli");
+stProf = M.matchLoop(ctx(), logger, nk, dispatcher, 5, stProf, [msg(PYks, 11, { act: "leave_cafe" })]).state;
+assert.strictEqual(stProf.players["nk-yks"].cafe, "");
+
 console.log("nakama modül testleri: OK");

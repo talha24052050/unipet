@@ -382,6 +382,23 @@ func on_cafe_exited(_cafe_id: String) -> void:
 		_refresh_all_ui()
 
 
+func on_bus_boarded(bus_id: String, bus_label: String) -> void:
+	current_cafe_id = bus_id
+	current_cafe_name = bus_label
+	_refresh_all_ui()
+
+
+func open_bus_chat() -> void:
+	open_panel()
+	select_tab("cafe")
+	_show_status("🚌 %s yolcu sohbetindesin — otobüsteki herkesle konuşabilirsin!" % current_cafe_name, Color(0.58, 0.90, 1.0))
+
+
+func on_bus_alighted(bus_id: String) -> void:
+	if current_cafe_id == bus_id:
+		on_cafe_exited(bus_id)
+
+
 func select_tab(tab_id: String) -> void:
 	active_tab = tab_id
 	if tab_id == "dm":
@@ -820,7 +837,13 @@ func _refresh_all_ui() -> void:
 	# Kanal sekme vurguları ve canlı sayaçlar
 	var inc_count: int = (Services.net.social_state.get("incoming", []) as Array).size() if Services.net != null else 0
 	if _tab_btns.has("cafe"):
-		(_tab_btns["cafe"] as Button).text = ("☕ %s" % current_cafe_name.get_slice(" ", 0)) if not current_cafe_id.is_empty() else "☕ Kafe"
+		var is_bus_ch: bool = current_cafe_id.begins_with("ring_") or current_cafe_id == "iett_41at"
+		if current_cafe_id.is_empty():
+			(_tab_btns["cafe"] as Button).text = "☕ Kafe"
+		elif is_bus_ch:
+			(_tab_btns["cafe"] as Button).text = "🟨 41AT" if current_cafe_id == "iett_41at" else "🚌 Ring"
+		else:
+			(_tab_btns["cafe"] as Button).text = "☕ %s" % current_cafe_name.get_slice(" ", 0)
 	if _tab_btns.has("inbox"):
 		(_tab_btns["inbox"] as Button).text = ("🔔 İstek (%d)" % inc_count) if inc_count > 0 else "🔔 İstekler"
 	if _tab_btns.has("dm"):
@@ -884,7 +907,7 @@ func _rebuild_context_box() -> void:
 	elif active_tab == "cafe":
 		if current_cafe_id.is_empty():
 			var hint: Label = Label.new()
-			hint.text = "☕ Bir kafenin (Hokka, Kayıntı, Büyük Ev, Yemekhane, Yıldız Cafe, Eskafe) kapısından içeri girdiğinde o kafenin canlı sohbet salonu otomatik açılır!"
+			hint.text = "☕ Bir kafenin (Hokka, Kayıntı, Büyük Ev, Yemekhane, Yıldız Cafe, Eskafe) kapısından içeri girdiğinde veya 🚌 Mavi Ring / 41AT otobüsüne bindiğinde ortak sohbet kanalı otomatik açılır!"
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			hint.add_theme_font_size_override("font_size", 18)
 			hint.add_theme_color_override("font_color", Color(0.95, 0.84, 0.52))
@@ -893,7 +916,11 @@ func _rebuild_context_box() -> void:
 			var cafes: Dictionary = Services.net.social_state.get("cafes", {}) if Services.net != null else {}
 			var members: Array = cafes.get(current_cafe_id, [])
 			var title: Label = Label.new()
-			title.text = "☕ %s Salonu — İçeridekiler (%d kişi, tanışmak için isme dokun):" % [current_cafe_name, maxi(1, members.size())]
+			var is_bus_ctx: bool = current_cafe_id.begins_with("ring_") or current_cafe_id == "iett_41at"
+			if is_bus_ctx:
+				title.text = "🚌 %s — Yolcular (%d kişi, tanışmak için isme dokun):" % [current_cafe_name, maxi(1, members.size())]
+			else:
+				title.text = "☕ %s Salonu — İçeridekiler (%d kişi, tanışmak için isme dokun):" % [current_cafe_name, maxi(1, members.size())]
 			title.add_theme_font_size_override("font_size", 18)
 			title.add_theme_color_override("font_color", Color(0.62, 0.94, 0.76))
 			_context_box.add_child(title)

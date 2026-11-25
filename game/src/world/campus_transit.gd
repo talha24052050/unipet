@@ -2,8 +2,9 @@ extends Node3D
 ## YTÜ Davutpaşa Kampüsü Ulaşım Sistemi (Mavi YTÜ Ring + Sembolik İETT 41AT + 11 Durak + Biniş Tanıtım Turu):
 ## - Oyun A Kapısı Başlangıç Durağı'nda başlar; anlık ışınlanma yerine kampüs içi ulaşım Ring ve 41AT ile sağlanır.
 ## - 11 gerçek durakta cam durak kabinleri ve çift logolu (YTÜ RİNG | 41AT İETT) durak totemleri yer alır.
-## - 3 adet Mavi YTÜ Ring otobüsü ve sembolik sarı-siyah İETT 41AT (AYAZAĞA - DAVUTPAŞA Y.T.Ü.) otobüsü
-##   4.1 km'lik asfalt kampüs ring hattında kesintisiz dolaşır ve duraklarda yolcu indirip bindirir.
+## - 4 adet Mavi YTÜ Ring otobüsü sık aralıklarla, sembolik sarı-siyah İETT 41AT (AYAZAĞA - DAVUTPAŞA Y.T.Ü.) otobüsü
+##   ise ara sıra şehir seferinden A Kapısı'ndan girerek 4.1 km'lik kampüs ring hattında yolcu indirip bindirir.
+## - Otobüs içi canlı yolcu sohbeti ("🚌 Ring / 41AT Sohbeti"), açılır-kapanır durak kapıları ve 6 pencere koltuğu bulunur.
 ## - Oyuncu ilk kez A Kapısı'ndan Ring'e bindiğinde 4 kartlık interaktif "UniPet Kampüs Tanıtım Turu" açılır.
 
 signal boarded_bus(bus_id: String, is_41at: bool)
@@ -12,16 +13,26 @@ signal alighted_bus(stop_id: String, stop_name: String)
 const LocalProfile := preload("res://src/core/local_profile.gd")
 const TRANSIT_JSON_PATH: String = "res://data/transit_routes.json"
 
-const CRUISE_SPEED_MPS: float = 12.4
-const STOP_DWELL_SEC: float = 6.0
+const CRUISE_SPEED_MPS: float = 14.2
+const STOP_DWELL_SEC: float = 5.5
 ## A Kapısı (hat başı) bekleme süresi: yeni gelen oyuncu Ring'i kaçırmasın.
-const A_GATE_DWELL_SEC: float = 20.0
+const A_GATE_DWELL_SEC: float = 18.0
 ## Sefer tarifesi örnekleme adımı (sn).
 const TIMETABLE_DT: float = 0.1
 ## Durak yakınında "sıradaki otobüs" süresi gösterme yarıçapı (m).
-const STOP_ETA_RADIUS_M: float = 22.0
+const STOP_ETA_RADIUS_M: float = 24.0
 const BOARD_RADIUS_M: float = 15.5
 const STOP_APPROACH_SLOW_M: float = 18.0
+
+## Aynı otobüsteki oyuncular üst üste binmesin diye 6 farklı pencere kenarı koltuk ofseti.
+const SEAT_OFFSETS: Array[Vector3] = [
+	Vector3(-0.68, 1.18, 1.65),
+	Vector3(0.68, 1.18, 1.65),
+	Vector3(-0.68, 1.18, 0.05),
+	Vector3(0.68, 1.18, 0.05),
+	Vector3(-0.68, 1.18, -1.55),
+	Vector3(0.68, 1.18, -1.55),
+]
 
 @export var player: Node3D
 @export var ui: CanvasLayer
@@ -55,6 +66,7 @@ var _board_btn: Button
 var _ride_panel: PanelContainer
 var _ride_status_lbl: Label
 var _stop_select: OptionButton
+var _bus_chat_btn: Button
 var _alight_now_btn: Button
 var _tour_btn: Button
 
@@ -229,17 +241,21 @@ func _build_stop_shelters() -> void:
 	add_child(mi)
 
 
-## 2) 3 Mavi YTÜ Ring + 1 Sembolik İETT 41AT Otobüsü Filosu
+## 2) 4 Mavi YTÜ Ring (sık sefer: çeyrek tur arayla) + 1 Sembolik İETT 41AT (ara sıra şehir seferinden kampüse girer!)
 func _spawn_fleet() -> void:
 	var ring_mesh: ArrayMesh = _create_blue_ring_mesh()
 	var bus_41at_mesh: ArrayMesh = _create_41at_iett_mesh()
+	var door_ring_mesh: ArrayMesh = _create_sliding_door_mesh(false)
+	var door_41at_mesh: ArrayMesh = _create_sliding_door_mesh(true)
 
 	var fleet_specs: Array[Dictionary] = [
-		# phase: tarife periyodunun kesri (otobüsler hat boyunca eşit aralıklı)
-		{"id": "ring_1", "label": "Mavi YTÜ Ring #1", "is_41at": false, "phase": 0.0},
-		{"id": "iett_41at", "label": "İETT 41AT (Ayazağa - Davutpaşa Y.T.Ü.)", "is_41at": true, "phase": 0.5},
-		{"id": "ring_2", "label": "Mavi YTÜ Ring #2", "is_41at": false, "phase": 0.25},
-		{"id": "ring_3", "label": "Mavi YTÜ Ring #3", "is_41at": false, "phase": 0.75},
+		# 4 Mavi YTÜ Ring hat boyunca eşit aralıklı (~75-80 sn'de bir duraktan geçer);
+		# Sembolik 41AT ise 2 turda bir (period_mult=2: yarısında Ayazağa/Topkapı hattında, yarısında kampüs içinde!) gelir.
+		{"id": "ring_1", "label": "Mavi YTÜ Ring #1", "is_41at": false, "phase": 0.00, "period_mult": 1},
+		{"id": "ring_2", "label": "Mavi YTÜ Ring #2", "is_41at": false, "phase": 0.25, "period_mult": 1},
+		{"id": "ring_3", "label": "Mavi YTÜ Ring #3", "is_41at": false, "phase": 0.50, "period_mult": 1},
+		{"id": "ring_4", "label": "Mavi YTÜ Ring #4", "is_41at": false, "phase": 0.75, "period_mult": 1},
+		{"id": "iett_41at", "label": "İETT 41AT (Ayazağa - Davutpaşa Y.T.Ü.)", "is_41at": true, "phase": 0.08, "period_mult": 2},
 	]
 
 	for spec: Dictionary in fleet_specs:
@@ -250,6 +266,11 @@ func _spawn_fleet() -> void:
 		mi.name = "BusBodyMesh"
 		mi.mesh = bus_41at_mesh if is_41at else ring_mesh
 		bus_root.add_child(mi)
+
+		var door_mi: MeshInstance3D = MeshInstance3D.new()
+		door_mi.name = "SlidingDoors"
+		door_mi.mesh = door_41at_mesh if is_41at else door_ring_mesh
+		bus_root.add_child(door_mi)
 
 		if is_41at:
 			_attach_41at_led_signs(bus_root)
@@ -262,13 +283,39 @@ func _spawn_fleet() -> void:
 			"label": str(spec["label"]),
 			"is_41at": is_41at,
 			"node": bus_root,
+			"doors": door_mi,
+			"door_open": 0.0,
 			"phase": float(spec["phase"]),
+			"period_mult": int(spec["period_mult"]),
+			"active": true,
 			"s": 0.0,
 			"dwell": 0.0,
 			"last_stop_idx": -1,
 			"pos": Vector2.ZERO,
 			"yaw": 0.0,
 		})
+
+
+func _create_sliding_door_mesh(is_41at: bool) -> ArrayMesh:
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(-1)
+	var id_xf: Transform3D = Transform3D.IDENTITY
+	var c_frame: Color = (Color(0.95, 0.71, 0.07) if is_41at else Color(0.05, 0.34, 0.76)).srgb_to_linear()
+	var c_glass: Color = Color(0.14, 0.24, 0.34).srgb_to_linear()
+	var z_list: Array = [4.75, 0.25, -4.45] if is_41at else [3.55, -0.65]
+	var x_out: float = -1.29 if is_41at else -1.28
+	for dz_v: Variant in z_list:
+		var dz: float = float(dz_v)
+		_box(st, id_xf, Vector3(0.05, 2.04, 1.12), Vector3(x_out, 1.60, dz), c_frame)
+		_box(st, id_xf, Vector3(0.06, 1.72, 0.92), Vector3(x_out - 0.005, 1.66, dz), c_glass)
+	st.generate_normals()
+	var mesh: ArrayMesh = st.commit()
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.42
+	mesh.surface_set_material(0, mat)
+	return mesh
 
 
 ## Mavi YTÜ Ring Otobüsü 3B Modeli (10.4 m uzunluk, metalik YTÜ mavisi + beyaz tavan/kuşak, panoramik camlar)
@@ -310,11 +357,11 @@ func _create_blue_ring_mesh() -> ArrayMesh:
 		_box(st, id_xf, Vector3(0.32, 0.44, 0.08), Vector3(sgn * 0.98, 1.04, -5.11), c_taillight)
 		_box(st, id_xf, Vector3(0.18, 0.38, 0.14), Vector3(sgn * 1.36, 2.28, 4.86), c_black)
 
-	# Sağ yolcu biniş çift kapıları (-X = sağ kaldırım tarafı! İleri = +Z, Yukarı = +Y -> Sağ = -X!)
+	# Sağ yolcu biniş çift kapı boşlukları ve sarı basamak şeridi (-X = sağ kaldırım tarafı; kapı kanatları SlidingDoors'ta kayar)
+	var c_step_yellow: Color = Color(0.95, 0.76, 0.12).srgb_to_linear()
 	for dz: float in [3.55, -0.65]:
-		_box(st, id_xf, Vector3(0.06, 2.18, 1.22), Vector3(-1.25, 1.56, dz), c_black)
-		_box(st, id_xf, Vector3(0.08, 1.96, 0.54), Vector3(-1.26, 1.60, dz - 0.28), c_glass)
-		_box(st, id_xf, Vector3(0.08, 1.96, 0.54), Vector3(-1.26, 1.60, dz + 0.28), c_glass)
+		_box(st, id_xf, Vector3(0.10, 2.18, 1.22), Vector3(-1.23, 1.56, dz), c_black)
+		_box(st, id_xf, Vector3(0.12, 0.08, 1.16), Vector3(-1.24, 0.52, dz), c_step_yellow)
 
 	# 4 Tekerlek
 	for wz: float in [-3.15, 3.15]:
@@ -393,12 +440,11 @@ func _create_41at_iett_mesh() -> ArrayMesh:
 		_box(st, id_xf, Vector3(0.28, 0.07, 0.07), Vector3(sgn * 1.34, 2.66, 5.82), c_iett_yellow)
 		_box(st, id_xf, Vector3(0.16, 0.44, 0.12), Vector3(sgn * 1.44, 2.42, 5.86), c_piano_black)
 
-	# SAĞ BİNİŞ YANI (-X = sağ kaldırım yönü): 3 adet çift kanatlı kapı (ön, orta, arka) + yan turuncu LED kutusu!
+	# SAĞ BİNİŞ YANI (-X = sağ kaldırım yönü): 3 adet kapı basamak boşluğu (kanatlar SlidingDoors'ta kayar) + yan turuncu LED kutusu!
 	_box(st, id_xf, Vector3(0.08, 0.28, 1.65), Vector3(-1.27, 2.86, 3.65), c_piano_black)
 	for dz: float in [4.75, 0.25, -4.45]:
-		_box(st, id_xf, Vector3(0.06, 2.24, 1.24), Vector3(-1.26, 1.58, dz), c_piano_black)
-		_box(st, id_xf, Vector3(0.08, 1.98, 0.54), Vector3(-1.27, 1.62, dz - 0.29), c_glass)
-		_box(st, id_xf, Vector3(0.08, 1.98, 0.54), Vector3(-1.27, 1.62, dz + 0.29), c_glass)
+		_box(st, id_xf, Vector3(0.10, 2.24, 1.24), Vector3(-1.24, 1.58, dz), c_piano_black)
+		_box(st, id_xf, Vector3(0.12, 0.08, 1.18), Vector3(-1.25, 0.52, dz), c_iett_yellow)
 
 	# ARKA CEPHE (-Z = -6.00 m): Arka turuncu "41AT" LED kutusu + dikey üçlü stop grubu + motor ızgarası
 	_box(st, id_xf, Vector3(1.10, 0.30, 0.09), Vector3(0.0, 2.94, -6.01), c_piano_black)
@@ -459,7 +505,7 @@ static func _add_bus_label(parent: Node3D, pos: Vector3, ry: float, nm: String, 
 func _build_transit_hud() -> void:
 	_hud_layer = CanvasLayer.new()
 	_hud_layer.name = "TransitHudLayer"
-	_hud_layer.layer = 15
+	_hud_layer.layer = 1
 	add_child(_hud_layer)
 
 	# Yaya iken otobüs yaklaşınca çıkan "🚌 Ring'e Bin / 41AT'ye Bin" butonu
@@ -486,8 +532,8 @@ func _build_transit_hud() -> void:
 	_ride_panel.anchor_top = 1.0
 	_ride_panel.anchor_right = 0.5
 	_ride_panel.anchor_bottom = 1.0
-	_ride_panel.offset_left = -338.0
-	_ride_panel.offset_right = 246.0
+	_ride_panel.offset_left = -340.0
+	_ride_panel.offset_right = 218.0
 	_ride_panel.offset_top = -178.0
 	_ride_panel.offset_bottom = -18.0
 	var rst: StyleBoxFlat = StyleBoxFlat.new()
@@ -533,11 +579,24 @@ func _build_transit_hud() -> void:
 		target_stop_idx = sel_i - 1)
 	ctrl_row.add_child(_stop_select)
 
+	_bus_chat_btn = Button.new()
+	_bus_chat_btn.name = "BusChatButton"
+	_bus_chat_btn.text = "💬 Sohbet"
+	_bus_chat_btn.custom_minimum_size = Vector2(96, 52)
+	_bus_chat_btn.add_theme_font_size_override("font_size", 16)
+	_bus_chat_btn.pressed.connect(func() -> void:
+		Sfx.play(&"ui_click")
+		if has_node("../UI/ChatMenu"):
+			var cm: Node = get_node("../UI/ChatMenu")
+			if cm.has_method("open_bus_chat"):
+				cm.call("open_bus_chat"))
+	ctrl_row.add_child(_bus_chat_btn)
+
 	_tour_btn = Button.new()
 	_tour_btn.name = "ReplayTourButton"
-	_tour_btn.text = "📖 Tanıtım"
-	_tour_btn.custom_minimum_size = Vector2(114, 52)
-	_tour_btn.add_theme_font_size_override("font_size", 17)
+	_tour_btn.text = "📖 Rehber"
+	_tour_btn.custom_minimum_size = Vector2(94, 52)
+	_tour_btn.add_theme_font_size_override("font_size", 16)
 	_tour_btn.pressed.connect(func() -> void:
 		Sfx.play(&"ui_click")
 		open_onboarding_tour())
@@ -546,7 +605,7 @@ func _build_transit_hud() -> void:
 	_alight_now_btn = Button.new()
 	_alight_now_btn.name = "AlightNowButton"
 	_alight_now_btn.text = "İn"
-	_alight_now_btn.custom_minimum_size = Vector2(82, 52)
+	_alight_now_btn.custom_minimum_size = Vector2(66, 52)
 	_alight_now_btn.add_theme_font_size_override("font_size", 19)
 	_alight_now_btn.pressed.connect(func() -> void: alight_bus())
 	ctrl_row.add_child(_alight_now_btn)
@@ -696,6 +755,8 @@ func set_target_stop_index(stop_idx: int) -> void:
 func get_live_buses() -> Array:
 	var out: Array = []
 	for b: Dictionary in _buses:
+		if not bool(b.get("active", true)):
+			continue
 		out.append({
 			"id": b["id"],
 			"label": b["label"],
@@ -765,8 +826,13 @@ func _sample_timetable(t: float) -> Dictionary:
 	return {"s": s_val, "dwell": _tt_dwell[i], "stop": _tt_stop[i]}
 
 
+func _bus_cycle_period(b: Dictionary) -> float:
+	return _period * float(maxi(1, int(b.get("period_mult", 1))))
+
+
 func _bus_time(b: Dictionary) -> float:
-	return fposmod(_sim_time + float(b["phase"]) * _period, _period)
+	var bp: float = _bus_cycle_period(b)
+	return fposmod(_sim_time + float(b["phase"]) * bp, bp)
 
 
 func _update_buses_transforms(delta: float) -> void:
@@ -778,24 +844,80 @@ func _update_buses_transforms(delta: float) -> void:
 		_sim_time += delta
 	for bi: int in _buses.size():
 		var b: Dictionary = _buses[bi]
-		var smp: Dictionary = _sample_timetable(_bus_time(b))
+		var bt: float = _bus_time(b)
+		var nd: Node3D = b["node"] as Node3D
+		# Sembolik 41AT, 2 turluk döngüsünün ikinci yarısında A Kapısı'ndan çıkıp Cevizlibağ-Mecidiyeköy-Ayazağa şehir seferindedir!
+		if bt >= _period:
+			if riding_bus_idx == bi:
+				b["s"] = float(stops[0]["s"])
+				_apply_bus_3d_pose(b)
+				alight_bus(0)
+			b["active"] = false
+			b["dwell"] = 0.0
+			b["door_open"] = 0.0
+			if nd != null:
+				nd.visible = false
+			continue
+
+		b["active"] = true
+		if nd != null:
+			nd.visible = true
+		var smp: Dictionary = _sample_timetable(bt)
 		b["s"] = float(smp["s"])
 		b["dwell"] = float(smp["dwell"])
 		b["last_stop_idx"] = int(smp["stop"])
+		# Durakta beklerken kayar yolcu kapılarını dışa-geriye doğru yumuşakça aç, kalkarken kapat.
+		var target_door: float = 1.0 if float(b["dwell"]) > 0.15 else 0.0
+		var cur_door: float = float(b.get("door_open", 0.0))
+		cur_door = target_door if delta <= 0.0 else move_toward(cur_door, target_door, delta * 2.8)
+		b["door_open"] = cur_door
+		var doors: MeshInstance3D = b.get("doors") as MeshInstance3D
+		if doors != null:
+			doors.position = Vector3(-0.08 * cur_door, 0.0, -0.62 * cur_door)
 		_apply_bus_3d_pose(b)
 		# Oyuncu bu otobüsteyse ve seçtiği durakta bekliyorsa otomatik indir.
 		if riding_bus_idx == bi and target_stop_idx >= 0 and float(b["dwell"]) > 0.0 and int(b["last_stop_idx"]) == target_stop_idx:
 			alight_bus(target_stop_idx)
 
 
-## Durağa sıradaki otobüsün varmasına kalan süre (sn); tarife yoksa -1.
+## Durağa sıradaki herhangi bir otobüsün (Ring veya 41AT) varmasına kalan süre (sn); tarife yoksa -1.
 func seconds_until_next_bus(stop_idx: int) -> float:
 	if _period <= 0.0 or stop_idx < 0 or stop_idx >= _stop_arrival_t.size() or _stop_arrival_t[stop_idx] < 0.0:
 		return -1.0
 	var best: float = INF
+	var arr_t: float = _stop_arrival_t[stop_idx]
 	for b: Dictionary in _buses:
-		best = minf(best, fposmod(_stop_arrival_t[stop_idx] - _bus_time(b), _period))
+		var bp: float = _bus_cycle_period(b)
+		best = minf(best, fposmod(arr_t - _bus_time(b), bp))
 	return best
+
+
+## Durağa sıradaki Mavi YTÜ Ring'in varmasına kalan süre (sn).
+func seconds_until_next_ring(stop_idx: int) -> float:
+	if _period <= 0.0 or stop_idx < 0 or stop_idx >= _stop_arrival_t.size() or _stop_arrival_t[stop_idx] < 0.0:
+		return -1.0
+	var best: float = INF
+	var arr_t: float = _stop_arrival_t[stop_idx]
+	for b: Dictionary in _buses:
+		if bool(b.get("is_41at", false)):
+			continue
+		var bp: float = _bus_cycle_period(b)
+		best = minf(best, fposmod(arr_t - _bus_time(b), bp))
+	return best
+
+
+## Durağa sembolik İETT 41AT'nin varmasına kalan süre (sn).
+func seconds_until_next_41at(stop_idx: int) -> float:
+	if _period <= 0.0 or stop_idx < 0 or stop_idx >= _stop_arrival_t.size() or _stop_arrival_t[stop_idx] < 0.0:
+		return -1.0
+	var best: float = INF
+	var arr_t: float = _stop_arrival_t[stop_idx]
+	for b: Dictionary in _buses:
+		if not bool(b.get("is_41at", false)):
+			continue
+		var bp: float = _bus_cycle_period(b)
+		best = minf(best, fposmod(arr_t - _bus_time(b), bp))
+	return best if best < INF else -1.0
 
 
 func _apply_bus_3d_pose(b: Dictionary) -> void:
@@ -886,6 +1008,8 @@ func _find_boardable_bus_index() -> int:
 	var best_bi: int = -1
 	var best_d: float = BOARD_RADIUS_M
 	for bi: int in _buses.size():
+		if not bool(_buses[bi].get("active", true)):
+			continue
 		var b_xz: Vector2 = _buses[bi]["pos"]
 		var d: float = p_xz.distance_to(b_xz)
 		if d < best_d:
@@ -902,7 +1026,7 @@ func board_nearest_bus() -> bool:
 
 
 func board_bus(bus_idx: int) -> bool:
-	if bus_idx < 0 or bus_idx >= _buses.size() or player == null:
+	if bus_idx < 0 or bus_idx >= _buses.size() or player == null or not bool(_buses[bus_idx].get("active", true)):
 		return false
 	riding_bus_idx = bus_idx
 	Sfx.play(&"ui_click")
@@ -930,13 +1054,21 @@ func board_bus(bus_idx: int) -> bool:
 	if _ride_panel != null:
 		_ride_panel.visible = true
 
+	var bus_info: Dictionary = _buses[bus_idx]
+	var bus_id: String = str(bus_info["id"])
+	if Services != null and Services.net != null:
+		Services.net.send_social({"act": "enter_cafe", "cafe": bus_id})
+	if has_node("../UI/ChatMenu"):
+		var cm: Node = get_node("../UI/ChatMenu")
+		if cm.has_method("on_bus_boarded"):
+			cm.call("on_bus_boarded", bus_id, str(bus_info["label"]))
+
 	# İlk kez Ring'e biniyorsa Tanıtım Turu'nu otomatik aç!
 	var prof: RefCounted = LocalProfile.load_or_default()
 	if not bool(prof.get("onboarding_seen")):
 		open_onboarding_tour()
 
-	var bus_info: Dictionary = _buses[bus_idx]
-	boarded_bus.emit(str(bus_info["id"]), bool(bus_info["is_41at"]))
+	boarded_bus.emit(bus_id, bool(bus_info["is_41at"]))
 	return true
 
 
@@ -944,6 +1076,7 @@ func alight_bus(stop_idx: int = -1) -> void:
 	if riding_bus_idx < 0 or player == null:
 		return
 	var b: Dictionary = _buses[riding_bus_idx]
+	var prev_bus_id: String = str(b["id"])
 	var b_xz: Vector2 = b["pos"]
 	var chosen_stop_i: int = stop_idx if stop_idx >= 0 else _nearest_stop_index_xz(b_xz)
 	var exit_xz: Vector2 = b_xz
@@ -981,6 +1114,13 @@ func alight_bus(stop_idx: int = -1) -> void:
 	if _onboarding_card != null:
 		_onboarding_card.visible = false
 
+	if Services != null and Services.net != null:
+		Services.net.send_social({"act": "leave_cafe"})
+	if has_node("../UI/ChatMenu"):
+		var cm: Node = get_node("../UI/ChatMenu")
+		if cm.has_method("on_bus_alighted"):
+			cm.call("on_bus_alighted", prev_bus_id)
+
 	Sfx.play(&"care_ok")
 	if has_node("../UI/CareHud"):
 		var hud: Node = get_node("../UI/CareHud")
@@ -989,15 +1129,51 @@ func alight_bus(stop_idx: int = -1) -> void:
 	alighted_bus.emit(stop_id, stop_nm)
 
 
+static func _fmt_eta_short(sec: float) -> String:
+	var s_int: int = maxi(1, ceili(sec))
+	if s_int < 90:
+		return "~%d sn" % s_int
+	return "~%d dk" % maxi(1, roundi(sec / 60.0))
+
+
+func _is_ui_modal_open() -> bool:
+	if ui == null:
+		return false
+	var cm: Node = ui.get_node_or_null("ChatMenu")
+	if cm != null:
+		var po: Control = cm.get("_panel_overlay") as Control
+		if po != null and po.visible:
+			return true
+	for ch: Node in ui.get_children():
+		if ch is Control and (ch as Control).visible:
+			var nm: String = ch.name
+			if nm.ends_with("Overlay") or nm.ends_with("Panel") or nm.ends_with("Modal"):
+				return true
+	return false
+
+
 func _update_player_riding_and_hud() -> void:
 	if player == null:
 		return
+	var modal_open: bool = _is_ui_modal_open()
 	if riding_bus_idx >= 0 and riding_bus_idx < _buses.size():
+		if _ride_panel != null:
+			_ride_panel.visible = not modal_open
 		var b: Dictionary = _buses[riding_bus_idx]
 		var nd: Node3D = b["node"] as Node3D
 		if nd != null:
-			_set_node_pos(player, _get_node_pos(nd) + Vector3(0.0, 1.35, 0.0))
+			var local_uid: String = Services.net.local_player_id() if (Services != null and Services.net != null) else "local"
+			var seat_idx: int = absi(local_uid.hash()) % SEAT_OFFSETS.size()
+			var seat_local: Vector3 = SEAT_OFFSETS[seat_idx]
+			_set_node_pos(player, _get_node_pos(nd) + (nd.transform.basis * seat_local))
 			player.rotation.y = float(b["yaw"])
+		if _bus_chat_btn != null:
+			var riders_n: int = 1
+			if Services != null and Services.net != null:
+				var cafes_d: Dictionary = Services.net.social_state.get("cafes", {})
+				var arr: Array = cafes_d.get(str(b["id"]), [])
+				riders_n = maxi(1, arr.size())
+			_bus_chat_btn.text = ("💬 Sohbet (%d)" % riders_n) if riders_n > 1 else "💬 Sohbet"
 		var nstop_i: int = _next_stop_index_from_s(float(b["s"]))
 		var dist_m: int = roundi(_forward_dist_on_loop(float(b["s"]), float(stops[nstop_i]["s"])))
 		var prefix: String = "🟨 İETT 41AT" if bool(b["is_41at"]) else "🟦 Mavi Ring"
@@ -1013,23 +1189,30 @@ func _update_player_riding_and_hud() -> void:
 	# Yaya iken yakında otobüs var mı kontrol et
 	var near_bi: int = _find_boardable_bus_index()
 	if _board_btn != null:
-		if near_bi >= 0:
+		if modal_open:
+			_board_btn.visible = false
+		elif near_bi >= 0:
 			var nb: Dictionary = _buses[near_bi]
 			_board_btn.visible = true
 			_board_btn.disabled = false
 			_board_btn.text = "🚌 Efsane 41AT'ye Bin" if bool(nb["is_41at"]) else "🚌 Mavi Ring'e Bin (Ücretsiz)"
 		else:
-			# Durakta bekliyorsa sıradaki otobüsün kaç saniye sonra geleceğini göster.
+			# Durakta bekliyorsa sıradaki Ring ve sembolik 41AT varış sürelerini göster.
 			var p3: Vector3 = _get_node_pos(player)
 			var p_xz: Vector2 = Vector2(p3.x, p3.z)
 			var si: int = _nearest_stop_index_xz(p_xz)
-			var eta: float = -1.0
+			var eta_ring: float = -1.0
+			var eta_41at: float = -1.0
 			if si >= 0 and si < stops.size() and p_xz.distance_to(stops[si]["shelter_pos"] as Vector2) <= STOP_ETA_RADIUS_M:
-				eta = seconds_until_next_bus(si)
-			if eta >= 0.0:
+				eta_ring = seconds_until_next_ring(si)
+				eta_41at = seconds_until_next_41at(si)
+			if eta_ring >= 0.0:
 				_board_btn.visible = true
 				_board_btn.disabled = true
-				_board_btn.text = "🚏 Sıradaki otobüs ~%d sn" % ceili(eta)
+				if eta_41at >= 0.0:
+					_board_btn.text = "🚏 Ring %s  ·  🟨 41AT %s" % [_fmt_eta_short(eta_ring), _fmt_eta_short(eta_41at)]
+				else:
+					_board_btn.text = "🚏 Sıradaki Ring %s" % _fmt_eta_short(eta_ring)
 			else:
 				_board_btn.visible = false
 
