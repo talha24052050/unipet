@@ -8,7 +8,7 @@
 //   UNIPET_DEV_AUTH=true              "mock-..." kimliklerine izin ver (sadece yerel geliştirme!)
 //   UNIPET_REQUIRE_SCHOOL_EMAIL=false sadece @std.yildiz.edu.tr (şimdilik kapalı; oyundaki Config ile aynı tutulmalı)
 //   UNIPET_ROOM_CAPACITY=40           oda kapasitesi (oyundaki Config.ROOM_CAPACITY ile aynı)
-//   UNIPET_FREE_CHAT=false            serbest yazı (kapalı; açılırsa filtre şart)
+//   UNIPET_FREE_CHAT=true             serbest yazı (80 karakter + argo/spam filtresi; kapatmak için false)
 //
 // Not: Nakama JS runtime'ında kayıtlı fonksiyonlar global tanımlı olmalı (closure değil).
 

@@ -85,9 +85,14 @@ func _initialize() -> void:
 	a.send_chat(ChatMessage.preset("selam"))
 	check(await _wait(func() -> bool: return "selam" in ev["a_chat"] and "selam" in ev["b_chat"]), "chat ikisine de ulaştı")
 	check(await _wait(func() -> bool: return ev["a_care"].any(func(x: Array) -> bool: return x[0] and x[1] == "")), "chat sonrası sosyal bakım puanı")
+	# Serbest yazı açık (filtreli, b591405): temiz metin ulaşır, argo engellenir. Sunucu 1 sn chat aralığı ister.
+	await create_timer(1.1).timeout
 	b.send_chat(ChatMessage.free_text("serbest yazi"))
+	check(await _wait(func() -> bool: return "serbest yazi" in ev["a_chat"]), "temiz serbest yazı ulaştı")
+	await create_timer(1.1).timeout
+	b.send_chat(ChatMessage.free_text("siktir git"))
 	await create_timer(1.0).timeout
-	check(not ("serbest yazi" in ev["a_chat"]), "serbest yazı engellendi")
+	check(not ("siktir git" in ev["a_chat"]), "argo serbest yazı engellendi")
 	var b_id: String = b.local_player_id()
 	b.leave_zone()
 	check(await _wait(func() -> bool: return b_id in ev["a_left"]), "A, B'nin çıktığını gördü")

@@ -65,7 +65,7 @@ $ErrorActionPreference = "Continue"
 $ErrorActionPreference = "Stop"
 
 Get-Process nakama -ErrorAction SilentlyContinue | Stop-Process -Force
-$envVars = @{ UNIPET_DEV_AUTH = "true"; UNIPET_ROOM_CAPACITY = "40"; UNIPET_FREE_CHAT = "false"; UNIPET_REQUIRE_SCHOOL_EMAIL = "false" }
+$envVars = @{ UNIPET_DEV_AUTH = "true"; UNIPET_ROOM_CAPACITY = "40"; UNIPET_FREE_CHAT = "true"; UNIPET_REQUIRE_SCHOOL_EMAIL = "false" }
 $envFile = Join-Path $ServerDir ".env"
 if (Test-Path $envFile) {
     foreach ($line in Get-Content $envFile) {
