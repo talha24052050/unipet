@@ -449,6 +449,18 @@ function cleanName(raw) {
   return NAME_PATTERN.test(n) && !isOffensive(n) ? n : "";
 }
 
+// Profil statüsü sabit listeden seçilir (game/src/core/local_profile.gd ile aynı). Doğrulanmamış oyuncu
+// fakülte etiketi takamaz; listede olmayan değer listenin ilkine düşer.
+var YTU_ROLES = ["Bilgisayar Müh.", "Elektrik-Elektronik Fak.", "Makine Fak.", "İnşaat Fak.", "İİBF", "Fen-Edebiyat Fak.",
+  "Eğitim Fak.", "Kimya-Metalurji Fak.", "Sanat ve Tasarım Fak.", "YDYO Hazırlık"];
+var VISITOR_ROLES = ["🎯 YKS Adayı (Hedef YTÜ)", "👀 Kampüs Misafiri", "🎓 Misafir Öğrenci", "🏛 YTÜ Mezunu"];
+
+function cleanRole(raw, ytu) {
+  var list = ytu ? YTU_ROLES : VISITOR_ROLES;
+  var r = String(raw || "");
+  return list.indexOf(r) >= 0 ? r : list[0];
+}
+
 function cleanFreeChat(raw, maxLen) {
   var lim = maxLen || 80;
   var s = String(raw || "").replace(/[\x00-\x1F\x7F]/g, "").replace(/\s+/g, " ").trim().substring(0, lim);
@@ -1074,7 +1086,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
       }
       pl.pet = String(data.pet); pl.acc = acc; pl.name = cleanName(data.name);
       // pl.ytu yalnızca oturumdan gelir (matchJoin); istemcinin gönderdiği data.ytu yok sayılır.
-      pl.role = cleanFreeChat(data.role || "", 32);
+      pl.role = cleanRole(data.role, pl.ytu);
       pl.bio = cleanFreeChat(data.bio || "", 40);
       pl.disc = typeof data.disc === "number" && isFinite(data.disc) ? Math.max(0, Math.min(60, Math.floor(data.disc))) : 0;
       if (pl.name) {

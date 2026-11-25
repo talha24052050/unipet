@@ -357,6 +357,8 @@ assert.strictEqual(profMsgs.length, 2);
 assert.strictEqual(profMsgs[0].data.ytu, true, "YTÜ maili olan her zaman doğrulanmış olmalı");
 assert.strictEqual(profMsgs[1].data.ytu, false, "gmail hesabı sahte ytu:true gönderse bile sunucu false tutmalı");
 assert.strictEqual(profMsgs[0].data.role, "Bilgisayar Müh.");
+assert.strictEqual(M.cleanRole("Bilgisayar Müh.", false), "🎯 YKS Adayı (Hedef YTÜ)", "misafir fakülte etiketi takamaz");
+assert.strictEqual(M.cleanRole("<b>x</b>", true), "Bilgisayar Müh.", "listede olmayan statü varsayılana düşer");
 assert.strictEqual(profMsgs[1].data.bio, "Hedef YTÜ!");
 
 // Hızlı yeniden bağlanma: yeni oturum katıldıktan sonra gelen eski oturum çıkışı oyuncuyu silmemeli
