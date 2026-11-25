@@ -352,7 +352,8 @@ static func _emit_terrain_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector
 	var bc: float = b.distance_squared_to(c)
 	var ca: float = c.distance_squared_to(a)
 	var max_sq: float = maxf(ab, maxf(bc, ca))
-	var near_hamam: bool = absf((a.x + b.x + c.x) * 0.3333 - 21.0) < 62.0 and absf((a.y + b.y + c.y) * 0.3333 + 133.0) < 62.0
+	# Sadece çökük avluya değen üçgenler incelir (eskiden 124×124 m'lik kare: mobilde gereksiz binlerce üçgen).
+	var near_hamam: bool = _tri_touches_hamam_pit(a, b, c)
 	var eff_subdiv: float = minf(subdiv_m, 1.1) if near_hamam else subdiv_m
 	var eff_max_depth: int = maxi(max_depth, 9) if near_hamam else max_depth
 	if depth < eff_max_depth and max_sq > eff_subdiv * eff_subdiv:
@@ -448,6 +449,7 @@ const HAMAM_U: Vector2 = Vector2(-0.630079, 0.776531)
 const HAMAM_N: Vector2 = Vector2(-0.776519, -0.630094)
 const HAMAM_UPPER_Y: float = 0.00
 const HAMAM_SUNK_Y: float = -2.00
+static var HAMAM_PIT_AABB: Rect2 = _hamam_pit_aabb(3.0)
 
 
 static func _in_merkez_sunk_pit(wx: float, wz: float) -> bool:
@@ -456,6 +458,22 @@ static func _in_merkez_sunk_pit(wx: float, wz: float) -> bool:
 	var lu: float = rx * MERKEZ_LIB_U.x + rz * MERKEZ_LIB_U.y
 	var lv: float = rx * MERKEZ_LIB_V.x + rz * MERKEZ_LIB_V.y
 	return lu >= 18.42 and lu <= 58.20 and lv >= 18.12 and lv <= 31.25
+
+
+## Üçgenin AABB'si Hamam çökük avlusunun (3 m paylı) dünya AABB'siyle kesişiyor mu.
+static func _tri_touches_hamam_pit(a: Vector2, b: Vector2, c: Vector2) -> bool:
+	var lo: Vector2 = Vector2(minf(a.x, minf(b.x, c.x)), minf(a.y, minf(b.y, c.y)))
+	var hi: Vector2 = Vector2(maxf(a.x, maxf(b.x, c.x)), maxf(a.y, maxf(b.y, c.y)))
+	return hi.x >= HAMAM_PIT_AABB.position.x and lo.x <= HAMAM_PIT_AABB.end.x \
+		and hi.y >= HAMAM_PIT_AABB.position.y and lo.y <= HAMAM_PIT_AABB.end.y
+
+
+static func _hamam_pit_aabb(margin: float) -> Rect2:
+	var r: Rect2 = Rect2(HAMAM_ORIGIN + HAMAM_U * 0.15 + HAMAM_N * -0.45, Vector2.ZERO)
+	for s: float in [0.15, 75.45]:
+		for d: float in [-0.45, 8.80]:
+			r = r.expand(HAMAM_ORIGIN + HAMAM_U * s + HAMAM_N * d)
+	return r.grow(margin)
 
 
 static func _in_hamam_sunk_pit(wx: float, wz: float) -> bool:
@@ -504,7 +522,7 @@ func _build_terrain_ground(rect: Rect2, th: TerrainHeight) -> void:
 			var cx_cell: float = x0 + th.step * 0.5
 			var cz_cell: float = z0 + th.step * 0.5
 			var near_merkez: bool = has_merkez_pit and absf(cx_cell + 48.0) < 52.0 and absf(cz_cell + 198.0) < 52.0
-			var near_hamam: bool = has_hamam_pit and absf(cx_cell - 21.0) < 62.0 and absf(cz_cell + 133.0) < 62.0
+			var near_hamam: bool = has_hamam_pit and HAMAM_PIT_AABB.intersects(Rect2(x0, z0, th.step, th.step), true)
 			if near_merkez or near_hamam:
 				var sub: int = 8
 				var ds: float = th.step / float(sub)

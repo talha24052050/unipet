@@ -26,9 +26,10 @@ var profile_sync: ProfileSync
 var feedback: Feedback
 ## Uygulama arka plan / geri dönüş yaşam döngüsü (iOS/Android).
 var lifecycle: AppLifecycle
-## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
+## Aktif hedef değişti (boş sözlük = hedef kaldırıldı).
 signal waypoint_changed(waypoint: Dictionary)
 
+## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
 var current_zone: String = ""
 ## Haritadan veya sohbet konum pininden işaretlenen aktif yürüyüş/Ring hedefi: {"pos": Vector2, "name": String, "stop": String}
 var active_waypoint: Dictionary = {}

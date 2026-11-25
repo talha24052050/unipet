@@ -73,6 +73,7 @@ func build() -> void:
 		var det_mi: MeshInstance3D = MeshInstance3D.new()
 		det_mi.name = "HamamArchitecturalDetails"
 		det_mi.mesh = det_mesh
+		det_mi.visibility_range_end = 180.0  # mobil: uzaktan küçük detaylar (minibüs, afiş çerçeveleri) çizilmesin
 		add_child(det_mi)
 
 
@@ -464,6 +465,7 @@ func _build_artlab_banners(st: SurfaceTool, hxf: Transform3D) -> void:
 	main_mi.name = "ArtlabMainBanner"
 	main_mi.mesh = main_quad
 	main_mi.transform = hxf * Transform3D(Basis.IDENTITY, Vector3(bs_mid, by_mid, bd_z))
+	main_mi.visibility_range_end = 180.0
 	add_child(main_mi)
 
 	# 4b) Yeni Merkez Kütüphanesi & EEF yaklaşım aksına dönük çift yüzlü karşılama afiş panosu (s=2.40, d=9.85, y=0..3.6)
@@ -487,6 +489,7 @@ func _build_artlab_banners(st: SurfaceTool, hxf: Transform3D) -> void:
 		var ry: float = 0.0 if face_i == 0 else PI
 		var z_off: float = 0.05 if face_i == 0 else -0.05
 		qmi.transform = kxf * Transform3D(Basis(Vector3.UP, ry), Vector3(0.0, 2.44, z_off))
+		qmi.visibility_range_end = 140.0
 		add_child(qmi)
 
 
