@@ -86,6 +86,17 @@ func sign_out() -> void:
 		_post("/auth/v1/logout", {}, true, token)
 
 
+## Supabase hesabını siler (server/supabase/003_account_delete.sql: profil ve geri bildirimler de gider).
+func delete_account() -> String:
+	if _access_token.is_empty():
+		return "Oturum yok. Tekrar giriş yapıp dene."
+	var res: Dictionary = await _post("/rest/v1/rpc/delete_my_account", {}, true)
+	if not res["ok"]:
+		return "Hesap silinemedi (%d). İnternetini kontrol edip tekrar dene." % res["code"]
+	sign_out()
+	return ""
+
+
 func is_signed_in() -> bool:
 	return not _access_token.is_empty() and Time.get_unix_time_from_system() < _expires_at
 

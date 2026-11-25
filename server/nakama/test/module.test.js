@@ -421,4 +421,13 @@ assert.deepEqual(busChatMsgs[0].to.sort(), ["nk-old", "nk-yks"], "otobüs sohbet
 stProf = M.matchLoop(ctx(), logger, nk, dispatcher, 5, stProf, [msg(PYks, 11, { act: "leave_cafe" })]).state;
 assert.strictEqual(stProf.players["nk-yks"].cafe, "");
 
+// Hesap silme: Nakama hesabı silinir, arkadaşların listesinden de düşer
+var deleted = [];
+nk.accountDeleteId = function (id) { deleted.push(id); };
+assert.ok(M.areFriends(nk, "S2", "S1"), "silmeden önce arkadaşlar");
+assert.throws(function () { M.rpcDeleteAccount(ctx(), logger, nk, "{}"); }, "girişsiz silinemez");
+assert.strictEqual(JSON.parse(M.rpcDeleteAccount(ctx({}, "S1"), logger, nk, "{}")).ok, true);
+assert.deepEqual(deleted, ["S1"], "Nakama hesabı silinmeli");
+assert.ok(!M.areFriends(nk, "S2", "S1"), "silinen hesap arkadaşın listesinden düşmeli");
+
 console.log("nakama modül testleri: OK");

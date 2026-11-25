@@ -117,3 +117,10 @@ func _set_wallet(w: Dictionary) -> void:
 
 func local_player_id() -> String:
 	return ""
+
+
+## Sunucudaki hesabı ve tüm verisini kalıcı siler (Play Store hesap silme şartı). "" = başarılı, aksi halde hata.
+## session_token: Services.auth erişim anahtarı. Tek oyunculu modda sunucuda veri yok: hemen başarılı.
+func delete_account(_session_token: String) -> String:
+	await Engine.get_main_loop().process_frame
+	return ""

@@ -96,5 +96,11 @@ func _initialize() -> void:
 	var b_id: String = b.local_player_id()
 	b.leave_zone()
 	check(await _wait(func() -> bool: return b_id in ev["a_left"]), "A, B'nin çıktığını gördü")
+	# Hesap silme (Play Store şartı): sunucudaki hesap gerçekten gider, ikinci silme "hesap yok" ile başarılı döner
+	var del_err: String = await a.delete_account("mock-token")
+	check(del_err.is_empty(), "A hesabını sildi %s" % del_err)
+	var again: Dictionary = await a._http_post("/v2/account/authenticate/custom?create=false", {"id": "mock-e2e-a"})
+	check(again["code"] == 404, "silinen hesapla giriş yok (%d)" % again["code"])
+	check((await a.delete_account("mock-token")).is_empty(), "olmayan hesabı silmek hata vermez")
 	print("\n%s (%d hata)" % ["E2E GEÇTİ" if failures == 0 else "E2E BAŞARISIZ", failures])
 	quit(1 if failures > 0 else 0)

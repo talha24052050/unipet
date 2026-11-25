@@ -57,6 +57,13 @@ func sign_out() -> void:
 	pass
 
 
+## Giriş hesabını kalıcı siler ve oturumu kapatır. "" = başarılı, aksi halde hata. (Play Store hesap silme şartı)
+func delete_account() -> String:
+	sign_out()
+	await Engine.get_main_loop().process_frame
+	return ""
+
+
 ## Sunucu çağrılarında (profil, Nakama köprüsü) kullanılacak erişim anahtarı.
 func get_access_token() -> String:
 	return ""

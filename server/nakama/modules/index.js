@@ -656,6 +656,31 @@ function beforeAuthenticateCustom(ctx, logger, nk, req) {
   return req;
 }
 
+// ---------------------------------------------------------------- hesap silme (Play Store şartı)
+// Oyuncunun Nakama hesabını ve sunucudaki tüm kayıtlarını (cüzdan, bakım, kilitler, arkadaşlar) kalıcı siler.
+// Arkadaşlarının listesindeki kaydı da temizlenir. Supabase hesabını istemci ayrıca siler (delete_my_account).
+function rpcDeleteAccount(ctx, logger, nk, payload) {
+  if (!ctx.userId) throw Error("giriş gerekli");
+  var doc = socialLoad(nk, ctx.userId);
+  var others = doc.friends.concat(doc.incoming, doc.outgoing);
+  for (var i = 0; i < others.length; i++) {
+    var oid = others[i] && others[i].id;
+    if (!oid || oid === ctx.userId || !userExists(nk, oid)) continue;
+    try {
+      var od = socialLoad(nk, oid);
+      od.friends = removeUserEntry(od.friends, ctx.userId);
+      od.incoming = removeUserEntry(od.incoming, ctx.userId);
+      od.outgoing = removeUserEntry(od.outgoing, ctx.userId);
+      socialSave(nk, oid, od);
+    } catch (e) {
+      logger.warn("arkadaş kaydı temizlenemedi: %s", e && e.message);
+    }
+  }
+  nk.accountDeleteId(ctx.userId, false);
+  logger.info("hesap silindi: %s", ctx.userId);
+  return JSON.stringify({ ok: true });
+}
+
 // ---------------------------------------------------------------- 4.3 eşleştirme
 
 function rpcFindRoom(ctx, logger, nk, payload) {
@@ -1204,6 +1229,7 @@ function InitModule(ctx, logger, nk, initializer) {
   initializer.registerRpc("find_room", rpcFindRoom);
   initializer.registerRpc("wallet", rpcWallet);
   initializer.registerRpc("buy_item", rpcBuyItem);
+  initializer.registerRpc("delete_account", rpcDeleteAccount);
   initializer.registerMatch("zone_room", {
     matchInit: matchInit,
     matchJoinAttempt: matchJoinAttempt,

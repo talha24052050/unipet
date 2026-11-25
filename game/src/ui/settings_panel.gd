@@ -34,6 +34,15 @@ var server_status: Label
 ## Geliştirici modu anahtarı (imzalı yayında gizli)
 var dev_check: CheckButton
 const LOGIN_SCENE: String = "res://scenes/ui/login.tscn"
+const AccountDeletion := preload("res://src/core/account_deletion.gd")
+## Hesap silme iki adımlı: ilk dokunuş onay ister, bu süre içinde ikinci dokunuş siler.
+const DELETE_CONFIRM_SEC: float = 6.0
+var privacy_button: Button
+var terms_button: Button
+var delete_button: Button
+var delete_status: Label
+var _delete_armed_until: float = 0.0
+var _deleting: bool = false
 const FEEDBACK_INPUT_HEIGHT: float = 140.0
 
 # Erişilebilirlik ve test kolaylığı için kısayol
@@ -179,6 +188,24 @@ func _setup_layout() -> void:
 	dev_check.toggled.connect(_on_dev_mode_toggled)
 	vbox.add_child(dev_check)
 
+	# Yasal: gizlilik / koşullar / hesap silme (Google Play şartları)
+	var legal_row: HBoxContainer = HBoxContainer.new()
+	legal_row.name = "LegalRow"
+	legal_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(legal_row)
+	privacy_button = _small_button("PrivacyButton", "Gizlilik", legal_row)
+	privacy_button.pressed.connect(func() -> void: OS.shell_open(Config.PRIVACY_URL))
+	terms_button = _small_button("TermsButton", "Koşullar", legal_row)
+	terms_button.pressed.connect(func() -> void: OS.shell_open(Config.TERMS_URL))
+	delete_button = _small_button("DeleteAccountButton", "Hesabı sil", legal_row)
+	delete_button.add_theme_color_override("font_color", Color(1.0, 0.55, 0.5))
+	delete_button.pressed.connect(_on_delete_pressed)
+	delete_status = Label.new()
+	delete_status.name = "DeleteStatus"
+	delete_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	delete_status.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 4)
+	vbox.add_child(delete_status)
+
 	close_button = Button.new()
 	close_button.name = "CloseButton"
 	close_button.text = "Kapat"
@@ -186,6 +213,43 @@ func _setup_layout() -> void:
 	close_button.add_theme_font_size_override("font_size", FONT_SIZE_CONTROLS)
 	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(close_button)
+
+
+func _small_button(node_name: String, label: String, parent: Control) -> Button:
+	var b: Button = Button.new()
+	b.name = node_name
+	b.text = label
+	b.custom_minimum_size = Vector2(0, MIN_CONTROL_HEIGHT)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 2)
+	parent.add_child(b)
+	return b
+
+
+## İlk dokunuş: uyarı + onay penceresi açılır. Süresi içinde ikinci dokunuş: hesap ve tüm veriler silinir.
+func _on_delete_pressed() -> void:
+	if _deleting:
+		return
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if now > _delete_armed_until:
+		_delete_armed_until = now + DELETE_CONFIRM_SEC
+		delete_button.text = "Eminim, sil"
+		delete_status.text = "Hesabın, petin, yıldız tozun, aksesuarların ve arkadaşlıkların KALICI olarak silinecek. Geri alınamaz. Onaylamak için tekrar bas."
+		return
+	_deleting = true
+	delete_button.disabled = true
+	delete_status.text = "Siliniyor…"
+	var err: String = await AccountDeletion.run()
+	_deleting = false
+	_delete_armed_until = 0.0
+	delete_button.disabled = false
+	delete_button.text = "Hesabı sil"
+	if not err.is_empty():
+		delete_status.text = err
+		return
+	delete_status.text = "Hesabın silindi."
+	close()
+	get_tree().change_scene_to_file.call_deferred(LOGIN_SCENE)
 
 
 func _connect_signals() -> void:
@@ -295,6 +359,10 @@ func refresh_from_settings() -> void:
 
 func open() -> void:
 	refresh_from_settings()
+	_delete_armed_until = 0.0
+	if delete_button != null and not _deleting:
+		delete_button.text = "Hesabı sil"
+		delete_status.text = ""
 	visible = true
 	# Ağaç dışında ayarlanan çapalar CanvasLayer altında (0,0)'a göre kalıyor: açılırken ekranın ortasına al.
 	if is_inside_tree():

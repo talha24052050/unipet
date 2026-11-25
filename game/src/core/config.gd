@@ -8,6 +8,12 @@ const REQUIRE_SCHOOL_EMAIL: bool = false
 ## Okul maili zorunluyken izin verilen domainler.
 const ALLOWED_EMAIL_DOMAINS: PackedStringArray = ["std.yildiz.edu.tr"]
 
+## Yasal sayfalar (GitHub Pages, site/ klasörü). Play Store'da da aynı adresler verilir.
+const SITE_URL: String = "https://talha24052050.github.io/unipet"
+const PRIVACY_URL: String = SITE_URL + "/gizlilik.html"
+const TERMS_URL: String = SITE_URL + "/kosullar.html"
+const ACCOUNT_DELETE_URL: String = SITE_URL + "/hesap-silme.html"
+
 ## Bir bölge odasının (kanal) maksimum oyuncu sayısı.
 const ROOM_CAPACITY: int = 40
 

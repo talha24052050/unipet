@@ -207,6 +207,26 @@ func local_player_id() -> String:
 	return _user_id
 
 
+## Hesabı sunucudan kalıcı siler. Soketten bağımsız (HTTP): bağlantı kopuk olsa da çalışır. Silme oturumları
+## kapattığı için önce bağlantı kesilir. Sunucuda hiç hesap açılmamışsa (create=false → 404) silinecek bir şey yok.
+func delete_account(session_token: String) -> String:
+	var custom_id: String = custom_id_override if not custom_id_override.is_empty() else Services.auth.get_user_id()
+	if custom_id.is_empty():
+		return "Önce giriş yapılmalı."
+	var res: Dictionary = await _http_post("/v2/account/authenticate/custom?create=false", {"id": custom_id, "vars": {"supabase_token": session_token}})
+	if res["code"] == 404:
+		disconnect_from_server()
+		return ""
+	if not res["ok"] or not (res["body"] is Dictionary) or not (res["body"] as Dictionary).has("token"):
+		return "Sunucuya bağlanılamadı (%d). İnternetini kontrol edip tekrar dene." % res["code"]
+	var token: String = str(res["body"]["token"])
+	disconnect_from_server()
+	var del: Dictionary = await _http_post_raw("/v2/rpc/delete_account", JSON.stringify("{}"), token)
+	if not del["ok"]:
+		return "Sunucu hesabı silemedi (%d). Biraz sonra tekrar dene." % del["code"]
+	return ""
+
+
 ## Bağlantı canlı mı hemen yokla (uygulama arka plandan dönünce): ping yanıtsız kalırsa soket kapatılır.
 func check_connection() -> void:
 	if _socket_open:
@@ -411,13 +431,18 @@ func _send_envelope(body: Dictionary) -> void:
 		_socket.send_text(JSON.stringify(body))
 
 
-func _http_post(path: String, body: Dictionary) -> Dictionary:
+func _http_post(path: String, body: Dictionary, bearer: String = "") -> Dictionary:
+	return await _http_post_raw(path, JSON.stringify(body), bearer)
+
+
+## bearer boşsa server key ile (giriş), doluysa Nakama oturumuyla (RPC) istek.
+func _http_post_raw(path: String, body_text: String, bearer: String = "") -> Dictionary:
 	var req: HTTPRequest = HTTPRequest.new()
 	req.timeout = 10.0
 	add_child(req)
-	var auth: String = "Basic " + Marshalls.utf8_to_base64(server_key + ":")
+	var auth: String = ("Bearer " + bearer) if not bearer.is_empty() else ("Basic " + Marshalls.utf8_to_base64(server_key + ":"))
 	var url: String = "%s://%s:%d%s" % ["https" if ssl else "http", host, port, path]
-	var err: Error = req.request(url, ["Authorization: " + auth, "Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(body))
+	var err: Error = req.request(url, ["Authorization: " + auth, "Content-Type: application/json"], HTTPClient.METHOD_POST, body_text)
 	if err != OK:
 		req.queue_free()
 		return {"ok": false, "code": 0, "body": null}
