@@ -3,178 +3,189 @@
     764.89,
     566.52
   ],
-  "loop_length_m": 4111.4,
+  "loop_length_m": 4049.5,
   "stops": [
     {
       "id": "a_kapisi",
-      "name": "A Kapısı (Başlangıç)",
-      "desc": "Kampüs Ana Giriş & Ring Başlangıç Durağı",
+      "name": "Davutpaşa Kampüsü (A Kapısı)",
+      "desc": "Kampüs ana girişi · Ring başlangıcı",
+      "iett": "302511",
+      "waypoint_index": 0,
       "road_pos": [
-        763.0,
-        569.32
+        756.32,
+        564.81
       ],
       "shelter_pos": [
-        765.91,
-        565.01
+        759.22,
+        560.5
       ],
-      "shelter_yaw": -0.5931,
-      "waypoint_index": 0
+      "shelter_yaw": -0.5931
     },
     {
-      "id": "ilhan_varank",
-      "name": "İlhan Varank Kütüphanesi",
-      "desc": "7/24 Çalışma Salonu & Kongre Merkezi",
+      "id": "kutuphane",
+      "name": "Kütüphane",
+      "desc": "İlhan Varank Kütüphanesi · 7/24 çalışma salonu",
+      "iett": "104331",
+      "waypoint_index": 32,
       "road_pos": [
-        385.76,
-        418.1
+        335.57,
+        465.51
       ],
       "shelter_pos": [
-        382.19,
-        414.32
+        332.0,
+        461.73
       ],
-      "shelter_yaw": 0.7571,
-      "waypoint_index": 28
+      "shelter_yaw": 0.7564
     },
     {
       "id": "ydyo",
-      "name": "Yabancı Diller (YDYO)",
-      "desc": "Hazırlık Binası & Eskafe",
+      "name": "Yabancı Diller Okulu",
+      "desc": "Hazırlık binası · Eskafe",
+      "iett": "129791",
+      "waypoint_index": 61,
       "road_pos": [
-        207.43,
-        567.58
+        172.34,
+        415.38
       ],
       "shelter_pos": [
-        209.58,
-        572.32
+        175.03,
+        410.93
       ],
-      "shelter_yaw": -2.7157,
-      "waypoint_index": 41
+      "shelter_yaw": -0.5432
     },
     {
-      "id": "insaat_teknopark",
-      "name": "İnşaat Fak. & Teknopark",
-      "desc": "İnşaat Mühendisliği & Academic Lounge",
+      "id": "insaat",
+      "name": "İnşaat Fakültesi",
+      "desc": "İnşaat Fakültesi · Academic Lounge",
+      "iett": "102311",
+      "waypoint_index": 73,
       "road_pos": [
-        -58.58,
-        238.39
+        1.52,
+        285.72
       ],
       "shelter_pos": [
-        -55.36,
-        234.3
+        4.74,
+        281.63
       ],
-      "shelter_yaw": -0.6671,
-      "waypoint_index": 77
+      "shelter_yaw": -0.6672
     },
     {
       "id": "spor_kompleksi",
-      "name": "Spor Kompleksi & Havuz",
-      "desc": "Kapalı Yüzme Havuzu, Stadyum & Kortlar",
+      "name": "Spor Kompleksi",
+      "desc": "Kapalı havuz · Stadyum · Ortabahçe'ye yürüme mesafesi",
+      "iett": "132652",
+      "waypoint_index": 104,
       "road_pos": [
-        -268.6,
-        -199.68
+        -124.51,
+        -45.96
       ],
       "shelter_pos": [
-        -264.54,
-        -196.43
+        -121.29,
+        -50.05
       ],
-      "shelter_yaw": -2.246,
-      "waypoint_index": 120
+      "shelter_yaw": -0.6668
     },
     {
-      "id": "egitim_fef",
-      "name": "Eğitim & Fen-Edebiyat",
-      "desc": "Eğitim Fakültesi & FEF A Blok",
+      "id": "egitim",
+      "name": "Eğitim Fakültesi",
+      "desc": "Eğitim Fakültesi · Fen-Edebiyat",
+      "iett": "132912",
+      "waypoint_index": 124,
       "road_pos": [
-        -250.35,
-        -375.46
+        -257.5,
+        -212.55
       ],
       "shelter_pos": [
-        -245.17,
-        -374.98
+        -253.78,
+        -208.92
       ],
-      "shelter_yaw": -1.6637,
-      "waypoint_index": 136
+      "shelter_yaw": -2.3441
     },
     {
-      "id": "b_kapisi_cami",
-      "name": "B Kapısı & Kampüs Camii",
-      "desc": "Kuzey Girişi & Öğrenci Yurtları Yolu",
+      "id": "camii",
+      "name": "Üniversite Camii",
+      "desc": "Kampüs Camii · yurtlar yolu",
+      "iett": "132642",
+      "waypoint_index": 163,
       "road_pos": [
-        -58.15,
-        -329.89
+        -68.18,
+        -303.71
       ],
       "shelter_pos": [
-        -63.35,
-        -329.81
+        -73.33,
+        -304.46
       ],
-      "shelter_yaw": 1.5863,
-      "waypoint_index": 156
+      "shelter_yaw": 1.4258
     },
     {
-      "id": "eef_kutuphane_hamam",
-      "name": "Tarihi Hamam & Yeni Kütüphane",
-      "desc": "EEF, Yeni Merkez Kütüphanesi & ARTLAB Zirvesi",
+      "id": "b_kapisi",
+      "name": "Fakülte B Kapısı",
+      "desc": "B Kapısı · Elektrik-Elektronik Fakültesi",
+      "iett": "132632",
+      "waypoint_index": 180,
       "road_pos": [
-        -8.33,
-        -147.23
+        45.24,
+        -379.96
       ],
       "shelter_pos": [
-        -12.62,
-        -150.17
+        44.75,
+        -374.78
       ],
-      "shelter_yaw": 0.9697,
-      "waypoint_index": 174
+      "shelter_yaw": 3.0467
     },
     {
-      "id": "yemekhane_buyuk_ev",
-      "name": "Yemekhane & Büyük Ev",
-      "desc": "Yemekhane, Hokka, Yıldız Store & Taşbina",
+      "id": "iibf",
+      "name": "İktisadi ve İdari Bilimler Fakültesi",
+      "desc": "İİBF · Yıldız Cafe",
+      "iett": "133702",
+      "waypoint_index": 201,
       "road_pos": [
-        -43.06,
-        -90.18
+        270.7,
+        -294.01
       ],
       "shelter_pos": [
-        -45.75,
-        -85.73
+        267.38,
+        -290.0
       ],
-      "shelter_yaw": 2.5968,
-      "waypoint_index": 178
+      "shelter_yaw": 2.4501
     },
     {
-      "id": "iibf_ana_durak",
-      "name": "İİBF / 41AT Son Durak",
-      "desc": "İktisadi ve İdari Bilimler & Yıldız Cafe",
+      "id": "ytu_son_durak",
+      "name": "YTÜ Davutpaşa Kampüsü (41AT son durak)",
+      "desc": "41AT ve 85C son durağı · Teknopark yolu",
+      "iett": "125851",
+      "waypoint_index": 234,
       "road_pos": [
-        246.8,
-        -21.73
+        391.71,
+        66.19
       ],
       "shelter_pos": [
-        244.56,
-        -17.04
+        387.0,
+        63.98
       ],
-      "shelter_yaw": 2.6972,
-      "waypoint_index": 205
+      "shelter_yaw": 1.1313
     },
     {
-      "id": "otag_i_humayun",
-      "name": "Otağ-ı Hümayun",
-      "desc": "1483 Hünkar Kasrı & Sanat-Tasarım",
+      "id": "kutuphane_donus",
+      "name": "Kütüphane (A Kapısı yönü)",
+      "desc": "İlhan Varank Kütüphanesi · Otağ-ı Hümayun",
+      "iett": "104332",
+      "waypoint_index": 264,
       "road_pos": [
-        365.44,
-        284.35
+        402.36,
+        386.37
       ],
       "shelter_pos": [
-        360.24,
-        284.57
+        401.01,
+        391.39
       ],
-      "shelter_yaw": 1.6127,
-      "waypoint_index": 238
+      "shelter_yaw": 2.8777
     }
   ],
   "waypoints": [
     [
-      763.0,
-      569.32
+      756.32,
+      564.81
     ],
     [
       752.17,
@@ -299,6 +310,10 @@
     [
       338.92,
       462.35
+    ],
+    [
+      335.57,
+      465.51
     ],
     [
       327.74,
@@ -459,6 +474,10 @@
     [
       4.87,
       288.36
+    ],
+    [
+      1.52,
+      285.72
     ],
     [
       -7.75,
@@ -661,6 +680,10 @@
       -208.01
     ],
     [
+      -257.5,
+      -212.55
+    ],
+    [
       -254.59,
       -215.53
     ],
@@ -821,216 +844,260 @@
       -297.75
     ],
     [
-      -69.87,
-      -287.31
+      -68.18,
+      -303.71
     ],
     [
-      -68.09,
-      -275.28
+      -65.62,
+      -310.12
     ],
     [
-      -67.9,
-      -271.75
+      -62.7,
+      -314.97
     ],
     [
-      -51.89,
-      -258.09
+      -58.01,
+      -320.85
     ],
     [
-      -35.88,
-      -244.44
+      -53.48,
+      -326.22
     ],
     [
-      -19.87,
-      -230.78
+      -44.34,
+      -337.09
     ],
     [
-      -5.31,
-      -221.16
+      -35.21,
+      -347.95
     ],
     [
-      9.24,
-      -211.53
+      -26.07,
+      -358.82
     ],
     [
-      23.8,
-      -201.91
+      -15.0,
+      -371.98
     ],
     [
-      27.49,
-      -199.46
+      -9.8,
+      -376.7
     ],
     [
-      15.55,
-      -182.05
+      -3.0,
+      -380.67
     ],
     [
-      3.61,
-      -164.64
+      2.9,
+      -382.51
     ],
     [
-      -8.33,
-      -147.23
+      10.32,
+      -383.17
     ],
     [
-      -20.27,
-      -129.82
+      22.01,
+      -382.1
     ],
     [
-      -27.87,
-      -116.61
+      33.7,
+      -381.02
     ],
     [
-      -35.46,
-      -103.39
+      45.24,
+      -379.96
     ],
     [
-      -43.06,
-      -90.18
+      64.89,
+      -378.09
     ],
     [
-      -36.36,
-      -86.12
+      84.54,
+      -376.22
     ],
     [
-      -28.78,
-      -99.31
+      87.08,
+      -376.01
     ],
     [
-      -21.19,
-      -112.5
+      104.81,
+      -374.5
     ],
     [
-      -13.61,
-      -125.69
+      115.66,
+      -373.52
     ],
     [
-      -1.3,
-      -143.63
+      126.52,
+      -372.54
     ],
     [
-      11.0,
-      -161.57
+      135.88,
+      -371.18
     ],
     [
-      23.3,
-      -179.52
+      142.39,
+      -369.6
     ],
     [
-      35.61,
-      -197.46
+      146.04,
+      -368.59
     ],
     [
-      39.46,
-      -197.11
+      156.4,
+      -364.59
     ],
     [
-      49.66,
-      -189.11
+      166.98,
+      -359.15
     ],
     [
-      65.55,
-      -176.6
+      174.52,
+      -354.74
     ],
     [
-      81.44,
-      -164.08
+      186.27,
+      -347.93
     ],
     [
-      97.33,
-      -151.57
+      198.02,
+      -341.11
     ],
     [
-      113.91,
-      -138.52
+      209.9,
+      -334.28
     ],
     [
-      130.49,
-      -125.47
+      221.78,
+      -327.44
     ],
     [
-      146.99,
-      -112.48
+      233.66,
+      -320.61
     ],
     [
-      163.48,
-      -99.5
+      248.59,
+      -310.88
     ],
     [
-      177.81,
-      -88.21
+      264.19,
+      -299.4
     ],
     [
-      192.14,
-      -76.93
+      266.62,
+      -297.38
     ],
     [
-      206.47,
-      -65.64
+      270.7,
+      -294.01
     ],
     [
-      211.4,
-      -57.52
+      280.54,
+      -285.86
     ],
     [
-      215.05,
-      -52.49
+      294.45,
+      -274.34
     ],
     [
-      217.81,
-      -49.08
+      308.37,
+      -262.82
     ],
     [
-      226.59,
-      -38.22
+      322.29,
+      -251.3
     ],
     [
-      232.49,
-      -31.77
+      336.2,
+      -239.78
     ],
     [
-      239.48,
-      -26.13
+      350.12,
+      -228.26
     ],
     [
-      246.8,
-      -21.73
+      360.32,
+      -217.4
     ],
     [
-      254.99,
-      -17.83
+      362.15,
+      -215.01
     ],
     [
-      262.78,
-      -14.66
+      368.87,
+      -206.26
     ],
     [
-      275.2,
-      -9.62
+      375.08,
+      -195.22
     ],
     [
-      290.5,
-      -3.4
+      379.39,
+      -183.83
     ],
     [
-      305.8,
-      2.82
+      383.4,
+      -167.98
     ],
     [
-      324.38,
-      10.37
+      387.4,
+      -152.14
     ],
     [
-      342.95,
-      17.92
+      391.41,
+      -136.29
     ],
     [
-      361.53,
-      25.48
+      393.97,
+      -124.46
     ],
     [
-      380.1,
-      33.03
+      396.18,
+      -112.29
+    ],
+    [
+      396.92,
+      -109.59
+    ],
+    [
+      399.69,
+      -99.4
+    ],
+    [
+      403.84,
+      -86.58
+    ],
+    [
+      407.17,
+      -73.08
+    ],
+    [
+      409.0,
+      -59.93
+    ],
+    [
+      409.44,
+      -46.93
+    ],
+    [
+      409.14,
+      -34.96
+    ],
+    [
+      407.69,
+      -15.61
+    ],
+    [
+      406.23,
+      3.75
+    ],
+    [
+      404.77,
+      23.1
+    ],
+    [
+      403.32,
+      42.46
     ],
     [
       398.68,
@@ -1173,6 +1240,10 @@
       384.32
     ],
     [
+      402.36,
+      386.37
+    ],
+    [
       413.71,
       389.44
     ],
@@ -1271,6 +1342,11 @@
     [
       752.17,
       562.02
+    ],
+    [
+      763.0,
+      569.32
     ]
-  ]
+  ],
+  "stops_source": "İETT (OpenStreetMap) — art/reference/osm/iett_stops.json"
 }

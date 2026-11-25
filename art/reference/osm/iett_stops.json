@@ -1,0 +1,18 @@
+{
+  "source": "OpenStreetMap contributors (ODbL) — İETT durak platformları ve 41AT güzergâhı (relation 15531849 / 19870730), 2026-11-25",
+  "note": "x/z: oyun koordinatı (origin 41.026074, 28.8893207). Kampüs içi Ring döngüsü sırası; aynı adlı iki yönden döngünün geçtiği platform seçildi.",
+  "reroute_via": [[45.0, -376.0], [267.0, -289.0]],
+  "stops": [
+    {"id": "a_kapisi", "name": "Davutpaşa Kampüsü (A Kapısı)", "iett": "302511", "x": 760.1, "z": 559.2, "desc": "Kampüs ana girişi · Ring başlangıcı"},
+    {"id": "kutuphane", "name": "Kütüphane", "iett": "104331", "x": 343.3, "z": 473.7, "desc": "İlhan Varank Kütüphanesi · 7/24 çalışma salonu"},
+    {"id": "ydyo", "name": "Yabancı Diller Okulu", "iett": "129791", "x": 168.2, "z": 423.3, "desc": "Hazırlık binası · Eskafe"},
+    {"id": "insaat", "name": "İnşaat Fakültesi", "iett": "102311", "x": -0.2, "z": 287.9, "desc": "İnşaat Fakültesi · Academic Lounge"},
+    {"id": "spor_kompleksi", "name": "Spor Kompleksi", "iett": "132652", "x": -120.8, "z": -51.0, "desc": "Kapalı havuz · Stadyum · Ortabahçe'ye yürüme mesafesi"},
+    {"id": "egitim", "name": "Eğitim Fakültesi", "iett": "132912", "x": -255.3, "z": -210.4, "desc": "Eğitim Fakültesi · Fen-Edebiyat"},
+    {"id": "camii", "name": "Üniversite Camii", "iett": "132642", "x": -65.6, "z": -302.4, "desc": "Kampüs Camii · yurtlar yolu"},
+    {"id": "b_kapisi", "name": "Fakülte B Kapısı", "iett": "132632", "x": 45.3, "z": -376.2, "desc": "B Kapısı · Elektrik-Elektronik Fakültesi"},
+    {"id": "iibf", "name": "İktisadi ve İdari Bilimler Fakültesi", "iett": "133702", "x": 266.8, "z": -289.3, "desc": "İİBF · Yıldız Cafe"},
+    {"id": "ytu_son_durak", "name": "YTÜ Davutpaşa Kampüsü (41AT son durak)", "iett": "125851", "x": 366.1, "z": 50.8, "desc": "41AT ve 85C son durağı · Teknopark yolu"},
+    {"id": "kutuphane_donus", "name": "Kütüphane (A Kapısı yönü)", "iett": "104332", "x": 403.3, "z": 382.9, "desc": "İlhan Varank Kütüphanesi · Otağ-ı Hümayun"}
+  ]
+}

@@ -77,7 +77,7 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 		player.free()
 		return "A Kapısı'nda Ring'e biniş veya ilk biniş Tanıtım Turu açılmadı (boarded=%s, tour=%s)" % [boarded, onboarding_shown]
 
-	# İneceği durağı 2. durak (İlhan Varank Kütüphanesi, index=1) seç ve otobüsü ilerlet -> durakta otomatik inmeli!
+	# İneceği durağı 2. durak (Kütüphane, index=1) seç ve otobüsü ilerlet -> durakta otomatik inmeli!
 	transit.call("_finish_onboarding")
 	transit.call("set_target_stop_index", 1)
 	for _step: int in 600:

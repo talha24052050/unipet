@@ -1,9 +1,9 @@
 extends Node3D
 ## YTÜ Davutpaşa Kampüsü Ulaşım Sistemi (Mavi YTÜ Ring + Sembolik İETT 41AT + 11 Durak + Biniş Tanıtım Turu):
 ## - Oyun A Kapısı Başlangıç Durağı'nda başlar; anlık ışınlanma yerine kampüs içi ulaşım Ring ve 41AT ile sağlanır.
-## - 11 gerçek durakta cam durak kabinleri ve çift logolu (YTÜ RİNG | 41AT İETT) durak totemleri yer alır.
+## - 11 gerçek İETT durağında (OSM'den, 41AT güzergâhı) cam durak kabinleri ve çift logolu (YTÜ RİNG | 41AT İETT) durak totemleri yer alır.
 ## - 4 adet Mavi YTÜ Ring otobüsü sık aralıklarla, sembolik sarı-siyah İETT 41AT (AYAZAĞA - DAVUTPAŞA Y.T.Ü.) otobüsü
-##   ise ara sıra şehir seferinden A Kapısı'ndan girerek 4.1 km'lik kampüs ring hattında yolcu indirip bindirir.
+##   ise ara sıra şehir seferinden A Kapısı'ndan girerek 4 km'lik kampüs ring hattında yolcu indirip bindirir.
 ## - Otobüs içi canlı yolcu sohbeti ("🚌 Ring / 41AT Sohbeti"), açılır-kapanır durak kapıları ve 6 pencere koltuğu bulunur.
 ## - Oyuncu ilk kez A Kapısı'ndan Ring'e bindiğinde 4 kartlık interaktif "UniPet Kampüs Tanıtım Turu" açılır.
 
@@ -679,7 +679,8 @@ func _build_transit_hud() -> void:
 	_onboarding_quick_row.visible = false
 	ovb.add_child(_onboarding_quick_row)
 
-	for q_item: Array in [[7, "🏛 Tarihi Hamam'da İn"], [8, "🍽 Yemekhane'de İn"], [9, "🌳 İİBF / Ortabahçe'de İn"]]:
+	# Duraklar gerçek İETT durakları (data/transit_routes.json, tools/transit/real_stops.py): 1 Kütüphane, 4 Spor Kompleksi, 8 İİBF
+	for q_item: Array in [[1, "📚 Kütüphane'de İn"], [4, "🏟 Spor Kompleksi'nde İn"], [8, "🏛 İİBF'de İn"]]:
 		var st_i: int = int(q_item[0])
 		var qb: Button = Button.new()
 		qb.text = str(q_item[1])
