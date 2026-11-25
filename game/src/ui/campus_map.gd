@@ -536,8 +536,8 @@ func _draw_live_players(font: Font) -> void:
 	for pid_v: Variant in rps:
 		var pid: String = str(pid_v)
 		var rp: Node3D = rps[pid_v] as Node3D
-		if rp == null or not is_instance_valid(rp):
-			continue
+		if rp == null or not is_instance_valid(rp) or not rp.visible:
+			continue  # henüz konumu gelmemiş oyuncu (gizli) haritada orijinde görünmesin
 		var pm: Vector2 = world_to_map(Vector2(rp.global_position.x, rp.global_position.z))
 		var is_friend: bool = friend_ids.has(pid)
 		var pcol: Color = Color(0.12, 0.78, 0.42) if is_friend else Color(0.14, 0.68, 0.92)
