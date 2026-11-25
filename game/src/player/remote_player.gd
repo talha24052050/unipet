@@ -35,6 +35,9 @@ func _ready() -> void:
 		set_character(Config.DEFAULT_PET_ID)
 	_update_name_label()
 	_update_heights()
+	# İlk konum gelene kadar gizli: yoksa odaya yeni giren (henüz konum göndermemiş) oyuncu dünya orijininde belirir.
+	if _buffer.is_empty():
+		visible = false
 
 
 func _ensure_nodes() -> void:
@@ -153,9 +156,12 @@ func push_state(state: Dictionary) -> void:
 	var anim: String = str(state.get("anim", "idle"))
 
 	if _buffer.is_empty():
+		if not state.has("pos"):
+			return
 		_set_pos_and_yaw(pos, yaw)
 		_buffer.append({"time": _clock, "pos": pos, "yaw": yaw, "anim": anim})
 		_apply_animation(anim, 0.0)
+		visible = true
 		return
 
 	var last_pos: Vector3 = _buffer[-1]["pos"]

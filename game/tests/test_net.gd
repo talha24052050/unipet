@@ -46,3 +46,54 @@ func test_incoming_messages_emit_signals() -> String:
 	if str(got) != str(expect):
 		return "sinyaller beklenenden farklı:\n%s\n%s" % [got, expect]
 	return ""
+
+
+func test_fast_reconnect_keeps_player_until_last_session_leaves() -> String:
+	var n: Node = Nakama.new()
+	var got: Array = []
+	n.player_joined.connect(func(id: String, _st: Dictionary) -> void: got.append(["join", id]))
+	n.player_left.connect(func(id: String) -> void: got.append(["left", id]))
+	# E yeniden bağlandı: yeni oturum (s2) eski oturumun (s1) çıkışından ÖNCE geliyor.
+	n.call("_handle", {"match_presence_event": {"joins": [{"user_id": "E", "session_id": "s1"}]}})
+	n.call("_handle", {"match_presence_event": {"joins": [{"user_id": "E", "session_id": "s2"}]}})
+	n.call("_handle", {"match_presence_event": {"leaves": [{"user_id": "E", "session_id": "s1"}]}})
+	var mid: String = str(got)
+	n.call("_handle", {"match_presence_event": {"leaves": [{"user_id": "E", "session_id": "s2"}]}})
+	n.free()
+	if mid != str([["join", "E"]]):
+		return "eski oturumun çıkışı oyuncuyu silmemeli: %s" % mid
+	if str(got) != str([["join", "E"], ["left", "E"]]):
+		return "son oturum çıkınca ayrılmalı: %s" % got
+	return ""
+
+
+func test_non_fatal_rpc_error_does_not_disconnect() -> String:
+	var n: Node = Nakama.new()
+	var drops: Array = []
+	var results: Array = []
+	n.disconnected.connect(func(reason: String) -> void: drops.append(reason))
+	n.purchase_finished.connect(func(item: String, ok: bool, reason: String) -> void: results.append([item, ok, reason]))
+	n.set("_socket_open", true)
+	n.buy_item("crown_star")  # soket gerçekte kapalı: zarf gönderilmez ama istek kaydedilir
+	var cid: String = str(n.get("_cid"))
+	n.call("_handle", {"cid": cid, "error": {"message": "yetersiz"}})
+	n.call("_send_request", {"rpc": {"id": "find_room"}}, func(_r: Dictionary) -> void: pass, true)
+	n.call("_handle", {"cid": str(n.get("_cid")), "error": {"message": "oda yok"}})
+	n.set("_socket_open", false)
+	n.free()
+	if str(results) != str([["crown_star", false, "sunucu hatası"]]):
+		return "dükkan hatası satın almayı başarısız bitirmeli: %s" % results
+	if drops != ["oda yok"]:
+		return "sadece oda isteği hatası bağlantıyı düşürmeli: %s" % drops
+	return ""
+
+
+func test_snapshot_player_without_position_joins_without_state() -> String:
+	var n: Node = Nakama.new()
+	var got: Array = []
+	n.player_joined.connect(func(id: String, st: Dictionary) -> void: got.append([id, st.is_empty()]))
+	n.call("_handle", _md(3, {"players": [{"id": "F", "p": [0, 0, 0], "y": 0, "a": "idle"}, {"id": "G", "p": [3, 0, 4], "y": 0, "a": "idle"}]}))
+	n.free()
+	if str(got) != str([["F", true], ["G", false]]):
+		return "konumsuz oyuncu durumsuz katılmalı: %s" % got
+	return ""

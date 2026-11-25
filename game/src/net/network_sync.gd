@@ -85,6 +85,9 @@ func _on_app_resumed(_away_seconds: float) -> void:
 	elif _in_room:
 		_has_sent_state = false
 		_heartbeat_accum = HEARTBEAT_INTERVAL
+		# Arka planda soket sessizce ölmüş olabilir (mobil ağ değişimi): hemen yokla, yanıtsızsa yeniden bağlanır.
+		if net != null and net.has_method("check_connection"):
+			net.call("check_connection")
 
 
 func _connect_network_signals() -> void:

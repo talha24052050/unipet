@@ -29,8 +29,16 @@ var _nakama_token: String = ""
 var _user_id: String = ""
 var _match_id: String = ""
 var _cid: int = 0
-## cid -> Callable(response: Dictionary)
+## Yanıt gelmeyen istek bu kadar saniye sonra zaman aşımına düşer.
+const REQUEST_TIMEOUT_SEC: float = 10.0
+## Açık sokette bu aralıkla ping: mobil ağ değişiminde yarı açık (ölü) soket ancak böyle fark edilir.
+const PING_INTERVAL_SEC: float = 15.0
+## cid -> {"cb": Callable(response: Dictionary), "deadline": float (sn), "fatal": bool}
 var _pending: Dictionary = {}
+## Odadaki oyuncuların açık oturumları: user_id -> {session_id: true}. Hızlı yeniden bağlanmada eski oturumun
+## çıkışı yeni oturumdan sonra gelebilir; oyuncu ancak son oturumu çıkınca "ayrıldı" sayılır.
+var _presences: Dictionary = {}
+var _ping_accum: float = 0.0
 var _pending_zone: String = ""
 ## connect_to_url çağrıldı, henüz açılmadı: bu sırada kapanırsa da "koptu" yayınlanmalı (yoksa sonsuz "Bağlanıyor…").
 var _connecting: bool = false
@@ -86,6 +94,7 @@ func disconnect_from_server() -> void:
 	leave_zone()
 	_pending_zone = ""
 	_pending.clear()
+	_presences.clear()
 	_connecting = false
 	if _socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 		_socket.close()
@@ -103,7 +112,7 @@ func join_zone(zone_id: String) -> void:
 		if not payload is Dictionary or not (payload as Dictionary).has("match_id"):
 			disconnected.emit("Oda bulunamadı.")
 			return
-		_join_match(str(payload["match_id"])))
+		_join_match(str(payload["match_id"])), true)
 
 
 func leave_zone() -> void:
@@ -111,6 +120,7 @@ func leave_zone() -> void:
 		return
 	_send_envelope({"match_leave": {"match_id": _match_id}})
 	_match_id = ""
+	_presences.clear()
 
 
 func send_state(state: Dictionary) -> void:
@@ -181,6 +191,9 @@ func buy_item(item: String) -> void:
 		purchase_finished.emit.call_deferred(item, false, "sunucuya bağlı değil")
 		return
 	_send_request({"rpc": {"id": "buy_item", "payload": JSON.stringify({"item": item})}}, func(r: Dictionary) -> void:
+		if r.has("error"):
+			purchase_finished.emit(item, false, "sunucu hatası")
+			return
 		var res: Variant = JSON.parse_string(str(r.get("rpc", {}).get("payload", "{}")))
 		if not res is Dictionary:
 			purchase_finished.emit(item, false, "sunucu hatası")
@@ -194,8 +207,25 @@ func local_player_id() -> String:
 	return _user_id
 
 
-func _process(_delta: float) -> void:
+## Bağlantı canlı mı hemen yokla (uygulama arka plandan dönünce): ping yanıtsız kalırsa soket kapatılır.
+func check_connection() -> void:
+	if _socket_open:
+		_ping_accum = 0.0
+		_send_ping()
+
+
+func _send_ping() -> void:
+	_send_request({"ping": {}}, func(_r: Dictionary) -> void: pass, true)
+
+
+func _process(delta: float) -> void:
 	_socket.poll()
+	if _socket_open:
+		_ping_accum += delta
+		if _ping_accum >= PING_INTERVAL_SEC:
+			_ping_accum = 0.0
+			_send_ping()
+		_expire_pending_requests()
 	var st: WebSocketPeer.State = _socket.get_ready_state()
 	if st == WebSocketPeer.STATE_CLOSED and _connecting:
 		_connecting = false
@@ -211,6 +241,8 @@ func _process(_delta: float) -> void:
 	elif st == WebSocketPeer.STATE_CLOSED and _socket_open:
 		_socket_open = false
 		_match_id = ""
+		_pending.clear()
+		_presences.clear()
 		disconnected.emit("Bağlantı koptu (%d)." % _socket.get_close_code())
 	while _socket.get_available_packet_count() > 0:
 		var msg: Variant = JSON.parse_string(_socket.get_packet().get_string_from_utf8())
@@ -221,21 +253,24 @@ func _process(_delta: float) -> void:
 func _handle(msg: Dictionary) -> void:
 	var cid: String = str(msg.get("cid", ""))
 	if not cid.is_empty() and _pending.has(cid):
-		var cb: Callable = _pending[cid]
+		var req: Dictionary = _pending[cid]
 		_pending.erase(cid)
 		if msg.has("error"):
 			push_warning("Nakama hata: %s" % msg["error"])
-			disconnected.emit(str((msg["error"] as Dictionary).get("message", "Sunucu hatası")))
-			return
-		cb.call(msg)
+			# Sadece oda bulma/katılma hatası bağlantıyı düşürür; dükkan/cüzdan hatası odayı yeniden kurdurmasın.
+			if bool(req["fatal"]):
+				disconnected.emit(str((msg["error"] as Dictionary).get("message", "Sunucu hatası")))
+				return
+		(req["cb"] as Callable).call(msg)
 		return
 	if msg.has("match_presence_event"):
 		var ev: Dictionary = msg["match_presence_event"]
 		for p: Dictionary in ev.get("joins", []):
-			if str(p.get("user_id")) != _user_id:
-				player_joined.emit(str(p["user_id"]), {})
+			_presence_joined(p)
 		for p: Dictionary in ev.get("leaves", []):
-			player_left.emit(str(p["user_id"]))
+			var uid: String = str(p.get("user_id", ""))
+			if _presence_remove(uid, str(p.get("session_id", ""))):
+				player_left.emit(uid)
 	elif msg.has("match_data"):
 		_handle_match_data(msg["match_data"])
 
@@ -284,7 +319,10 @@ func _handle_match_data(md: Dictionary) -> void:
 		OP_SNAPSHOT:
 			for p: Dictionary in d.get("players", []):
 				var pid: String = str(p.get("id", ""))
-				player_joined.emit(pid, decode_state(p))
+				# Sunucuda henüz konum göndermemiş oyuncu [0,0,0] olarak durur: konumsuz katılım say (gizli kalır).
+				var sp: Variant = p.get("p", [])
+				var no_pos: bool = sp is Array and (sp as Array).size() == 3 and float(sp[0]) == 0.0 and float(sp[1]) == 0.0 and float(sp[2]) == 0.0
+				player_joined.emit(pid, {} if no_pos else decode_state(p))
 				if not str(p.get("pet", "")).is_empty():
 					player_profile.emit(pid, decode_profile(p))
 
@@ -296,10 +334,57 @@ func _join_match(match_id: String) -> void:
 		var me: Dictionary = m.get("self", {})
 		if me.has("user_id"):
 			_user_id = str(me["user_id"])
+		_presences.clear()
 		room_joined.emit(_match_id)
 		for p: Dictionary in m.get("presences", []):
-			if str(p.get("user_id")) != _user_id:
-				player_joined.emit(str(p["user_id"]), {}))
+			_presence_joined(p), true)
+
+
+## Katılan oturumu kaydeder; kullanıcının odadaki ilk oturumuysa player_joined yayınlar.
+func _presence_joined(p: Dictionary) -> void:
+	var uid: String = str(p.get("user_id", ""))
+	if uid.is_empty() or uid == _user_id:
+		return
+	var first: bool = not _presences.has(uid)
+	var sessions: Dictionary = _presences.get(uid, {})
+	sessions[str(p.get("session_id", ""))] = true
+	_presences[uid] = sessions
+	if first:
+		player_joined.emit(uid, {})
+
+
+## Oturumu siler; kullanıcının son oturumuysa true (oyuncu gerçekten ayrıldı).
+func _presence_remove(uid: String, session_id: String) -> bool:
+	if not _presences.has(uid):
+		return not uid.is_empty() and uid != _user_id
+	var sessions: Dictionary = _presences[uid]
+	sessions.erase(session_id)
+	if sessions.is_empty():
+		_presences.erase(uid)
+		return true
+	return false
+
+
+func _expire_pending_requests() -> void:
+	if _pending.is_empty():
+		return
+	var now: float = Time.get_ticks_msec() / 1000.0
+	var expired: Array = []
+	for cid: String in _pending:
+		if now >= float((_pending[cid] as Dictionary)["deadline"]):
+			expired.append(cid)
+	for cid: String in expired:
+		if not _pending.has(cid):
+			continue
+		var req: Dictionary = _pending[cid]
+		_pending.erase(cid)
+		if bool(req["fatal"]):
+			# Sunucu yanıt vermiyor (ölü soket / takılan oda isteği): soketi hemen kapat; _process "koptu" yayınlar
+			# ve NetworkSync artan aralıklarla yeniden bağlanır.
+			push_warning("Nakama isteği zaman aşımı: soket kapatılıyor")
+			_socket.close(-1)
+			return
+		(req["cb"] as Callable).call({"error": {"message": "zaman aşımı"}})
 
 
 func _send_match_data(op: int, payload: Dictionary) -> void:
@@ -312,10 +397,11 @@ func _send_match_data(op: int, payload: Dictionary) -> void:
 	}})
 
 
-func _send_request(body: Dictionary, on_response: Callable) -> void:
+## fatal: hata/zaman aşımı bağlantıyı düşürür (oda bulma/katılma, ping). Diğerlerinde callback {"error":…} alır.
+func _send_request(body: Dictionary, on_response: Callable, fatal: bool = false) -> void:
 	_cid += 1
 	var cid: String = str(_cid)
-	_pending[cid] = on_response
+	_pending[cid] = {"cb": on_response, "deadline": Time.get_ticks_msec() / 1000.0 + REQUEST_TIMEOUT_SEC, "fatal": fatal}
 	body["cid"] = cid
 	_send_envelope(body)
 
