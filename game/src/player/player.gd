@@ -18,6 +18,9 @@ var _step_accum: float = 0.0
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var display_name: String = ""
+var is_ytu_verified: bool = false
+var role_tag: String = ""
+var bio: String = ""
 
 @onready var visual: PetVisual = $PetVisual
 @onready var _collision: CollisionShape3D = $Collision
@@ -227,6 +230,9 @@ func _ready() -> void:
 
 ## Kayıtlı seçimi (pet + aksesuarlar + nick) uygular; çıkarılmış slotları da temizler.
 func apply_profile(profile: LocalProfile) -> void:
+	is_ytu_verified = profile.is_ytu_verified
+	role_tag = profile.role_tag
+	bio = profile.bio
 	set_character(profile.pet_id)
 	set_display_name(profile.display_name)
 	for slot: StringName in CharacterDef.ACCESSORY_SLOTS:
@@ -252,7 +258,9 @@ func _update_name_label() -> void:
 		name_label = get_node_or_null("NameLabel") as Label3D
 	if name_label == null:
 		return
-	name_label.text = display_name if not display_name.is_empty() else "Oyuncu"
+	var base_nm: String = display_name if not display_name.is_empty() else "Oyuncu"
+	name_label.text = ("✓ %s" % base_nm) if is_ytu_verified else base_nm
+	name_label.modulate = Color(0.84, 0.95, 1.0, 1.0) if is_ytu_verified else Color(0.96, 0.98, 1.0, 1.0)
 	if visual != null and visual.has_method("footprint"):
 		name_label.position.y = visual.footprint().y + 0.16
 

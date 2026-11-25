@@ -14,6 +14,10 @@ const CHAT_BUBBLE_OFFSET_Y: float = 0.52
 var character_id: StringName = &""
 ## Profil gelince takma ad; gelmediyse kimliğin başı gösterilir.
 var display_name: String = ""
+var is_ytu_verified: bool = false
+var role_tag: String = ""
+var bio: String = ""
+var discovered_count: int = 0
 
 var _clock: float = 0.0
 var _buffer: Array[Dictionary] = []
@@ -50,7 +54,9 @@ func set_player_id(id: String) -> void:
 func _update_name_label() -> void:
 	_ensure_nodes()
 	if name_label != null:
-		name_label.text = display_name if not display_name.is_empty() else (player_id.substr(0, 6) if not player_id.is_empty() else "")
+		var base_nm: String = display_name if not display_name.is_empty() else (player_id.substr(0, 6) if not player_id.is_empty() else "")
+		name_label.text = ("✓ %s" % base_nm) if (is_ytu_verified and not base_nm.is_empty()) else base_nm
+		name_label.modulate = Color(0.84, 0.95, 1.0, 1.0) if is_ytu_verified else Color(0.96, 0.98, 1.0, 1.0)
 
 
 func _update_heights() -> void:
@@ -88,6 +94,10 @@ func apply_profile(profile: Dictionary) -> void:
 		pet_id = Config.DEFAULT_PET_ID
 	set_character(pet_id)
 	display_name = str(profile.get("name", ""))
+	is_ytu_verified = bool(profile.get("ytu", false))
+	role_tag = str(profile.get("role", ""))
+	bio = str(profile.get("bio", ""))
+	discovered_count = int(profile.get("disc", 0))
 	_update_name_label()
 
 	var raw_acc: Variant = profile.get("acc", {})

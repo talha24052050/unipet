@@ -99,6 +99,11 @@ func _save_settings_and_name(email: String) -> bool:
 		prof.display_name = nick
 	elif prof.display_name.is_empty():
 		prof.display_name = LocalProfile.name_from_email(email)
+	if email.contains("@"):
+		prof.is_ytu_verified = Services.auth.is_school_email(email)
+		var valid_list: PackedStringArray = LocalProfile.YTU_ROLES if prof.is_ytu_verified else LocalProfile.VISITOR_ROLES
+		if not valid_list.has(prof.role_tag):
+			prof.role_tag = valid_list[0]
 	prof.save()
 	return true
 

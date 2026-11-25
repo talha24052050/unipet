@@ -238,21 +238,21 @@ func get_remote_players() -> Dictionary:
 func send_local_profile() -> void:
 	if net == null or not _in_room:
 		return
-	var pet_id: StringName = Config.DEFAULT_PET_ID
-	var accs: Dictionary = {}
+	var prof: RefCounted = LocalProfile.load_or_default()
+	var pet_id: StringName = prof.pet_id
+	var accs: Dictionary = prof.accessories
 	if player != null:
 		if "character_id" in player and player.character_id != &"":
 			pet_id = player.character_id
 		if "visual" in player and player.visual != null and player.visual.has_method("equipped_ids"):
 			accs = player.visual.equipped_ids()
-		else:
-			var prof: LocalProfile = LocalProfile.load_or_default()
-			accs = prof.accessories
-	else:
-		var prof: LocalProfile = LocalProfile.load_or_default()
-		pet_id = prof.pet_id
-		accs = prof.accessories
-	net.send_profile(pet_id, accs, LocalProfile.load_or_default().display_name)
+	var extra: Dictionary = {
+		"ytu": bool(prof.is_ytu_verified),
+		"role": str(prof.role_tag),
+		"bio": str(prof.bio),
+		"disc": (prof.discovered as PackedStringArray).size(),
+	}
+	net.send_profile(pet_id, accs, str(prof.display_name), extra)
 
 
 ## Sahneyi yeniden kurmadan yapılan anlık ışınlanmalarda odayı temizce yeniler (sunucu hız koruması için).

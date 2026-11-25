@@ -610,10 +610,14 @@ function beforeAuthenticateCustom(ctx, logger, nk, req) {
   var user = JSON.parse(res.body);
   var email = (user.email || "").toLowerCase();
   var schoolOnly = env(ctx, "UNIPET_REQUIRE_SCHOOL_EMAIL", "false") === "true";
-  if (user.id !== id || (schoolOnly && !ALLOWED_EMAIL.test(email))) {
+  var isYtuMail = ALLOWED_EMAIL.test(email);
+  if (user.id !== id || (schoolOnly && !isYtuMail)) {
     logger.warn("Reddedildi: id eşleşmedi ya da domain dışı (%s)", email);
     throw Error("bu hesap kullanılamaz");
   }
+  // Sunucu otoriter YTÜ öğrenci doğrulaması (yalnızca @std.yildiz.edu.tr / @yildiz.edu.tr true olur)
+  nk.storageWrite([{ collection: "account_meta", key: "auth_meta", userId: id, value: { ytu: isYtuMail },
+    permissionRead: 1, permissionWrite: 0 }]);
   // Token Nakama'da saklanmasın.
   delete req.account.vars.supabase_token;
   return req;
@@ -715,8 +719,13 @@ function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, me
 function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
   for (var i = 0; i < presences.length; i++) {
     var p = presences[i];
-    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", cafe: "", lastChat: 0 };
+    var metaObjs = nk.storageRead([{ collection: "account_meta", key: "auth_meta", userId: p.userId }]);
+    var hasMeta = metaObjs && metaObjs.length > 0 && metaObjs[0].value && typeof metaObjs[0].value.ytu === "boolean";
+    var ytuAuth = hasMeta ? !!metaObjs[0].value.ytu : null;
+    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", ytu: !!ytuAuth, ytuAuth: ytuAuth, role: "", bio: "", disc: 0, cafe: "", lastChat: 0 };
     state.players[p.userId].presence = p;
+    state.players[p.userId].ytuAuth = ytuAuth;
+    if (ytuAuth !== null) state.players[p.userId].ytu = ytuAuth;
     // Efsanevi pet kilitleri: kapalı testte Kutbi hediye; oyuncuya güncel liste
     var fresh = env(ctx, "UNIPET_CLOSED_TEST", "false") === "true" ? unlocksGrant(nk, p.userId, ["kutbi"]) : [];
     state.players[p.userId].unlocked = unlocksLoad(nk, p.userId);
@@ -728,7 +737,7 @@ function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
     for (var id in state.players) {
       if (id === p.userId) continue;
       var o = state.players[id];
-      list.push({ id: id, p: o.p, y: o.y, a: o.a, pet: o.pet, acc: o.acc, name: o.name });
+      list.push({ id: id, p: o.p, y: o.y, a: o.a, pet: o.pet, acc: o.acc, name: o.name, ytu: !!o.ytu, role: o.role || "", bio: o.bio || "", disc: o.disc | 0 });
     }
     dispatcher.broadcastMessage(OP_SNAPSHOT, JSON.stringify({ players: list }), [p], null, true);
     var nowS = Math.floor(Date.now() / 1000);
@@ -1055,13 +1064,17 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         acc[slots[s]] = String(a);
       }
       pl.pet = String(data.pet); pl.acc = acc; pl.name = cleanName(data.name);
+      pl.ytu = (pl.ytuAuth !== null && pl.ytuAuth !== undefined) ? !!pl.ytuAuth : !!data.ytu;
+      pl.role = cleanFreeChat(data.role || "", 32);
+      pl.bio = cleanFreeChat(data.bio || "", 40);
+      pl.disc = typeof data.disc === "number" && isFinite(data.disc) ? Math.max(0, Math.min(60, Math.floor(data.disc))) : 0;
       if (pl.name) {
         var sDoc = socialLoad(nk, uid);
         if (sDoc.name !== pl.name) { sDoc.name = pl.name; socialSave(nk, uid, sDoc); }
       }
       var rest = othersOf(state, uid);
       if (rest.length > 0) {
-        dispatcher.broadcastMessage(OP_PROFILE, JSON.stringify({ id: uid, pet: pl.pet, acc: acc, name: pl.name }), rest, null, true);
+        dispatcher.broadcastMessage(OP_PROFILE, JSON.stringify({ id: uid, pet: pl.pet, acc: acc, name: pl.name, ytu: pl.ytu, role: pl.role, bio: pl.bio, disc: pl.disc }), rest, null, true);
       }
     }
   }

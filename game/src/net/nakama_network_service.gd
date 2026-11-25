@@ -134,11 +134,17 @@ func send_chat(message: ChatMessage) -> void:
 	_send_match_data(OP_CHAT, pkt)
 
 
-func send_profile(pet_id: StringName, accessories: Dictionary, display_name: String = "") -> void:
+func send_profile(pet_id: StringName, accessories: Dictionary, display_name: String = "", extra: Dictionary = {}) -> void:
 	var acc: Dictionary = {}
 	for slot: StringName in accessories:
 		acc[str(slot)] = str(accessories[slot])
-	_send_match_data(OP_PROFILE, {"pet": str(pet_id), "acc": acc, "name": display_name})
+	var pkt: Dictionary = {"pet": str(pet_id), "acc": acc, "name": display_name}
+	if not extra.is_empty():
+		pkt["ytu"] = bool(extra.get("ytu", false))
+		pkt["role"] = str(extra.get("role", "")).substr(0, 32)
+		pkt["bio"] = str(extra.get("bio", "")).substr(0, 40)
+		pkt["disc"] = int(extra.get("disc", 0))
+	_send_match_data(OP_PROFILE, pkt)
 
 
 func send_care_action(action: String) -> void:
@@ -355,7 +361,15 @@ static func decode_profile(d: Dictionary) -> Dictionary:
 	if raw is Dictionary:
 		for slot: String in raw:
 			acc[StringName(slot)] = StringName(str(raw[slot]))
-	return {"pet": StringName(str(d.get("pet", ""))), "acc": acc, "name": str(d.get("name", ""))}
+	return {
+		"pet": StringName(str(d.get("pet", ""))),
+		"acc": acc,
+		"name": str(d.get("name", "")),
+		"ytu": bool(d.get("ytu", false)),
+		"role": str(d.get("role", "")),
+		"bio": str(d.get("bio", "")),
+		"disc": int(d.get("disc", 0)),
+	}
 
 
 ## Nakama oturum JWT'sinin içindeki kullanıcı kimliği (uid). İmza doğrulanmaz; sadece okumak için.

@@ -321,11 +321,39 @@ func _connect_signals() -> void:
 			pi.connect("profile_requested", open_player_profile)
 
 
-func open_player_profile(pid: String, dname: String, pet_id: String = "") -> void:
+func open_player_profile(pid: String, dname: String, pet_id: String = "", extra: Dictionary = {}) -> void:
 	_ensure_nodes()
 	_build_social_extensions()
+	var merged: Dictionary = extra.duplicate()
+	if merged.is_empty():
+		var my_id: String = Services.net.local_player_id() if Services.net != null else ""
+		if not my_id.is_empty() and pid == my_id:
+			var prof: RefCounted = LocalProfile.load_or_default()
+			if pet_id.is_empty():
+				pet_id = str(prof.get("pet_id"))
+			merged = {
+				"ytu": bool(prof.get("is_ytu_verified")),
+				"role": str(prof.get("role_tag")),
+				"bio": str(prof.get("bio")),
+				"disc": (prof.get("discovered") as PackedStringArray).size(),
+			}
+		else:
+			var ns: Node = _find_scene_node("NetworkSync")
+			if ns != null and ns.has_method("get_remote_player"):
+				var rp: Node = ns.call("get_remote_player", pid)
+				if rp != null:
+					if pet_id.is_empty() and "character_id" in rp:
+						pet_id = str(rp.get("character_id"))
+					if dname.is_empty() and "display_name" in rp:
+						dname = str(rp.get("display_name"))
+					merged = {
+						"ytu": bool(rp.get("is_ytu_verified")) if "is_ytu_verified" in rp else false,
+						"role": str(rp.get("role_tag")) if "role_tag" in rp else "",
+						"bio": str(rp.get("bio")) if "bio" in rp else "",
+						"disc": int(rp.get("discovered_count")) if "discovered_count" in rp else 0,
+					}
 	if _profile_popup != null and _profile_popup.has_method("show_for_player"):
-		_profile_popup.call("show_for_player", pid, dname, pet_id)
+		_profile_popup.call("show_for_player", pid, dname, pet_id, merged)
 
 
 func _on_open_dm_from_profile(peer_id: String, peer_name: String) -> void:
@@ -1020,13 +1048,68 @@ func _rebuild_inbox_view() -> void:
 	for ch: Node in _inbox_box.get_children():
 		ch.queue_free()
 
-	# 1) Kendi Nickim (kafa üstünde görünen takma ad)
+	# 1) Kampüs Kimliğim (Doğrulanmış YTÜ Öğrencisi ✓ vs YKS Adayı / Kampüs Misafiri)
 	var prof: RefCounted = LocalProfile.load_or_default()
+	var is_ytu: bool = bool(prof.get("is_ytu_verified"))
 	var nick_hdr: Label = Label.new()
-	nick_hdr.text = "👤 Benim Profilim (Başının üstünde görünen nick)"
+	nick_hdr.text = "👤 Kampüs Kimliğim — %s" % ("✓ Doğrulanmış YTÜ Öğrencisi" if is_ytu else "🎯 YKS Adayı / Kampüs Misafiri")
 	nick_hdr.add_theme_font_size_override("font_size", 20)
-	nick_hdr.add_theme_color_override("font_color", Color(0.68, 0.84, 1.0))
+	nick_hdr.add_theme_color_override("font_color", Color(1.0, 0.90, 0.52) if is_ytu else Color(0.68, 0.86, 1.0))
 	_inbox_box.add_child(nick_hdr)
+
+	var verify_info_row: HBoxContainer = HBoxContainer.new()
+	verify_info_row.add_theme_constant_override("separation", 8)
+	_inbox_box.add_child(verify_info_row)
+
+	var verify_hint: Label = Label.new()
+	verify_hint.text = "YTÜ maili (@std.yildiz.edu.tr) ile giriş yapanlar otomatik doğrulanmış rozet alır; misafir ve YKS öğrencileri hedef/misafir statüsü seçebilir."
+	verify_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	verify_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	verify_hint.add_theme_font_size_override("font_size", 15)
+	verify_hint.add_theme_color_override("font_color", Color(0.72, 0.80, 0.90))
+	verify_info_row.add_child(verify_hint)
+
+	if Config.DEV_MODE:
+		var toggle_ytu_btn: Button = Button.new()
+		toggle_ytu_btn.name = "DevToggleYtuButton"
+		toggle_ytu_btn.text = "Misafir Yap" if is_ytu else "YTÜ ✓ Yap"
+		toggle_ytu_btn.custom_minimum_size = Vector2(124, 44)
+		toggle_ytu_btn.add_theme_font_size_override("font_size", 16)
+		toggle_ytu_btn.pressed.connect(func() -> void: _toggle_dev_ytu_verified())
+		verify_info_row.add_child(toggle_ytu_btn)
+
+	var role_row: HBoxContainer = HBoxContainer.new()
+	role_row.add_theme_constant_override("separation", 8)
+	_inbox_box.add_child(role_row)
+
+	var role_lbl: Label = Label.new()
+	role_lbl.text = "Bölüm:" if is_ytu else "Statü:"
+	role_lbl.add_theme_font_size_override("font_size", 18)
+	role_row.add_child(role_lbl)
+
+	var role_opt: OptionButton = OptionButton.new()
+	role_opt.name = "SelfRoleSelect"
+	role_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	role_opt.custom_minimum_size = Vector2(0, 48)
+	role_opt.add_theme_font_size_override("font_size", 18)
+	var role_choices: PackedStringArray = LocalProfile.YTU_ROLES if is_ytu else LocalProfile.VISITOR_ROLES
+	var cur_role: String = str(prof.get("role_tag"))
+	var sel_idx: int = 0
+	for ri: int in role_choices.size():
+		role_opt.add_item(role_choices[ri], ri)
+		if role_choices[ri] == cur_role:
+			sel_idx = ri
+	role_opt.select(sel_idx)
+	role_row.add_child(role_opt)
+
+	var bio_in: LineEdit = LineEdit.new()
+	bio_in.name = "SelfBioInput"
+	bio_in.text = str(prof.get("bio"))
+	bio_in.placeholder_text = "Kısa durum/hedef yazısı (örn: ARTLAB için geldim / YKS 2027 hedef YTÜ!)..."
+	bio_in.max_length = LocalProfile.BIO_MAX
+	bio_in.custom_minimum_size = Vector2(0, 48)
+	bio_in.add_theme_font_size_override("font_size", 18)
+	_inbox_box.add_child(bio_in)
 
 	var nick_row: HBoxContainer = HBoxContainer.new()
 	nick_row.add_theme_constant_override("separation", 8)
@@ -1037,17 +1120,19 @@ func _rebuild_inbox_view() -> void:
 	nick_in.text = str(prof.get("display_name"))
 	nick_in.placeholder_text = "Takma adın (1-16 karakter)..."
 	nick_in.max_length = LocalProfile.NAME_MAX
-	nick_in.custom_minimum_size = Vector2(0, 54)
+	nick_in.custom_minimum_size = Vector2(0, 52)
 	nick_in.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nick_in.add_theme_font_size_override("font_size", 20)
+	nick_in.add_theme_font_size_override("font_size", 19)
 	nick_row.add_child(nick_in)
 
 	var save_nick_btn: Button = Button.new()
 	save_nick_btn.name = "SaveNickButton"
-	save_nick_btn.text = "Nick Kaydet"
-	save_nick_btn.custom_minimum_size = Vector2(148, 54)
-	save_nick_btn.add_theme_font_size_override("font_size", 20)
-	save_nick_btn.pressed.connect(func() -> void: _save_self_nick(nick_in.text))
+	save_nick_btn.text = "Profili Kaydet"
+	save_nick_btn.custom_minimum_size = Vector2(158, 52)
+	save_nick_btn.add_theme_font_size_override("font_size", 19)
+	save_nick_btn.pressed.connect(func() -> void:
+		var chosen_role: String = role_opt.get_item_text(role_opt.selected) if role_opt.item_count > 0 else ""
+		_save_self_profile(nick_in.text, chosen_role, bio_in.text))
 	nick_row.add_child(save_nick_btn)
 
 	# 2) Gelen Arkadaşlık İstekleri (İstek Kutusu)
@@ -1123,22 +1208,57 @@ func _rebuild_inbox_view() -> void:
 		frow.add_child(dm_b)
 
 
+func _toggle_dev_ytu_verified() -> void:
+	var prof: RefCounted = LocalProfile.load_or_default()
+	var next_ytu: bool = not bool(prof.get("is_ytu_verified"))
+	prof.set("is_ytu_verified", next_ytu)
+	prof.set("role_tag", LocalProfile.YTU_ROLES[0] if next_ytu else LocalProfile.VISITOR_ROLES[0])
+	prof.call("save")
+	var player: Node = _find_scene_node("Player")
+	if player != null and player.has_method("apply_profile"):
+		player.call("apply_profile", prof)
+	var ns: Node = _find_scene_node("NetworkSync")
+	if ns != null and ns.has_method("send_local_profile"):
+		ns.call("send_local_profile")
+	Sfx.play(&"ui_click")
+	_rebuild_inbox_view()
+
+
 func _save_self_nick(raw_nick: String) -> void:
+	var prof: RefCounted = LocalProfile.load_or_default()
+	_save_self_profile(raw_nick, str(prof.get("role_tag")), str(prof.get("bio")))
+
+
+func _save_self_profile(raw_nick: String, raw_role: String, raw_bio: String) -> void:
 	var cleaned: String = LocalProfile.clean_name(raw_nick)
 	if cleaned.is_empty() or ChatFilter.is_offensive(cleaned):
 		_show_status("Geçerli bir takma ad girin.", Color(1.0, 0.55, 0.50))
 		return
+	var clean_bio: String = raw_bio.strip_edges().substr(0, LocalProfile.BIO_MAX)
+	if not clean_bio.is_empty() and ChatFilter.is_offensive(clean_bio):
+		_show_status("Durum yazısında uygunsuz ifade kullanılamaz.", Color(1.0, 0.55, 0.50))
+		return
 	var prof: RefCounted = LocalProfile.load_or_default()
 	prof.set("display_name", cleaned)
+	prof.set("role_tag", raw_role.strip_edges().substr(0, 32))
+	prof.set("bio", clean_bio)
 	prof.call("save")
 	var player: Node = _find_scene_node("Player")
-	if player != null and player.has_method("set_display_name"):
-		player.call("set_display_name", cleaned)
+	if player != null:
+		if player.has_method("apply_profile"):
+			player.call("apply_profile", prof)
+		elif player.has_method("set_display_name"):
+			player.call("set_display_name", cleaned)
 	var ns: Node = _find_scene_node("NetworkSync")
 	if ns != null and ns.has_method("send_local_profile"):
 		ns.call("send_local_profile")
 	elif Services.net != null:
-		Services.net.send_profile(prof.get("pet_id"), prof.get("accessories"), cleaned)
+		Services.net.send_profile(prof.get("pet_id"), prof.get("accessories"), cleaned, {
+			"ytu": bool(prof.get("is_ytu_verified")),
+			"role": str(prof.get("role_tag")),
+			"bio": clean_bio,
+			"disc": (prof.get("discovered") as PackedStringArray).size(),
+		})
 	Sfx.play(&"ui_click")
 	_rebuild_inbox_view()
 

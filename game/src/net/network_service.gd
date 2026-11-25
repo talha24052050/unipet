@@ -56,8 +56,8 @@ func send_chat(_message: ChatMessage) -> void:
 	push_error("NetworkService.send_chat soyut")
 
 
-## Yerel oyuncunun pet + aksesuarlarını odaya duyurur (katılınca ve değişince).
-func send_profile(_pet_id: StringName, _accessories: Dictionary, _display_name: String = "") -> void:
+## Yerel oyuncunun pet + aksesuar + kampüs kimliği bilgilerini odaya duyurur.
+func send_profile(_pet_id: StringName, _accessories: Dictionary, _display_name: String = "", _extra: Dictionary = {}) -> void:
 	pass
 
 

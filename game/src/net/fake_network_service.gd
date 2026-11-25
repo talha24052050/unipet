@@ -36,8 +36,16 @@ func send_state(state: Dictionary) -> void:
 	sent_states.append(state.duplicate(true))
 
 
-func send_profile(pet_id: StringName, accessories: Dictionary, display_name: String = "") -> void:
-	sent_profiles.append({"pet": pet_id, "acc": accessories.duplicate(true)})
+func send_profile(pet_id: StringName, accessories: Dictionary, display_name: String = "", extra: Dictionary = {}) -> void:
+	sent_profiles.append({
+		"pet": pet_id,
+		"acc": accessories.duplicate(true),
+		"name": display_name,
+		"ytu": bool(extra.get("ytu", false)),
+		"role": str(extra.get("role", "")),
+		"bio": str(extra.get("bio", "")),
+		"disc": int(extra.get("disc", 0)),
+	})
 
 
 func send_chat(message: ChatMessage) -> void:

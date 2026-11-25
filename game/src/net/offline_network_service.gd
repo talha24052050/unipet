@@ -196,7 +196,7 @@ func _care_save() -> void:
 	cfg.save(CARE_PATH)
 
 
-func send_profile(pet_id: StringName, _accessories: Dictionary, display_name: String = "") -> void:
+func send_profile(pet_id: StringName, _accessories: Dictionary, display_name: String = "", _extra: Dictionary = {}) -> void:
 	_pet_id = str(pet_id)
 	if not display_name.is_empty():
 		_display_name = display_name

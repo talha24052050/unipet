@@ -330,4 +330,24 @@ stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 10, stSoc, [
 var grpChats = sent.filter(function (m) { return m.op === 2; });
 assert.deepEqual(grpChats[0].to.sort(), ["S1", "S3"], "grup mesajı sadece grup üyelerine gitmeli");
 
+// Doğrulanmış YTÜ Öğrencisi vs Misafir (OP_PROFILE otoriter doğrulama)
+supaUser = { id: "u-ytu", email: "talha@std.yildiz.edu.tr" };
+M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-ytu", vars: { supabase_token: "good" } } });
+supaUser = { id: "u-yks", email: "ece@gmail.com" };
+M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-yks", vars: { supabase_token: "good" } } });
+var stProf = M.matchInit(ctx(), logger, nk, { zone: "kampus" }).state;
+var PYtu = { userId: "u-ytu" }, PYks = { userId: "u-yks" };
+stProf = M.matchJoin(ctx(), logger, nk, dispatcher, 0, stProf, [PYtu, PYks]).state;
+sent = [];
+stProf = M.matchLoop(ctx(), logger, nk, dispatcher, 1, stProf, [
+  msg(PYtu, 4, { pet: "shark", acc: {}, name: "Talha", ytu: false, role: "Bilgisayar Müh.", bio: "ARTLAB Zirvesi", disc: 24 }),
+  msg(PYks, 4, { pet: "birb", acc: {}, name: "Ece", ytu: true, role: "YKS Adayı", bio: "Hedef YTÜ!", disc: 5 })
+]).state;
+var profMsgs = sent.filter(function (m) { return m.op === 4; });
+assert.strictEqual(profMsgs.length, 2);
+assert.strictEqual(profMsgs[0].data.ytu, true, "YTÜ maili olan her zaman doğrulanmış olmalı");
+assert.strictEqual(profMsgs[1].data.ytu, false, "gmail hesabı sahte ytu:true gönderse bile sunucu false tutmalı");
+assert.strictEqual(profMsgs[0].data.role, "Bilgisayar Müh.");
+assert.strictEqual(profMsgs[1].data.bio, "Hedef YTÜ!");
+
 console.log("nakama modül testleri: OK");

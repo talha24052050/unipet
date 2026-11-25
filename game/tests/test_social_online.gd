@@ -168,3 +168,35 @@ func test_cafe_door_auto_opens_cafe_chat() -> String:
 	if not ok_exit:
 		return "Kafeden uzaklaşınca salondan çıkış tetiklenmedi"
 	return ""
+
+
+func test_ytu_verified_and_visitor_profile_badges() -> String:
+	_ensure_registries()
+	var cm_scene: PackedScene = load("res://scenes/ui/chat_menu.tscn") as PackedScene
+	var chat_menu: Control = cm_scene.instantiate() as Control
+	(Engine.get_main_loop() as SceneTree).root.add_child(chat_menu)
+	if not chat_menu.is_node_ready():
+		chat_menu.call("_ready")
+
+	chat_menu.call("open_player_profile", "ytu_1", "Talha", "kutbi", {
+		"ytu": true,
+		"role": "Bilgisayar Müh.",
+		"bio": "ARTLAB Zirvesi'ndeyim!",
+		"disc": 28,
+	})
+	var popup: Control = chat_menu.get_node_or_null("PlayerProfilePopup") as Control
+	var v_lbl: Label = popup.find_child("VerificationLabel", true, false) as Label
+	var r_lbl: Label = popup.find_child("ProfileRoleLabel", true, false) as Label
+	var ok_ytu: bool = v_lbl != null and v_lbl.text.contains("DOĞRULANMIŞ YTÜ") and r_lbl != null and r_lbl.text.contains("Bilgisayar Müh.")
+
+	chat_menu.call("open_player_profile", "vis_2", "EceYKS", "birb", {
+		"ytu": false,
+		"role": "🎯 YKS Adayı (Hedef YTÜ)",
+		"bio": "Davutpaşa kampüsünü geziyorum",
+		"disc": 7,
+	})
+	var ok_vis: bool = v_lbl != null and v_lbl.text.contains("KAMPÜS MİSAFİRİ") and r_lbl != null and r_lbl.text.contains("YKS Adayı")
+	chat_menu.free()
+	if not ok_ytu or not ok_vis:
+		return "YTÜ doğrulanmış öğrenci ve YKS misafir profil rozetleri beklendiği gibi oluşmadı"
+	return ""
