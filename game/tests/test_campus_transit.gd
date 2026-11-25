@@ -193,7 +193,16 @@ func test_riding_bus_has_no_gravity_drift_or_camera_jitter() -> String:
 			break
 		prev_cam = cam_rig.position
 
+	# Çift biniş denemesi çarpışmayı bozmamalı ve inişte çarpışma kesin açık kalmalı!
+	if bool(transit.call("board_nearest_bus")):
+		transit.free(); cam_rig.free(); player.free()
+		return "Otobüste iken ikinci kez biniş kabul edilmemeli"
+
 	transit.call("alight_bus", 0)
+	var col_after: CollisionShape3D = player.get_node("Collision") as CollisionShape3D
+	if col_after.disabled or bool(player.get("riding_bus")):
+		transit.free(); cam_rig.free(); player.free()
+		return "Otobüsten indikten sonra çarpışma kapalı kaldı veya riding_bus sıfırlanmadı"
 	transit.free()
 	cam_rig.free()
 	player.free()

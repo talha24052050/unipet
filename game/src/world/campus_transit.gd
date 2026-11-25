@@ -1053,7 +1053,7 @@ func board_nearest_bus() -> bool:
 
 
 func board_bus(bus_idx: int) -> bool:
-	if bus_idx < 0 or bus_idx >= _buses.size() or player == null or not bool(_buses[bus_idx].get("active", true)):
+	if riding_bus_idx >= 0 or bus_idx < 0 or bus_idx >= _buses.size() or player == null or not bool(_buses[bus_idx].get("active", true)):
 		return false
 	riding_bus_idx = bus_idx
 	Sfx.play(&"ui_click")
@@ -1130,18 +1130,21 @@ func alight_bus(stop_idx: int = -1) -> void:
 
 	riding_bus_idx = -1
 	target_stop_idx = -1
+	var gy: float = TerrainHeight.active_height(exit_xz.x, exit_xz.y) + 0.45
+	_set_node_pos(player, Vector3(exit_xz.x, gy, exit_xz.y))
+	if "velocity" in player:
+		player.set("velocity", Vector3.ZERO)
 	var col: CollisionShape3D = player.get_node_or_null("Collision") as CollisionShape3D
 	if col != null:
-		col.disabled = _saved_collision_disabled
+		col.disabled = false
 	if "riding_bus" in player:
 		player.set("riding_bus", false)
 	if "frozen" in player:
 		player.set("frozen", false)
-
-	var gy: float = TerrainHeight.active_height(exit_xz.x, exit_xz.y) + 0.30
-	_set_node_pos(player, Vector3(exit_xz.x, gy, exit_xz.y))
-	if "velocity" in player:
-		player.set("velocity", Vector3.ZERO)
+	if has_node("../FollowCamera"):
+		var fc: Node = get_node("../FollowCamera")
+		if fc.has_method("snap_to_target"):
+			fc.call("snap_to_target")
 
 	if _ride_panel != null:
 		_ride_panel.visible = false

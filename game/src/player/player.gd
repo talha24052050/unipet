@@ -312,6 +312,19 @@ func _physics_process(delta: float) -> void:
 			teleport_to(cur_xz)
 	velocity = compute_velocity(velocity, Vector3.ZERO if frozen else move_input, is_on_floor(), _gravity, delta)
 	move_and_slide()
+	# Yeraltına düşme / sıfır kalınlıklı trimesh zeminden sızma koruması (-2.0 m çökük avlulara pay bırakarak)
+	if TerrainHeight.active != null:
+		var p_now: Vector3 = global_position if is_inside_tree() else position
+		var ground_y: float = TerrainHeight.active_height(p_now.x, p_now.z)
+		if p_now.y < ground_y - 2.65:
+			if _collision != null:
+				_collision.disabled = false
+			var rescued: Vector3 = Vector3(p_now.x, ground_y + 0.50, p_now.z)
+			if is_inside_tree():
+				global_position = rescued
+			else:
+				position = rescued
+			velocity = Vector3.ZERO
 
 	var flat: Vector3 = Vector3(velocity.x, 0.0, velocity.z)
 	visual.set_locomotion(flat.length())

@@ -72,12 +72,16 @@ func _process(delta: float) -> void:
 			_was_riding_bus = true
 			_ride_yaw_offset = deg_to_rad(-16.0)
 			yaw = wrapf(bus_yaw + PI + _ride_yaw_offset, -PI, PI)
-			pitch = clampf(pitch, deg_to_rad(-34.0), deg_to_rad(-22.0))
+			pitch = clampf(pitch, deg_to_rad(-36.0), deg_to_rad(-26.0))
 		elif _touches.is_empty():
 			yaw = lerp_angle(yaw, bus_yaw + PI + _ride_yaw_offset, minf(1.0, delta * 5.5))
+		pitch = minf(pitch, deg_to_rad(-24.0))
 		# Otobüs 14.2 m/s hızla giderken lerp gecikmesi kamerayı tavanın içine sokup titretir;
 		# otobüs üstü odak noktasına 1:1 kilitlenerek sıfır kayma sağlanır.
-		_set_pos(self, target.get("bus_camera_focus"))
+		var focus: Vector3 = target.get("bus_camera_focus")
+		var min_focus_y: float = TerrainHeight.active_height(focus.x, focus.z) + 2.80
+		focus.y = maxf(focus.y, min_focus_y)
+		_set_pos(self, focus)
 		_apply()
 		return
 
