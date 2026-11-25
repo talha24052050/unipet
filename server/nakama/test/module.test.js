@@ -25,6 +25,7 @@ var nk = {
     return headers.Authorization === "Bearer good" ? { code: 200, body: JSON.stringify(supaUser) } : { code: 401, body: "{}" };
   },
   binaryToString: function (s) { return s; },
+  usersGetId: function (ids) { return ids.filter(function (id) { return id.indexOf("ghost") !== 0; }).map(function (id) { return { userId: id }; }); },
   matchList: function () { return nk._matches; },
   matchCreate: function () { return "new-match"; },
   _matches: []
@@ -329,6 +330,34 @@ stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 10, stSoc, [
 ]).state;
 var grpChats = sent.filter(function (m) { return m.op === 2; });
 assert.deepEqual(grpChats[0].to.sort(), ["S1", "S3"], "grup mesajı sadece grup üyelerine gitmeli");
+
+// Güvenlik: bozuk paket / uydurma kimlik odayı çökertmez, işlenmeden atılır; sonraki mesajlar işlenir
+var thrown = null;
+try {
+  stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 11, stSoc, [
+    { sender: S1, opCode: 1, data: "null" },
+    { sender: S1, opCode: 11, data: "[1,2]" },
+    msg(S3, 11, { act: "friend_req", to: "ghost-not-a-user" }),
+    msg(S3, 11, { act: "friend_decline", from: "ghost-x" }),
+    msg(S2, 1, { p: [-60, 0, -110], y: 0, a: "idle" })
+  ]).state;
+} catch (e) { thrown = e; }
+assert.strictEqual(thrown, null, "bozuk paket matchLoop'u düşürmemeli");
+assert.strictEqual(M.socialLoad(nk, "ghost-not-a-user").incoming.length, 0, "var olmayan kullanıcıya istek yazılmaz");
+var badNk = Object.create(nk);
+badNk.storageRead = function () { throw Error("db hatası"); };
+thrown = null;
+try { M.matchLoop(ctx(), logger, badNk, dispatcher, 12, stSoc, [msg(S2, 11, { act: "friend_req", to: "S3" })]); } catch (e) { thrown = e; }
+assert.strictEqual(thrown, null, "storage hatası tek mesajda kalmalı, oda yaşamalı");
+// Supabase'i atlayan giriş yolları ve istemcinin doğrudan storage yazması kapalı
+var hooks = {};
+var initMock = new Proxy({}, { get: function (_, name) { return function (a, b) { hooks[name] = b || a; }; } });
+M.InitModule(ctx({}), logger, nk, initMock);
+["registerBeforeAuthenticateDevice", "registerBeforeAuthenticateEmail", "registerBeforeWriteStorageObjects",
+  "registerBeforeDeleteStorageObjects", "registerBeforeLinkCustom"].forEach(function (h) {
+  assert.ok(hooks[h], h + " kayıtlı olmalı");
+  assert.throws(function () { hooks[h](ctx(), logger, nk, {}); }, h + " reddetmeli");
+});
 
 // Doğrulanmış YTÜ Öğrencisi vs Misafir (OP_PROFILE otoriter doğrulama)
 // Gerçek Nakama'da custom id (Supabase kimliği) ≠ Nakama user_id: doğrulama storage'a değil oturum değişkenine yazılır.

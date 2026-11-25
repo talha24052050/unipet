@@ -30,11 +30,16 @@ services:
       - >
         /nakama/nakama migrate up --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable &&
         printf 'runtime:\n  env:\n    - "SUPABASE_URL=%s"\n    - "SUPABASE_ANON_KEY=%s"\n    - "UNIPET_DEV_AUTH=%s"\n    - "UNIPET_ROOM_CAPACITY=%s"\n    - "UNIPET_FREE_CHAT=%s"\n    - "UNIPET_REQUIRE_SCHOOL_EMAIL=%s"\n    - "UNIPET_CLOSED_TEST=%s"\n' "$$SUPABASE_URL" "$$SUPABASE_ANON_KEY" "$$UNIPET_DEV_AUTH" "$$UNIPET_ROOM_CAPACITY" "$$UNIPET_FREE_CHAT" "$$UNIPET_REQUIRE_SCHOOL_EMAIL" "$$UNIPET_CLOSED_TEST" > /tmp/runtime-env.yml &&
-        exec /nakama/nakama --config /nakama/data/local.yml --config /tmp/runtime-env.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS"
+        exec /nakama/nakama --config /nakama/data/local.yml --config /tmp/runtime-env.yml --database.address postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-localdb}@postgres:5432/${POSTGRES_DB:-nakama}?sslmode=disable --socket.server_key "$$NAKAMA_SERVER_KEY" --console.username "$$NAKAMA_CONSOLE_USER" --console.password "$$NAKAMA_CONSOLE_PASS" --session.encryption_key "$$NAKAMA_SESSION_KEY" --session.refresh_encryption_key "$$NAKAMA_REFRESH_KEY" --runtime.http_key "$$NAKAMA_HTTP_KEY"
     environment:
       - NAKAMA_SERVER_KEY=${NAKAMA_SERVER_KEY:-unipet-dev-server-key}
       - NAKAMA_CONSOLE_USER=${NAKAMA_CONSOLE_USER:-admin}
       - NAKAMA_CONSOLE_PASS=${NAKAMA_CONSOLE_PASS:-password}
+      # Oturum (JWT) imza anahtarları: Nakama varsayılanı herkesçe bilinir → sahte oturumla her hesaba girilir.
+      # Yayında deploy/restart.sh rastgele üretir; buradaki değerler sadece yerel geliştirme içindir.
+      - NAKAMA_SESSION_KEY=${NAKAMA_SESSION_KEY:-unipet-dev-session-key}
+      - NAKAMA_REFRESH_KEY=${NAKAMA_REFRESH_KEY:-unipet-dev-refresh-key}
+      - NAKAMA_HTTP_KEY=${NAKAMA_HTTP_KEY:-unipet-dev-http-key}
       - SUPABASE_URL=${SUPABASE_URL:-}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
       - UNIPET_DEV_AUTH=${UNIPET_DEV_AUTH:-false}
