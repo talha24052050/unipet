@@ -408,8 +408,8 @@ var CHAT_PRESET = 0, CHAT_EMOTE = 1, CHAT_FREE = 2;
 var CHAT_MIN_INTERVAL_MS = 1000;
 var ID_PATTERN = /^[a-z0-9_]{1,32}$/;
 var WORLD_LIMIT = 2000;
-// Hareket hile koruması: iki durum arasında bu hızdan (m/s) hızlı yer değiştirme reddedilir (yürüme 4.6, koşu 7).
-var MAX_SPEED = 15;
+// Hareket hile koruması: iki durum arasında bu hızdan (m/s) hızlı yer değiştirme reddedilir (yürüme 4.6, Ring/41AT 12.5).
+var MAX_SPEED = 18;
 var SPEED_TOLERANCE_M = 2;
 var NAME_PATTERN = /^[0-9A-Za-zÇĞİÖŞÜçğıöşü _-]{1,16}$/;
 

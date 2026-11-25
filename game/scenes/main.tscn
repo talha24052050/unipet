@@ -32,6 +32,7 @@
 [ext_resource type="Script" path="res://src/ui/pet_button.gd" id="30"]
 [ext_resource type="Script" path="res://src/world/cafe_social_zones.gd" id="31"]
 [ext_resource type="Script" path="res://src/world/tarihi_hamam.gd" id="32"]
+[ext_resource type="Script" path="res://src/world/campus_transit.gd" id="33"]
 
 [sub_resource type="NavigationMesh" id="navmesh"]
 geometry_parsed_geometry_type = 1
@@ -345,3 +346,8 @@ script = ExtResource("32")
 script = ExtResource("31")
 player = NodePath("../Player")
 chat_menu = NodePath("../UI/ChatMenu")
+
+[node name="CampusTransit" type="Node3D" parent="." node_paths=PackedStringArray("player", "ui")]
+script = ExtResource("33")
+player = NodePath("../Player")
+ui = NodePath("../UI")

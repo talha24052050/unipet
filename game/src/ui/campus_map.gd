@@ -258,10 +258,17 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
-func _find_live_player() -> Node3D:
-	if not is_inside_tree() or get_tree().current_scene == null:
+func _scene_root() -> Node:
+	if not is_inside_tree():
 		return null
-	return get_tree().current_scene.get_node_or_null("Player") as Node3D
+	if get_tree().current_scene != null:
+		return get_tree().current_scene
+	return get_tree().root.get_node_or_null("Main")
+
+
+func _find_live_player() -> Node3D:
+	var sr: Node = _scene_root()
+	return sr.get_node_or_null("Player") as Node3D if sr != null else null
 
 
 func open_overlay(player_pos: Vector3) -> void:
@@ -451,6 +458,7 @@ func _draw() -> void:
 		draw_circle(h, 14.0, Color(0.85, 0.15, 0.15, 0.25))
 		draw_circle(h, 11.0, Color.WHITE)
 		draw_circle(h, 7.5, Color(0.85, 0.15, 0.15))
+	_draw_live_buses_top(font)
 
 	# Üst başlık ve filtre şeridi arka planı
 	draw_rect(Rect2(0.0, 0.0, size.x, TOP_BAR - 2.0), Color(0.93, 0.93, 0.90, 0.95))
@@ -476,18 +484,21 @@ func _draw_transit_stops_and_buses(font: Font) -> void:
 				draw_string_outline(font, at, st_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, Color.WHITE)
 				draw_string(font, at, st_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.05, 0.28, 0.68))
 
-	# Sahnedeki canlı hareketli Ring ve 41AT otobüsleri
-	if is_inside_tree() and get_tree().current_scene != null:
-		var ct: Node = get_tree().current_scene.get_node_or_null("CampusTransit")
+
+func _draw_live_buses_top(font: Font) -> void:
+	# Sahnedeki canlı hareketli Ring ve 41AT otobüsleri (en üst katmanda net görünür)
+	var sr: Node = _scene_root()
+	if sr != null:
+		var ct: Node = sr.get_node_or_null("CampusTransit")
 		if ct != null and ct.has_method("get_live_buses"):
 			var buses: Array = ct.call("get_live_buses")
 			for bus: Dictionary in buses:
 				var bp: Vector2 = bus.get("pos", Vector2.ZERO)
-				var bm: Vector2 = world_to_map(bp)
+				var bm: Vector2 = world_to_map(bp) + Vector2(0.0, -13.0)
 				var is_41at: bool = bool(bus.get("is_41at", false))
-				var bcol: Color = Color(0.92, 0.62, 0.06) if is_41at else Color(0.08, 0.52, 0.96)
-				draw_rect(Rect2(bm - Vector2(18.0, 9.5), Vector2(36.0, 19.0)), Color.WHITE, true)
-				draw_rect(Rect2(bm - Vector2(16.5, 8.0), Vector2(33.0, 16.0)), bcol, true)
+				var bcol: Color = Color(0.95, 0.68, 0.06) if is_41at else Color(0.08, 0.48, 0.94)
+				draw_rect(Rect2(bm - Vector2(19.0, 9.5), Vector2(38.0, 19.0)), Color.WHITE, true)
+				draw_rect(Rect2(bm - Vector2(17.5, 8.0), Vector2(35.0, 16.0)), bcol, true)
 				var code_txt: String = "41AT" if is_41at else "RİNG"
 				var tsz: Vector2 = font.get_string_size(code_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
 				draw_string(font, bm + Vector2(-tsz.x * 0.5, 4.0), code_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.08, 0.08, 0.10) if is_41at else Color.WHITE)
@@ -511,9 +522,10 @@ func _draw_live_cafe_badges(font: Font) -> void:
 
 
 func _draw_live_players(font: Font) -> void:
-	if active_filter not in ["all", "players"] or not is_inside_tree() or get_tree().current_scene == null:
+	var sr: Node = _scene_root()
+	if active_filter not in ["all", "players"] or sr == null:
 		return
-	var ns: Node = get_tree().current_scene.get_node_or_null("NetworkSync")
+	var ns: Node = sr.get_node_or_null("NetworkSync")
 	if ns == null or not ns.has_method("get_remote_players"):
 		return
 	var friend_ids: Dictionary = {}

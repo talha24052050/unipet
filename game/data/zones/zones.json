@@ -11,8 +11,8 @@
       ],
       "radius": 1050,
       "spawn": [
-        0,
-        0
+        764.89,
+        566.52
       ],
       "greybox": "res://data/zones/kampus_greybox.json",
       "props": "res://data/zones/kampus_props.json"

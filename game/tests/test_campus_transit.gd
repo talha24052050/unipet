@@ -1,0 +1,94 @@
+extends RefCounted
+
+const ZoneCatalog := preload("res://src/world/zone_catalog.gd")
+const CampusTransit := preload("res://src/world/campus_transit.gd")
+const LocalProfile := preload("res://src/core/local_profile.gd")
+const CharacterRegistry := preload("res://src/characters/character_registry.gd")
+const AccessoryRegistry := preload("res://src/characters/accessory_registry.gd")
+
+
+func _ensure_registries() -> void:
+	if Services.characters == null:
+		Services.characters = CharacterRegistry.new()
+		Services.characters.load_from_dir("res://data/characters")
+	if Services.accessories == null:
+		Services.accessories = AccessoryRegistry.new()
+		Services.accessories.load_from_dir("res://data/accessories")
+
+
+func test_game_starts_at_a_kapisi() -> String:
+	var cat: RefCounted = ZoneCatalog.load_default()
+	var sp: Vector2 = cat.get_zone("kampus")["spawn"]
+	if sp.distance_to(Vector2(764.89, 566.52)) > 5.0:
+		return "Oyun başlangıç noktası A Kapısı durağında değil: %s" % sp
+	return ""
+
+
+func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
+	_ensure_registries()
+	var saved_prof: RefCounted = LocalProfile.load_or_default()
+	var prev_seen: bool = bool(saved_prof.get("onboarding_seen"))
+	saved_prof.set("onboarding_seen", false)
+	saved_prof.call("save")
+
+	var player: Node3D = (load("res://scenes/player.tscn") as PackedScene).instantiate() as Node3D
+	(Engine.get_main_loop() as SceneTree).root.add_child(player)
+	if not player.is_node_ready():
+		player.call("_ready")
+	player.position = Vector3(764.89, 0.5, 566.52)
+
+	var transit: Node3D = CampusTransit.new()
+	transit.set("player", player)
+	(Engine.get_main_loop() as SceneTree).root.add_child(transit)
+	transit.call("build")
+
+	var stops: Array = transit.get("stops")
+	var buses: Array = transit.call("get_live_buses")
+	if stops.size() < 11:
+		transit.free()
+		player.free()
+		return "En az 11 kampüs Ring/41AT durağı olmalıydı: %d" % stops.size()
+	if buses.size() != 4:
+		transit.free()
+		player.free()
+		return "3 Mavi Ring + 1 adet 41AT olmak üzere 4 otobüs olmalıydı: %d" % buses.size()
+	var has_41at: bool = false
+	for b: Dictionary in buses:
+		if bool(b.get("is_41at", false)):
+			has_41at = true
+	if not has_41at:
+		transit.free()
+		player.free()
+		return "Sembolik 41AT otobüsü filoda bulunamadı"
+
+	# A Kapısı'nda bekleyen Ring #1'e biniş ve ilk biniş tanıtım turu kontrolü
+	var boarded: bool = transit.call("board_nearest_bus")
+	var onboarding_shown: bool = transit.call("is_onboarding_visible")
+	if not boarded or not onboarding_shown:
+		transit.free()
+		player.free()
+		return "A Kapısı'nda Ring'e biniş veya ilk biniş Tanıtım Turu açılmadı (boarded=%s, tour=%s)" % [boarded, onboarding_shown]
+
+	# İneceği durağı 2. durak (İlhan Varank Kütüphanesi, index=1) seç ve otobüsü ilerlet -> durakta otomatik inmeli!
+	transit.call("_finish_onboarding")
+	transit.call("set_target_stop_index", 1)
+	for _step: int in 260:
+		transit.call("_process", 0.25)
+		if int(transit.get("riding_bus_idx")) == -1:
+			break
+
+	var alighted_ok: bool = int(transit.get("riding_bus_idx")) == -1
+	var p_end: Vector3 = player.global_position if player.is_inside_tree() else player.position
+	var end_xz: Vector2 = Vector2(p_end.x, p_end.z)
+	var stop1_xz: Vector2 = stops[1]["shelter_pos"]
+	var dist_to_stop1: float = end_xz.distance_to(stop1_xz)
+
+	var restore_p: RefCounted = LocalProfile.load_or_default()
+	restore_p.set("onboarding_seen", prev_seen)
+	restore_p.call("save")
+	transit.free()
+	player.free()
+
+	if not alighted_ok or dist_to_stop1 > 12.0:
+		return "Seçilen durakta otomatik iniş gerçekleşmedi (alighted=%s, dist=%.1f)" % [alighted_ok, dist_to_stop1]
+	return ""
