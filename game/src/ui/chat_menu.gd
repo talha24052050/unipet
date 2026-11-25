@@ -554,11 +554,11 @@ func _push_hud_live_card(msg: ChatMessage, body_text: String) -> void:
 
 	if msg.has_pin:
 		var go_btn: Button = Button.new()
-		go_btn.text = "📍 Git"
-		go_btn.custom_minimum_size = Vector2(74, 36)
-		go_btn.add_theme_font_size_override("font_size", 16)
+		go_btn.text = "🧭 Hedefle"
+		go_btn.custom_minimum_size = Vector2(92, 36)
+		go_btn.add_theme_font_size_override("font_size", 15)
 		var target_xz: Vector2 = msg.pin_pos
-		go_btn.pressed.connect(func() -> void: _teleport_to_pin(target_xz, msg.pin_place))
+		go_btn.pressed.connect(func() -> void: _mark_pin_waypoint(target_xz, msg.pin_place))
 		row.add_child(go_btn)
 
 	_hud_feed_box.add_child(panel)
@@ -569,21 +569,20 @@ func _push_hud_live_card(msg: ChatMessage, body_text: String) -> void:
 			(old["node"] as Node).queue_free()
 
 
-func _teleport_to_pin(target_xz: Vector2, place_label: String) -> void:
+func _mark_pin_waypoint(target_xz: Vector2, place_label: String) -> void:
 	Sfx.play(&"ui_click")
-	var player: Node = _find_scene_node("Player")
-	if player != null and player.has_method("teleport_to"):
-		player.call("teleport_to", target_xz)
-	var cam: Node = _find_scene_node("FollowCamera")
-	if cam != null and cam.has_method("snap_to_target"):
-		cam.call("snap_to_target")
-	var ns: Node = _find_scene_node("NetworkSync")
-	if ns != null and ns.has_method("notify_local_teleport"):
-		ns.call("notify_local_teleport")
+	var CampusMapRef := load("res://src/ui/campus_map.gd") as GDScript
+	var stop_nm: String = ""
+	if CampusMapRef != null and CampusMapRef.has_method("nearest_bus_stop"):
+		var ns_info: Dictionary = CampusMapRef.call("nearest_bus_stop", target_xz)
+		stop_nm = str(ns_info.get("name", ""))
+	if Services != null and Services.has_method("set_waypoint"):
+		Services.set_waypoint(target_xz, place_label, stop_nm)
 	close_panel()
 	var hud: Node = _find_scene_node("CareHud")
 	if hud != null and hud.has_method("show_toast"):
-		hud.call("show_toast", "📍 %s konumuna gidildi!" % place_label, 2.5)
+		var stop_txt: String = (" — 🚌 En yakın durak: %s" % stop_nm) if not stop_nm.is_empty() else ""
+		hud.call("show_toast", "🧭 %s hedef olarak işaretlendi%s" % [place_label, stop_txt], 3.5)
 
 
 func _populate_items() -> void:
@@ -1001,12 +1000,12 @@ func _rebuild_feed_list() -> void:
 
 		if m.has_pin:
 			var gb: Button = Button.new()
-			gb.text = "📍 Yanına Git"
+			gb.text = "🧭 Hedefle"
 			gb.custom_minimum_size = Vector2(132, 42)
 			gb.add_theme_font_size_override("font_size", 18)
 			var ppos: Vector2 = m.pin_pos
 			var pplace: String = m.pin_place
-			gb.pressed.connect(func() -> void: _teleport_to_pin(ppos, pplace))
+			gb.pressed.connect(func() -> void: _mark_pin_waypoint(ppos, pplace))
 			row.add_child(gb)
 
 	if _feed_scroll != null and is_inside_tree():

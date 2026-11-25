@@ -6,10 +6,8 @@ const MapScript := preload("res://src/ui/campus_map.gd")
 func _make() -> Control:
 	var m: Control = (load("res://scenes/ui/campus_map.tscn") as PackedScene).instantiate()
 	(Engine.get_main_loop() as SceneTree).root.add_child(m)
-	# Test runner SceneTree._initialize içinde çalışır; orada _ready çağrılmaz.
 	if m.get("catalog") == null:
 		m.call("_ready")
-	# Tam ekran çapalı kontrole doğrudan size vermek Godot uyarısı basıyor: test için sol-üst çapaya al
 	m.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	m.size = Vector2(720, 1280)
 	m.call("_fit")
@@ -32,7 +30,7 @@ func test_map_fits_and_roundtrips() -> String:
 	return err
 
 
-func test_tap_selects_place_and_sets_teleport() -> String:
+func test_tap_selects_place_and_shows_nearest_ring_stop() -> String:
 	var m: Control = _make()
 	var places: Array = m.get("_places")
 	var target: Dictionary = {}
@@ -44,9 +42,11 @@ func test_tap_selects_place_and_sets_teleport() -> String:
 	var miss: Dictionary = m.call("place_at", Vector2(2, 2))
 	m.call("select_place", hit)
 	var sel: Dictionary = m.get("selected_place")
+	var stop_lbl: Label = m.find_child("NearestStopLabel", true, false) as Label
+	var has_stop_hint: bool = stop_lbl != null and stop_lbl.text.contains("En Yakın Ring Durağı")
 	m.free()
-	if hit.get("id") != "yemekhane" or not miss.is_empty() or sel.get("id") != "yemekhane":
-		return "dokunma yanlış: %s %s %s" % [hit.get("id"), miss, sel.get("id")]
+	if hit.get("id") != "yemekhane" or not miss.is_empty() or sel.get("id") != "yemekhane" or not has_stop_hint:
+		return "yer seçimi veya en yakın Ring durağı bilgisi hatalı: %s %s" % [hit.get("id"), stop_lbl.text if stop_lbl != null else "null"]
 	return ""
 
 
@@ -56,7 +56,7 @@ func test_historic_names() -> String:
 	return ""
 
 
-func test_care_spots_loaded_and_drawn() -> String:
+func test_care_spots_filters_and_transit_stops_drawn() -> String:
 	var raw: String = FileAccess.get_file_as_string("res://data/care_spots.json")
 	var json_data: Dictionary = JSON.parse_string(raw) as Dictionary
 	var expected_count: int = 0
@@ -68,35 +68,22 @@ func test_care_spots_loaded_and_drawn() -> String:
 	var actual_count: int = 0
 	for k: String in ["eat", "rest", "play"]:
 		actual_count += (loaded.get(k, []) as Array).size()
-
 	if actual_count != expected_count or actual_count == 0:
 		m.free()
 		return "care_spots yer sayısı JSON ile uyuşmuyor: %d != %d" % [actual_count, expected_count]
 
-	# Bir play yerinin harita koordinatı ekran içinde
-	var play_spots: Array = loaded.get("play", [])
-	if play_spots.is_empty():
+	var t_stops: Array = m.get("_transit_stops")
+	if t_stops.size() < 10:
 		m.free()
-		return "play yerleri boş"
-	var p0: Dictionary = play_spots[0]
-	var w: Vector2 = Vector2(float(p0.get("x", 0.0)), float(p0.get("z", 0.0)))
-	var map_pos: Vector2 = m.call("world_to_map", w)
-	var screen_rect: Rect2 = Rect2(Vector2.ZERO, m.size)
-	if not screen_rect.has_point(map_pos):
-		m.free()
-		return "play yeri (%s) ekran dışında: %s (ekran: %s)" % [p0.get("name", ""), map_pos, m.size]
+		return "haritada en az 10 Ring/41AT durağı olmalıydı: %d" % t_stops.size()
 
-	# Çizim hatasız (sahne 2 kare çizilir, hata sayacı 0)
-	# 1. kare: onay paneli kapalıyken (açıklama lejantı çizilir)
-	m.call("_fit")
+	for filt: String in ["all", "stops", "cafes", "faculty", "landmark", "players"]:
+		m.call("set_category_filter", filt)
+		RenderingServer.force_draw(false)
+	m.call("set_category_filter", "all")
+	m.call("set_search_query", "kütüphane")
 	RenderingServer.force_draw(false)
-
-	# 2. kare: bir yere dokunulup onay paneli açıldığında (lejant gizli)
-	var places: Array = m.get("_places")
-	if not places.is_empty():
-		m.call("select_place", places[0])
-	RenderingServer.force_draw(false)
-
+	m.call("set_search_query", "")
 	m.free()
 	return ""
 
@@ -111,13 +98,14 @@ func test_short_names_for_landmarks() -> String:
 	return ""
 
 
-func test_overlay_mode_zoom_and_instant_teleport() -> String:
+func test_overlay_marks_waypoint_without_teleporting() -> String:
+	Services.clear_waypoint()
+	Services.pending_teleport = Vector2.INF
 	var m: Control = _make()
 	m.call("open_overlay", Vector3(-10.0, 0.0, 15.0))
 	if not bool(m.get("overlay_mode")) or not m.visible:
 		m.free()
 		return "open_overlay haritayı görünür overlay yapmadı"
-	# Yakınlaştırma ve sıfırlama
 	m.call("_zoom_at", Vector2(360.0, 640.0), 2.4)
 	if float(m.get("_zoom")) < 2.3:
 		m.free()
@@ -127,7 +115,6 @@ func test_overlay_mode_zoom_and_instant_teleport() -> String:
 		m.free()
 		return "reset_view yakınlaştırmayı 1.0'a döndürmedi"
 
-	# Yeni Merkez Kütüphanesi (service) artık seçilebilir ve overlay ışınlanma sahne değiştirmeden sinyal üretmeli
 	var places: Array = m.get("_places")
 	var lib_place: Dictionary = {}
 	for p: Dictionary in places:
@@ -136,17 +123,15 @@ func test_overlay_mode_zoom_and_instant_teleport() -> String:
 	if lib_place.is_empty():
 		m.free()
 		return "yeni_kutuphane places listesinde yok"
-	var lp_pos: Array = lib_place["pos"]
-	var hit: Dictionary = m.call("place_at", m.call("world_to_map", Vector2(float(lp_pos[0]), float(lp_pos[1]))))
-	if str(hit.get("id", "")) != "yeni_kutuphane":
-		m.free()
-		return "service türündeki yeni_kutuphane haritada dokunularak seçilemedi: %s" % str(hit)
-	var got_tp: Array = []
-	m.connect("teleport_requested", func(xz: Vector2, _pl: Dictionary) -> void: got_tp.append(xz))
+	var got_wp: Array = []
+	m.connect("waypoint_requested", func(xz: Vector2, _pl: Dictionary) -> void: got_wp.append(xz))
 	m.call("select_place", lib_place)
-	m.call("travel")
+	m.call("mark_waypoint")
 	var was_hidden: bool = not m.visible
+	var no_tp: bool = Services.pending_teleport == Vector2.INF
+	var has_active_wp: bool = not Services.active_waypoint.is_empty()
+	Services.clear_waypoint()
 	m.free()
-	if got_tp.size() != 1 or not was_hidden:
-		return "overlay travel() anlık teleport_requested sinyali üretmedi veya kapanmadı"
+	if got_wp.size() != 1 or not was_hidden or not no_tp or not has_active_wp:
+		return "mark_waypoint ışınlama yapmadan hedef işaretlemeliydi"
 	return ""

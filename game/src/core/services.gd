@@ -27,8 +27,12 @@ var feedback: Feedback
 ## Uygulama arka plan / geri dönüş yaşam döngüsü (iOS/Android).
 var lifecycle: AppLifecycle
 ## Oyuncunun bulunduğu bölge (ana sahne bunu yükler; harita ekranı değiştirir).
+signal waypoint_changed(waypoint: Dictionary)
+
 var current_zone: String = ""
-## Haritadan ışınlanma hedefi (kampüs XZ). Oyuncu sahnesi bir kez kullanır ve sıfırlar.
+## Haritadan veya sohbet konum pininden işaretlenen aktif yürüyüş/Ring hedefi: {"pos": Vector2, "name": String, "stop": String}
+var active_waypoint: Dictionary = {}
+## Eski uyumluluk alanı (ışınlanma kaldırıldı; yalnızca dahili test/kurtarma için tutulur).
 var pending_teleport: Vector2 = Vector2.INF
 ## Oyun sahnesinden geçici çıkışta (harita, pet seçimi, ayarlardan yeniden bağlanma) oyuncunun yeri: dönünce aynı
 ## yerde başlasın (Talha 2026-11-22: "haritaya girip çıkınca yerimiz değişiyor"). INF = yok.
@@ -53,6 +57,22 @@ func _ready() -> void:
 	add_child(feedback)
 	lifecycle = AppLifecycle.new()
 	add_child(lifecycle)
+
+
+func set_waypoint(target_xz: Vector2, label: String, stop_name: String = "") -> void:
+	active_waypoint = {
+		"pos": target_xz,
+		"name": label,
+		"stop": stop_name,
+	}
+	waypoint_changed.emit(active_waypoint)
+
+
+func clear_waypoint() -> void:
+	if active_waypoint.is_empty():
+		return
+	active_waypoint = {}
+	waypoint_changed.emit(active_waypoint)
 
 
 ## Sunucu adresine göre ağ servisini seçer: {} → tek oyunculu (offline), {"host","port","ssl"} → Nakama.
