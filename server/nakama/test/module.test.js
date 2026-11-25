@@ -331,13 +331,22 @@ var grpChats = sent.filter(function (m) { return m.op === 2; });
 assert.deepEqual(grpChats[0].to.sort(), ["S1", "S3"], "grup mesajı sadece grup üyelerine gitmeli");
 
 // Doğrulanmış YTÜ Öğrencisi vs Misafir (OP_PROFILE otoriter doğrulama)
-supaUser = { id: "u-ytu", email: "talha@std.yildiz.edu.tr" };
-M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-ytu", vars: { supabase_token: "good" } } });
-supaUser = { id: "u-yks", email: "ece@gmail.com" };
-M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "u-yks", vars: { supabase_token: "good" } } });
+// Gerçek Nakama'da custom id (Supabase kimliği) ≠ Nakama user_id: doğrulama storage'a değil oturum değişkenine yazılır.
+supaUser = { id: "sb-ytu", email: "talha@std.yildiz.edu.tr" };
+var reqYtu = M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "sb-ytu", vars: { supabase_token: "good", ytu: "false" } } });
+assert.deepEqual(JSON.parse(JSON.stringify(reqYtu.account.vars)), { ytu: "true" }, "oturuma sadece sunucunun ytu kararı girer");
+supaUser = { id: "sb-yks", email: "ece@gmail.com" };
+var reqYks = M.beforeAuthenticateCustom(ctx(env), logger, nk, { account: { id: "sb-yks", vars: { supabase_token: "good", ytu: "true" } } });
+assert.deepEqual(JSON.parse(JSON.stringify(reqYks.account.vars)), { ytu: "false" }, "istemcinin sahte ytu değişkeni atılır");
+var devReq = M.beforeAuthenticateCustom(ctx({ UNIPET_DEV_AUTH: "true" }), logger, nk, { account: { id: "mock-ali", vars: { ytu: "true" } } });
+assert.strictEqual(devReq.account.vars.ytu, "false", "dev girişte de istemci ytu taşıyamaz");
 var stProf = M.matchInit(ctx(), logger, nk, { zone: "kampus" }).state;
-var PYtu = { userId: "u-ytu" }, PYks = { userId: "u-yks" };
-stProf = M.matchJoin(ctx(), logger, nk, dispatcher, 0, stProf, [PYtu, PYks]).state;
+var PYtu = { userId: "nk-ytu", sessionId: "s1" }, PYks = { userId: "nk-yks", sessionId: "s2" }, POld = { userId: "nk-old", sessionId: "s3" };
+assert.ok(M.matchJoinAttempt({ vars: reqYtu.account.vars }, logger, nk, dispatcher, 0, stProf, PYtu, {}).accept);
+assert.ok(M.matchJoinAttempt({ vars: reqYks.account.vars }, logger, nk, dispatcher, 0, stProf, PYks, {}).accept);
+assert.ok(M.matchJoinAttempt({ vars: {} }, logger, nk, dispatcher, 0, stProf, POld, {}).accept);
+stProf = M.matchJoin(ctx(), logger, nk, dispatcher, 0, stProf, [PYtu, PYks, POld]).state;
+assert.strictEqual(stProf.players["nk-old"].ytu, false, "değişkeni olmayan eski oturum doğrulanmamış");
 sent = [];
 stProf = M.matchLoop(ctx(), logger, nk, dispatcher, 1, stProf, [
   msg(PYtu, 4, { pet: "shark", acc: {}, name: "Talha", ytu: false, role: "Bilgisayar Müh.", bio: "ARTLAB Zirvesi", disc: 24 }),
@@ -349,5 +358,15 @@ assert.strictEqual(profMsgs[0].data.ytu, true, "YTÜ maili olan her zaman doğru
 assert.strictEqual(profMsgs[1].data.ytu, false, "gmail hesabı sahte ytu:true gönderse bile sunucu false tutmalı");
 assert.strictEqual(profMsgs[0].data.role, "Bilgisayar Müh.");
 assert.strictEqual(profMsgs[1].data.bio, "Hedef YTÜ!");
+
+// Hızlı yeniden bağlanma: yeni oturum katıldıktan sonra gelen eski oturum çıkışı oyuncuyu silmemeli
+var PYtuNew = { userId: "nk-ytu", sessionId: "s1b" };
+M.matchJoinAttempt({ vars: reqYtu.account.vars }, logger, nk, dispatcher, 0, stProf, PYtuNew, {});
+stProf = M.matchJoin(ctx(), logger, nk, dispatcher, 0, stProf, [PYtuNew]).state;
+stProf = M.matchLeave(ctx(), logger, nk, dispatcher, 2, stProf, [PYtu]).state;
+assert.ok(stProf.players["nk-ytu"], "eski oturumun çıkışı yeni oturumu silmemeli");
+assert.strictEqual(stProf.players["nk-ytu"].ytu, true);
+stProf = M.matchLeave(ctx(), logger, nk, dispatcher, 3, stProf, [PYtuNew]).state;
+assert.ok(!stProf.players["nk-ytu"], "güncel oturum çıkınca oyuncu silinir");
 
 console.log("nakama modül testleri: OK");

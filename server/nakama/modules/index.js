@@ -588,6 +588,8 @@ function beforeAuthenticateCustom(ctx, logger, nk, req) {
   }
   if (env(ctx, "UNIPET_DEV_AUTH", "false") === "true" && id.indexOf("mock-") === 0) {
     logger.warn("DEV_AUTH ile giriş: %s", id);
+    // İstemcinin gönderdiği vars asla oturuma taşınmaz; dev'de "mock-ytu-" önekli kimlik doğrulanmış sayılır.
+    req.account.vars = { ytu: id.indexOf("mock-ytu-") === 0 ? "true" : "false" };
     return req;
   }
   var token = vars.supabase_token;
@@ -615,11 +617,10 @@ function beforeAuthenticateCustom(ctx, logger, nk, req) {
     logger.warn("Reddedildi: id eşleşmedi ya da domain dışı (%s)", email);
     throw Error("bu hesap kullanılamaz");
   }
-  // Sunucu otoriter YTÜ öğrenci doğrulaması (yalnızca @std.yildiz.edu.tr / @yildiz.edu.tr true olur)
-  nk.storageWrite([{ collection: "account_meta", key: "auth_meta", userId: id, value: { ytu: isYtuMail },
-    permissionRead: 1, permissionWrite: 0 }]);
-  // Token Nakama'da saklanmasın.
-  delete req.account.vars.supabase_token;
+  // Sunucu otoriter YTÜ öğrenci doğrulaması: sonuç sunucunun imzaladığı oturum değişkenine yazılır.
+  // (Burada storage kullanılamaz: custom id Supabase kimliğidir, Nakama user_id'si değil; yeni hesapta kullanıcı
+  // henüz yok.) vars tamamen değiştirilir: istemcinin gönderdiği her şey (supabase_token, sahte ytu) atılır.
+  req.account.vars = { ytu: isYtuMail ? "true" : "false" };
   return req;
 }
 
@@ -705,7 +706,14 @@ function matchInit(ctx, logger, nk, params) {
   };
 }
 
+// Katılanın oturum değişkenindeki (sunucu imzalı) YTÜ doğrulaması. Değişkeni olmayan eski oturum = doğrulanmamış.
+function sessionYtu(ctx) {
+  return !!(ctx && ctx.vars && ctx.vars.ytu === "true");
+}
+
 function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, metadata) {
+  state.ytuPending = state.ytuPending || {};
+  state.ytuPending[presence.userId] = sessionYtu(ctx);
   var count = Object.keys(state.players).length;
   if (state.players[presence.userId]) {
     return { state: state, accept: true };
@@ -719,13 +727,11 @@ function matchJoinAttempt(ctx, logger, nk, dispatcher, tick, state, presence, me
 function matchJoin(ctx, logger, nk, dispatcher, tick, state, presences) {
   for (var i = 0; i < presences.length; i++) {
     var p = presences[i];
-    var metaObjs = nk.storageRead([{ collection: "account_meta", key: "auth_meta", userId: p.userId }]);
-    var hasMeta = metaObjs && metaObjs.length > 0 && metaObjs[0].value && typeof metaObjs[0].value.ytu === "boolean";
-    var ytuAuth = hasMeta ? !!metaObjs[0].value.ytu : null;
-    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", ytu: !!ytuAuth, ytuAuth: ytuAuth, role: "", bio: "", disc: 0, cafe: "", lastChat: 0 };
+    var ytuAuth = !!(state.ytuPending && state.ytuPending[p.userId]);
+    if (state.ytuPending) delete state.ytuPending[p.userId];
+    state.players[p.userId] = state.players[p.userId] || { presence: p, p: [0, 0, 0], y: 0, a: "idle", pet: "", acc: {}, name: "", ytu: false, role: "", bio: "", disc: 0, cafe: "", lastChat: 0 };
     state.players[p.userId].presence = p;
-    state.players[p.userId].ytuAuth = ytuAuth;
-    if (ytuAuth !== null) state.players[p.userId].ytu = ytuAuth;
+    state.players[p.userId].ytu = ytuAuth;
     // Efsanevi pet kilitleri: kapalı testte Kutbi hediye; oyuncuya güncel liste
     var fresh = env(ctx, "UNIPET_CLOSED_TEST", "false") === "true" ? unlocksGrant(nk, p.userId, ["kutbi"]) : [];
     state.players[p.userId].unlocked = unlocksLoad(nk, p.userId);
@@ -756,6 +762,9 @@ function matchLeave(ctx, logger, nk, dispatcher, tick, state, presences) {
   var grpChanged = false;
   for (var i = 0; i < presences.length; i++) {
     var uid = presences[i].userId;
+    // Hızlı yeniden bağlanmada eski oturumun çıkışı yeni oturumdan SONRA gelebilir: yeni kaydı silme.
+    var cur = state.players[uid];
+    if (cur && cur.presence && cur.presence.sessionId && presences[i].sessionId && cur.presence.sessionId !== presences[i].sessionId) continue;
     if (state.players[uid] && state.players[uid].cafe) cafeChanged = true;
     if (groupLeaveAll(state, uid)) grpChanged = true;
     delete state.players[uid];
@@ -1064,7 +1073,7 @@ function matchLoop(ctx, logger, nk, dispatcher, tick, state, messages) {
         acc[slots[s]] = String(a);
       }
       pl.pet = String(data.pet); pl.acc = acc; pl.name = cleanName(data.name);
-      pl.ytu = (pl.ytuAuth !== null && pl.ytuAuth !== undefined) ? !!pl.ytuAuth : !!data.ytu;
+      // pl.ytu yalnızca oturumdan gelir (matchJoin); istemcinin gönderdiği data.ytu yok sayılır.
       pl.role = cleanFreeChat(data.role || "", 32);
       pl.bio = cleanFreeChat(data.bio || "", 40);
       pl.disc = typeof data.disc === "number" && isFinite(data.disc) ? Math.max(0, Math.min(60, Math.floor(data.disc))) : 0;
