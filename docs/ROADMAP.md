@@ -7,6 +7,7 @@ Her task = bir commit. Her parça sonu = Talha kontrolü (`checkpoint`).
 - [ ] **Telefonda test**: pet seçimi/aksesuar, giriş (kod 000000), chat/emote, bakım
 - [ ] **Arkadaşlarla ilk oyun**: `docs/ARKADASLARLA_OYNA.md`
 - [ ] **Kalıcı sunucu + imzalı sürüm** (6.1/6.2): kod hazır, adımlar `docs/RELEASE.md` (VPS, keystore, GitHub secret'ları)
+- [ ] **Google Play** (6.4): Supabase'de `003_account_delete.sql` çalıştır, GitHub Pages'i aç, geliştirici hesabı (25 $), 12 testçi × 14 gün kapalı test — `docs/PLAY_STORE.md`
 
 Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye verilecek
 
@@ -77,4 +78,5 @@ Durum: `[ ]` bekliyor · `[~]` devam · `[x]` bitti · `(agy)` Antigravity'ye ve
 ## Parça 6 — Kapalı test
 - [~] 6.1 Ücretsiz VPS'e Nakama kurulumu
 - [~] 6.2 İmzalı release APK — keystore + GitHub secret'ları hazır (CI'da doğrulandı); kalıcı sunucu adresi (NAKAMA_HOST) bekleniyor
+- [x] 6.4 Google Play altyapısı: imzalı AAB (gradle, hedef API 36) + isteğe bağlı otomatik dahili test yüklemesi, uygulama içi hesap silme (Nakama + Supabase), engelle/şikayet (UGC), girişte koşul kabulü, yasal sayfalar (GitHub Pages `site/`), mağaza metinleri/form cevapları/görseller (`docs/store/`), inceleme hesabı girişi — Talha'nın adımları `docs/PLAY_STORE.md`
 - [~] 6.3 SKY LAB kapalı testi — oyun içi geri bildirim (Ayarlar → Supabase `feedback`) hazır; test turu kalıcı sunucudan sonra

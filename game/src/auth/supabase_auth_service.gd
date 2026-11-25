@@ -52,6 +52,12 @@ func request_code(email: String) -> void:
 func verify_code(email: String, code: String) -> void:
 	var e: String = email.strip_edges().to_lower()
 	var res: Dictionary = await _post("/auth/v1/verify", {"type": "email", "email": e, "token": code.strip_edges()})
+	if not res["ok"] and (res["code"] == 400 or res["code"] == 403):
+		# Google Play inceleme hesabı: incelemeci e-postaya erişemez. Supabase'de yalnızca o hesaba sayısal bir şifre
+		# tanımlanır ve kod alanına yazılır (docs/PLAY_STORE.md). Şifresi olmayan normal hesaplarda bu deneme hep başarısız.
+		var pw: Dictionary = await _post("/auth/v1/token?grant_type=password", {"email": e, "password": code.strip_edges()})
+		if pw["ok"]:
+			res = pw
 	if not res["ok"]:
 		auth_failed.emit(error_message(res["code"], res["body"]))
 		return

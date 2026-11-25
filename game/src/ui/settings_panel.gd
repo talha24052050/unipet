@@ -205,6 +205,13 @@ func _setup_layout() -> void:
 	delete_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	delete_status.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 4)
 	vbox.add_child(delete_status)
+	var credits: Label = Label.new()
+	credits.name = "MapCredits"
+	credits.text = "Harita verisi © OpenStreetMap katkıcıları (ODbL)"
+	credits.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	credits.add_theme_font_size_override("font_size", FONT_SIZE_LABEL - 8)
+	credits.add_theme_color_override("font_color", Color(0.65, 0.7, 0.78))
+	vbox.add_child(credits)
 
 	close_button = Button.new()
 	close_button.name = "CloseButton"

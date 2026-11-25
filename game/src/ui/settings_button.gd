@@ -47,6 +47,7 @@ func close_panel() -> void:
 func _ensure_panel() -> void:
 	if panel == null or not is_instance_valid(panel):
 		panel = SettingsPanel.new()
+		panel.name = "SettingsPanel"  # adı "...Panel" ile bitince Ring biniş butonu panel açıkken gizlenir (campus_transit)
 		var p: Node = get_parent()
 		if p == null:
 			add_child(panel)

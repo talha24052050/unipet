@@ -1,5 +1,7 @@
 # Yayın: sunucu (6.1) + imzalı APK (6.2)
 
+> Google Play'e çıkış adımları: [`docs/PLAY_STORE.md`](PLAY_STORE.md). Sürüm etiketi artık APK'nın yanında Play için AAB de üretir.
+
 Geliştirme APK'sı (her push, `android-debug`) sahte giriş + tek oyunculu/girilen sunucu ile çalışır.
 Yayın APK'sı (`v*` etiketi) **Supabase girişi + gömülü sunucu** ile çalışır (`Config.IS_RELEASE`).
 
