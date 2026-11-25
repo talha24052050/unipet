@@ -1,4 +1,5 @@
 extends Node
+const BlockList := preload("res://src/core/block_list.gd")
 ## Ağ arayüzü (soyut). Oyun kodu sadece bunu bilir.
 ## Implementasyonlar: OfflineNetworkService (tek oyunculu), NakamaNetworkService (Config.NETWORK_BACKEND = "nakama").
 
@@ -91,7 +92,20 @@ func send_social(_payload: Dictionary) -> void:
 	pass
 
 
+## Oyuncuyu moderasyona bildir (Google Play kullanıcı içeriği şartı). reason: REPORT_REASONS anahtarı.
+## Sunucu, oyuncunun son mesajlarını kanıt olarak şikayete ekler.
+func send_report(target_id: String, target_name: String, reason: String) -> void:
+	send_social({"act": "report", "id": target_id, "name": target_name, "reason": reason})
+
+
+const REPORT_REASONS: Dictionary = {"abuse": "Küfür / hakaret", "harass": "Taciz / rahatsız etme", "spam": "Spam / diğer"}
+
+
 func _apply_social_packet(d: Dictionary) -> void:
+	if d.has("incoming") and d["incoming"] is Array:
+		# Engellenen oyuncunun arkadaşlık isteği gösterilmez
+		d["incoming"] = (d["incoming"] as Array).filter(func(e: Variant) -> bool:
+			return not (e is Dictionary and BlockList.is_blocked(str((e as Dictionary).get("id", "")))))
 	if d.has("friends") and d["friends"] is Array:
 		social_state["friends"] = d["friends"]
 	if d.has("incoming") and d["incoming"] is Array:

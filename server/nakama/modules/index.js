@@ -529,6 +529,12 @@ function userExists(nk, uid) {
 
 var SOCIAL_MIN_INTERVAL_MS = 400;  // storage'a dokunan sosyal eylemler arası en az süre (spam/DB yükü)
 var SOCIAL_LIST_MAX = 100;         // arkadaş / istek kutusu üst sınırı
+// Şikayetler (Google Play kullanıcı içeriği şartı): sistem kullanıcısının "reports" koleksiyonuna yazılır,
+// Nakama konsolundan (Storage → reports) okunur. Kanıt: şikayet edilenin sunucunun gördüğü son mesajları.
+var REPORT_COLLECTION = "reports";
+var REPORT_REASONS = ["abuse", "harass", "spam"];
+var REPORT_MIN_INTERVAL_MS = 20000;
+var RECENT_CHAT_KEEP = 6;
 
 function areFriends(nk, uidA, uidB) {
   if (!uidA || !uidB || uidA === uidB) return false;
@@ -941,6 +947,7 @@ function handleMessage(ctx, logger, nk, dispatcher, state, m) {
     }
 
     pl.lastChat = now;
+    pl.recentChat = (pl.recentChat || []).concat([{ t: Math.floor(now / 1000), ch: ch, k: k, p: payload }]).slice(-RECENT_CHAT_KEEP);
     var outChat = { s: uid, sn: pl.name || uid.substring(0, 6), k: k, p: payload, ch: ch };
     if (finiteIn(data.px, WORLD_LIMIT) && finiteIn(data.pz, WORLD_LIMIT)) {
       outChat.px = Math.round(data.px * 10) / 10;
@@ -1005,6 +1012,23 @@ function handleMessage(ctx, logger, nk, dispatcher, state, m) {
         dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "groups", groups: groupList(state) }), everyone(state), null, true);
       }
       dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "group_left", left_group: true, groups: groupList(state) }), [pl.presence], null, true);
+    } else if (sAct === "report") {
+      var repId = String(data.id || "");
+      var reason = REPORT_REASONS.indexOf(String(data.reason)) >= 0 ? String(data.reason) : "spam";
+      if (!repId || repId === uid || !userExists(nk, repId)) return;
+      if (pl.lastReportAt && Date.now() - pl.lastReportAt < REPORT_MIN_INTERVAL_MS) {
+        dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "toast", ok: false, text: "Biraz bekleyip tekrar şikayet edebilirsin." }), [pl.presence], null, true);
+        return;
+      }
+      pl.lastReportAt = Date.now();
+      var tp = state.players[repId];
+      nk.storageWrite([{ collection: REPORT_COLLECTION, key: Date.now() + "-" + uid.substring(0, 8), userId: SYSTEM_USER,
+        value: { t: Math.floor(Date.now() / 1000), reporter: uid, reporter_name: myNick, target: repId,
+          target_name: (tp && tp.name) || cleanName(data.name) || "", reason: reason, zone: state.zone,
+          recent: (tp && tp.recentChat) || [] },
+        permissionRead: 0, permissionWrite: 0 }]);
+      logger.warn("şikayet: %s → %s (%s)", uid, repId, reason);
+      dispatcher.broadcastMessage(OP_SOCIAL, JSON.stringify({ type: "toast", ok: true, text: "Şikayetin alındı. Teşekkürler!" }), [pl.presence], null, true);
     } else if (sAct.indexOf("friend_") === 0 && pl.lastSocialAt && Date.now() - pl.lastSocialAt < SOCIAL_MIN_INTERVAL_MS) {
       return;
     } else if (sAct === "friend_req") {

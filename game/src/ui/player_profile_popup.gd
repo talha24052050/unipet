@@ -6,6 +6,9 @@ extends Control
 
 signal open_dm_requested(peer_id: String, peer_name: String)
 
+const BlockList := preload("res://src/core/block_list.gd")
+const NetworkService := preload("res://src/net/network_service.gd")
+
 var target_id: String = ""
 var target_name: String = ""
 var target_pet: String = ""
@@ -24,6 +27,11 @@ var _sub_label: Label
 var _status_label: Label
 var _primary_btn: Button
 var _secondary_btn: Button
+## Moderasyon (Google Play kullanıcı içeriği şartı): engelle / şikayet et
+var _moderation_row: HBoxContainer
+var _block_btn: Button
+var _report_btn: Button
+var _reason_row: HBoxContainer
 
 
 func _ready() -> void:
@@ -59,6 +67,7 @@ func _build_ui() -> void:
 	card.offset_top = -255.0
 	card.offset_right = 265.0
 	card.offset_bottom = 255.0
+	card.grow_vertical = Control.GROW_DIRECTION_BOTH  # moderasyon satırlarıyla uzarsa ortada kalsın
 	var st: StyleBoxFlat = StyleBoxFlat.new()
 	st.bg_color = Color(0.10, 0.13, 0.20, 0.98)
 	st.border_width_left = 2
@@ -162,6 +171,61 @@ func _build_ui() -> void:
 	_secondary_btn.pressed.connect(_on_secondary_pressed)
 	vbox.add_child(_secondary_btn)
 
+	_moderation_row = HBoxContainer.new()
+	_moderation_row.name = "ModerationRow"
+	_moderation_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(_moderation_row)
+	_block_btn = _mod_button("BlockButton", "🚫 Engelle", _moderation_row)
+	_block_btn.pressed.connect(_on_block_pressed)
+	_report_btn = _mod_button("ReportButton", "⚠ Şikayet et", _moderation_row)
+	_report_btn.pressed.connect(func() -> void:
+		Sfx.play(&"ui_click")
+		_reason_row.visible = not _reason_row.visible)
+	_reason_row = HBoxContainer.new()
+	_reason_row.name = "ReportReasonRow"
+	_reason_row.add_theme_constant_override("separation", 6)
+	_reason_row.visible = false
+	vbox.add_child(_reason_row)
+	for key: String in NetworkService.REPORT_REASONS:
+		var rb: Button = _mod_button("Reason_" + key, str(NetworkService.REPORT_REASONS[key]), _reason_row)
+		rb.add_theme_font_size_override("font_size", 15)
+		rb.pressed.connect(_on_report_reason.bind(key))
+
+
+func _mod_button(node_name: String, label: String, parent: Control) -> Button:
+	var b: Button = Button.new()
+	b.name = node_name
+	b.text = label
+	b.custom_minimum_size = Vector2(0, 50)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.add_theme_font_size_override("font_size", 17)
+	parent.add_child(b)
+	return b
+
+
+## Engelle: mesajları/baloncukları/istekleri gizlenir, arkadaşlık bozulur. Tekrar basınca engel kalkar.
+func _on_block_pressed() -> void:
+	Sfx.play(&"ui_click")
+	if BlockList.is_blocked(target_id):
+		BlockList.unblock(target_id)
+	else:
+		var rel: String = _relation_state()
+		BlockList.block(target_id, target_name)
+		if Services.net != null:
+			if rel == "friend":
+				Services.net.send_social({"act": "friend_remove", "id": target_id})
+			elif rel == "incoming":
+				Services.net.send_social({"act": "friend_decline", "from": target_id})
+	_refresh_state()
+
+
+func _on_report_reason(reason: String) -> void:
+	Sfx.play(&"ui_click")
+	if Services.net != null:
+		Services.net.send_report(target_id, target_name, reason)
+	_reason_row.visible = false
+	_status_label.text = "⚠ Şikayetin gönderildi. İstersen engelleyebilirsin."
+
 
 func show_for_player(pid: String, dname: String, pet_id: String = "", extra: Dictionary = {}) -> void:
 	if pid.is_empty():
@@ -174,6 +238,7 @@ func show_for_player(pid: String, dname: String, pet_id: String = "", extra: Dic
 	target_role = str(extra.get("role", ""))
 	target_bio = str(extra.get("bio", ""))
 	target_discovered = int(extra.get("disc", 0))
+	_reason_row.visible = false
 	visible = true
 	_refresh_state()
 
@@ -236,6 +301,15 @@ func _refresh_state() -> void:
 	_sub_label.text = "🐾 Pet: %s   ·   🗺 Kampüs Keşfi: %d/47" % [pet_txt, clampi(target_discovered, 0, 47)]
 
 	var rel: String = _relation_state()
+	var blocked: bool = rel != "self" and BlockList.is_blocked(target_id)
+	_moderation_row.visible = rel != "self"
+	_reason_row.visible = _reason_row.visible and rel != "self"
+	_block_btn.text = "✓ Engeli kaldır" if blocked else "🚫 Engelle"
+	if blocked:
+		_status_label.text = "🚫 Engelledin: mesajlarını ve isteklerini görmezsin"
+		_primary_btn.visible = false
+		_secondary_btn.visible = false
+		return
 	match rel:
 		"self":
 			_status_label.text = "Bu senin kampüs kartın (İstekler sekmesinden düzenleyebilirsin)"

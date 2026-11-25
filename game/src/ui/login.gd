@@ -44,6 +44,7 @@ func _ready() -> void:
 	_back_btn.pressed.connect(func() -> void: _show(Step.EMAIL))
 	_server_input.text = LocalSettings.load_or_default().server_address
 	_name_input.text = LocalProfile.load_or_default().display_name
+	_add_terms_note()
 	_show(Step.BUSY)
 	if Config.DEV_MODE and Services.auth.has_method("quick_sign_in"):
 		# Geliştirici modu: giriş ekranı yok, cihaza özel hesapla doğrudan giriş (sunucu adresi Ayarlar'dan)
@@ -55,6 +56,33 @@ func _ready() -> void:
 		return  # signed_in sinyali sahneyi değiştirir
 	_status.text = "Geliştirme modu: mail yerine 000 yaz → direkt giriş (kod: 000000)" if Config.AUTH_BACKEND == "mock" else ""
 	_show(Step.EMAIL)
+
+
+## Google Play kullanıcı içeriği şartı: hesap açılırken kullanım koşulları ve gizlilik politikası kabul edilir.
+func _add_terms_note() -> void:
+	var note: Label = Label.new()
+	note.name = "TermsNote"
+	note.text = "Kod isteyerek Kullanım Koşulları'nı (saygılı sohbet, hakaret/taciz yasak) ve Gizlilik Politikası'nı kabul etmiş olursun."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.add_theme_font_size_override("font_size", 20)
+	note.add_theme_color_override("font_color", Color(0.78, 0.82, 0.9))
+	_email_box.add_child(note)
+	_email_box.move_child(note, _send_btn.get_index() + 1)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "TermsLinks"
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_email_box.add_child(row)
+	_email_box.move_child(row, note.get_index() + 1)
+	for pair: Array in [["Kullanım Koşulları", Config.TERMS_URL], ["Gizlilik Politikası", Config.PRIVACY_URL]]:
+		var b: Button = Button.new()
+		b.text = str(pair[0])
+		b.flat = true
+		b.custom_minimum_size = Vector2(0, 56)
+		b.add_theme_font_size_override("font_size", 22)
+		var url: String = str(pair[1])
+		b.pressed.connect(func() -> void: OS.shell_open(url))
+		row.add_child(b)
 
 
 func _process(delta: float) -> void:

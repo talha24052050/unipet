@@ -421,6 +421,23 @@ assert.deepEqual(busChatMsgs[0].to.sort(), ["nk-old", "nk-yks"], "otobüs sohbet
 stProf = M.matchLoop(ctx(), logger, nk, dispatcher, 5, stProf, [msg(PYks, 11, { act: "leave_cafe" })]).state;
 assert.strictEqual(stProf.players["nk-yks"].cafe, "");
 
+// Şikayet: şikayet edilenin son mesajlarıyla sistem kaydına yazılır; hız sınırlı; uydurma kimlik reddedilir
+stSoc.players.S1.lastChat = 0;
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 20, stSoc, [msg(S1, 2, { k: 2, p: "kanıt mesajı", ch: "campus" })]).state;
+sent = [];
+stSoc = M.matchLoop(ctx(), logger, nk, dispatcher, 21, stSoc, [
+  msg(S2, 11, { act: "report", id: "S1", reason: "abuse" }),
+  msg(S2, 11, { act: "report", id: "S1", reason: "abuse" }),
+  msg(S3, 11, { act: "report", id: "ghost-1", reason: "abuse" })
+]).state;
+var reps = Object.keys(storage).filter(function (k) { return k.indexOf(M.SYSTEM_USER + "/") === 0 && /-/.test(k.split("/")[1]) && storage[k].reporter; });
+assert.strictEqual(reps.length, 1, "tek şikayet kaydı (ikincisi hız sınırına, hayalet kimlik reddine takılır)");
+var rep = storage[reps[0]];
+assert.strictEqual(rep.target, "S1");
+assert.strictEqual(rep.reason, "abuse");
+assert.ok(rep.recent.some(function (r) { return r.p === "kanıt mesajı"; }), "kanıt olarak son mesaj eklenmeli");
+assert.ok(sent.some(function (m) { return m.op === 11 && m.data.type === "toast" && m.data.ok && m.to[0] === "S2"; }), "şikayet edene teşekkür");
+
 // Hesap silme: Nakama hesabı silinir, arkadaşların listesinden de düşer
 var deleted = [];
 nk.accountDeleteId = function (id) { deleted.push(id); };

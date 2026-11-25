@@ -321,6 +321,8 @@ func _handle_match_data(md: Dictionary) -> void:
 				cm["pin_place"] = str(d.get("pl", "Kampüs"))
 				cm["pin_x"] = float(d.get("px", 0.0))
 				cm["pin_z"] = float(d.get("pz", 0.0))
+			if BlockList.is_blocked(str(cm["sender_id"])):
+				return  # engellenen oyuncunun mesajı/baloncuğu gösterilmez
 			chat_received.emit(ChatMessage.from_dict(cm))
 		OP_SOCIAL:
 			_apply_social_packet(d)

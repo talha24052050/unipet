@@ -229,6 +229,8 @@ func send_social(payload: Dictionary) -> void:
 	match act:
 		"sync":
 			_emit_full_social()
+		"report":
+			social_updated.emit({"type": "toast", "ok": true, "text": "Şikayetin alındı. Teşekkürler!"})
 		"enter_cafe":
 			_active_cafe = str(payload.get("cafe", "")).strip_edges()
 			_emit_full_social()

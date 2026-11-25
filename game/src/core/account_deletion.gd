@@ -11,6 +11,7 @@ const LOCAL_FILES: PackedStringArray = [
 	"user://social.cfg",
 	"user://minigames.cfg",
 	"user://feedback.log",
+	"user://blocked.cfg",
 	"user://session.cfg",
 	"user://mock_session.cfg",
 ]
