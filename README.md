@@ -16,8 +16,8 @@
 </p>
 
 <p align="center">
-  <a href="docs/media/unipet_reklam.mp4"><img src="docs/media/unipet_reklam.gif" width="260" alt="UniPet tanıtım videosu"></a><br>
-  <sub>Tanıtım videosu (oyun içi çekim) · <a href="docs/media/unipet_reklam.mp4">sesli izlemek için tıkla</a></sub>
+  <a href="docs/media/unipet_tanitim_v3.mp4"><img src="docs/media/unipet_tanitim_v3.gif" width="260" alt="UniPet tanıtım videosu"></a><br>
+  <sub>Tanıtım videosu (oyun içi çekim) · <a href="docs/media/unipet_tanitim_v3.mp4">sesli izlemek için tıkla</a></sub>
 </p>
 
 ---
