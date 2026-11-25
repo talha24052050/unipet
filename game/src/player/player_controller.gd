@@ -33,6 +33,10 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if player == null:
 		return
+	if bool(player.get("riding_bus")):
+		clear_destination()
+		player.set("move_input", Vector3.ZERO)
+		return
 	var input: Vector2 = joystick.get("value") if joystick != null else Vector2.ZERO
 	if input == Vector2.ZERO and OS.is_debug_build():
 		input = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
@@ -48,6 +52,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if player != null and bool(player.get("riding_bus")):
+		return
 	if not event is InputEventScreenTouch:
 		return
 	var t: InputEventScreenTouch = event

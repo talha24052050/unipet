@@ -50,6 +50,8 @@ var _buses: Array[Dictionary] = []
 ## Testler gerçek saat yerine _process(delta) toplamını kullanır.
 @export var use_wall_clock: bool = true
 var _sim_time: float = 0.0
+var _wall_base_unix: float = 0.0
+var _wall_base_usec: int = 0
 var _period: float = 0.0
 var _tt_s: PackedFloat32Array = PackedFloat32Array()
 var _tt_dwell: PackedFloat32Array = PackedFloat32Array()
@@ -99,6 +101,8 @@ const ONBOARDING_STEPS: Array[Dictionary] = [
 
 
 func _ready() -> void:
+	# FollowCamera (priority 0) ve NetworkSync'ten ÖNCE çalışsın ki aynı karede otobüs + oyuncu + kamera 1:1 senkron kalsın!
+	process_priority = -10
 	if player == null and has_node("../Player"):
 		player = get_node("../Player") as Node3D
 	if ui == null and has_node("../UI"):
@@ -167,6 +171,10 @@ func _build_stop_shelters() -> void:
 	var col_body: StaticBody3D = StaticBody3D.new()
 	col_body.name = "BusStopCollisions"
 	add_child(col_body)
+	if has_node("../FollowCamera"):
+		var fc: Node = get_node("../FollowCamera")
+		if fc.has_method("exclude_collision_rid"):
+			fc.call("exclude_collision_rid", col_body.get_rid())
 
 	var c_pad: Color = Color(0.58, 0.60, 0.62).srgb_to_linear()
 	var c_frame: Color = Color(0.14, 0.16, 0.20).srgb_to_linear()
@@ -839,7 +847,18 @@ func _update_buses_transforms(delta: float) -> void:
 	if _period <= 0.0:
 		return
 	if use_wall_clock:
-		_sim_time = Time.get_unix_time_from_system()
+		var now_unix: float = Time.get_unix_time_from_system()
+		var now_usec: int = Time.get_ticks_usec()
+		if _wall_base_unix <= 0.0:
+			_wall_base_unix = now_unix
+			_wall_base_usec = now_usec
+		var mono_unix: float = _wall_base_unix + float(now_usec - _wall_base_usec) * 0.000001
+		# Uyku/arka plan dönüşü gibi >0.5 sn sapmalarda yeniden hizala; aksi halde mikrosaniye akıcılığını koru.
+		if absf(now_unix - mono_unix) > 0.5:
+			_wall_base_unix = now_unix
+			_wall_base_usec = now_usec
+			mono_unix = now_unix
+		_sim_time = mono_unix
 	else:
 		_sim_time += delta
 	for bi: int in _buses.size():
@@ -941,7 +960,7 @@ func _apply_bus_3d_pose(b: Dictionary) -> void:
 		nd.rotation = Vector3(pitch, yaw, 0.0)
 
 
-func _sample_loop_pose(s_val: float) -> Dictionary:
+func _sample_raw_point(s_val: float) -> Vector2:
 	var s: float = fposmod(s_val, loop_length)
 	var m: int = waypoints.size()
 	var lo: int = 0
@@ -956,11 +975,19 @@ func _sample_loop_pose(s_val: float) -> Dictionary:
 	var b: Vector2 = waypoints[(lo + 1) % m]
 	var seg_len: float = maxf(cum_lengths[lo + 1] - cum_lengths[lo], 0.001)
 	var t: float = clampf((s - cum_lengths[lo]) / seg_len, 0.0, 1.0)
-	var pos: Vector2 = a.lerp(b, t)
-	var dir: Vector2 = (b - a) / seg_len
-	if dir.length_squared() < 0.01:
-		dir = Vector2(0.0, 1.0)
-	return {"pos": pos, "dir": dir.normalized()}
+	return a.lerp(b, t)
+
+
+func _sample_loop_pose(s_val: float) -> Dictionary:
+	# Köşe geçişlerinde sağ şerit ofseti ve yaw açısının aniden sıçramaması için
+	# dingil açıklığı (±4.0 m) boyunca C1-sürekli yumuşatılmış konum ve teğet yönü.
+	var p_back: Vector2 = _sample_raw_point(s_val - 4.0)
+	var p_mid: Vector2 = _sample_raw_point(s_val)
+	var p_fwd: Vector2 = _sample_raw_point(s_val + 4.0)
+	var pos: Vector2 = (p_back + p_mid * 2.0 + p_fwd) * 0.25
+	var chord: Vector2 = p_fwd - p_back
+	var dir: Vector2 = chord.normalized() if chord.length_squared() > 0.001 else Vector2(0.0, 1.0)
+	return {"pos": pos, "dir": dir}
 
 
 func _forward_dist_on_loop(s_from: float, s_to: float) -> float:
@@ -1037,6 +1064,10 @@ func board_bus(bus_idx: int) -> bool:
 			pc.call("clear_destination")
 	if "frozen" in player:
 		player.set("frozen", true)
+	if "riding_bus" in player:
+		player.set("riding_bus", true)
+	if "velocity" in player:
+		player.set("velocity", Vector3.ZERO)
 	var col: CollisionShape3D = player.get_node_or_null("Collision") as CollisionShape3D
 	if col != null:
 		_saved_collision_disabled = col.disabled
@@ -1068,6 +1099,7 @@ func board_bus(bus_idx: int) -> bool:
 	if not bool(prof.get("onboarding_seen")):
 		open_onboarding_tour()
 
+	_update_player_riding_and_hud()
 	boarded_bus.emit(bus_id, bool(bus_info["is_41at"]))
 	return true
 
@@ -1101,6 +1133,8 @@ func alight_bus(stop_idx: int = -1) -> void:
 	var col: CollisionShape3D = player.get_node_or_null("Collision") as CollisionShape3D
 	if col != null:
 		col.disabled = _saved_collision_disabled
+	if "riding_bus" in player:
+		player.set("riding_bus", false)
 	if "frozen" in player:
 		player.set("frozen", false)
 
@@ -1162,11 +1196,18 @@ func _update_player_riding_and_hud() -> void:
 		var b: Dictionary = _buses[riding_bus_idx]
 		var nd: Node3D = b["node"] as Node3D
 		if nd != null:
+			var bus_p3: Vector3 = _get_node_pos(nd)
 			var local_uid: String = Services.net.local_player_id() if (Services != null and Services.net != null) else "local"
 			var seat_idx: int = absi(local_uid.hash()) % SEAT_OFFSETS.size()
 			var seat_local: Vector3 = SEAT_OFFSETS[seat_idx]
-			_set_node_pos(player, _get_node_pos(nd) + (nd.transform.basis * seat_local))
+			_set_node_pos(player, bus_p3 + (nd.transform.basis * seat_local))
 			player.rotation.y = float(b["yaw"])
+			if "velocity" in player:
+				player.set("velocity", Vector3.ZERO)
+			if "bus_camera_focus" in player:
+				player.set("bus_camera_focus", bus_p3 + Vector3(0.0, 2.85, 0.0))
+			if "bus_camera_yaw" in player:
+				player.set("bus_camera_yaw", float(b["yaw"]))
 		if _bus_chat_btn != null:
 			var riders_n: int = 1
 			if Services != null and Services.net != null:

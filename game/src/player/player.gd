@@ -12,6 +12,10 @@ const LocalProfile := preload("res://src/core/local_profile.gd")
 var move_input: Vector3 = Vector3.ZERO
 ## Yarış geri sayımı gibi anlarda hareket kilidi.
 var frozen: bool = false
+## Otobüs yolculuğundayken fizik/yerçekimi/move_and_slide tamamen devre dışı kalır; kamera otobüs odağını izler.
+var riding_bus: bool = false
+var bus_camera_focus: Vector3 = Vector3.ZERO
+var bus_camera_yaw: float = 0.0
 
 const STEP_INTERVAL: float = 0.38
 var _step_accum: float = 0.0
@@ -290,6 +294,13 @@ func _fit_collision(size: Vector2) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if riding_bus:
+		velocity = Vector3.ZERO
+		if visual != null:
+			visual.set_locomotion(0.0)
+		_step_accum = 0.0
+		_unstuck_timer = 0.0
+		return
 	if _snap_to_navmesh:
 		_try_snap_to_navmesh()
 	# Güvenlik ağı: oyuncu herhangi bir nedenle kapalı bir katı binanın içinde sıkışırsa dışarı çıkar

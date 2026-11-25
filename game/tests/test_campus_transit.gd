@@ -144,3 +144,57 @@ func test_bus_timetable_is_shared_and_periodic() -> String:
 	a.free()
 	b.free()
 	return err
+
+
+func test_riding_bus_has_no_gravity_drift_or_camera_jitter() -> String:
+	_ensure_registries()
+	var player: CharacterBody3D = (load("res://scenes/player.tscn") as PackedScene).instantiate() as CharacterBody3D
+	var cam_rig: Node3D = (load("res://scenes/follow_camera.tscn") as PackedScene).instantiate() as Node3D
+	var transit: Node3D = CampusTransit.new()
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+
+	tree.root.add_child(player)
+	if not player.is_node_ready():
+		player.call("_ready")
+	player.position = Vector3(764.89, 0.5, 566.52)
+
+	cam_rig.set("target", player)
+	tree.root.add_child(cam_rig)
+	if not cam_rig.is_node_ready():
+		cam_rig.call("_ready")
+
+	transit.set("use_wall_clock", false)
+	transit.set("player", player)
+	tree.root.add_child(transit)
+	transit.call("build")
+
+	if not bool(transit.call("board_nearest_bus")):
+		transit.free(); cam_rig.free(); player.free()
+		return "Otobüs binişi başarısız"
+
+	# A Kapısı beklemesini geçip otobüsü virajlarda 180 kare (3 sn, 60 FPS) yürüt; her karede fizik -> transit -> kamera sırasını sına!
+	transit.set("_sim_time", 22.0)
+	transit.call("_process", 0.0)
+	cam_rig.call("_process", 0.016)
+	var prev_cam: Vector3 = cam_rig.position
+	var err: String = ""
+	for step: int in 180:
+		var dt: float = 1.0 / 60.0
+		player.call("_physics_process", dt)
+		# Fizik adımından hemen sonra oyuncu yeraltına düşmemiş ve hız biriktirmemiş olmalı!
+		if player.velocity.length() > 0.001:
+			err = "Otobüste yerçekimi hızı birikti: %s" % player.velocity
+			break
+		transit.call("_process", dt)
+		cam_rig.call("_process", dt)
+		var jump: float = cam_rig.position.distance_to(prev_cam)
+		if jump > 0.55:
+			err = "Kamera kareler arası ani sıçradı (kare %d, jump=%.2f m)" % [step, jump]
+			break
+		prev_cam = cam_rig.position
+
+	transit.call("alight_bus", 0)
+	transit.free()
+	cam_rig.free()
+	player.free()
+	return err

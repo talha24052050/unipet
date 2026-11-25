@@ -17,15 +17,34 @@ var distance: float = Config.CAMERA_DISTANCE_DEFAULT
 
 ## Aktif (joystick'e ait olmayan) dokunuşlar: index → ekran konumu.
 var _touches: Dictionary = {}
+var _was_riding_bus: bool = false
+var _ride_yaw_offset: float = 0.0
+const BUS_MIN_CAMERA_DISTANCE: float = 10.8
+
+
+static func _get_pos(n: Node3D) -> Vector3:
+	return n.global_position if n.is_inside_tree() else n.position
+
+
+static func _set_pos(n: Node3D, p: Vector3) -> void:
+	if n.is_inside_tree():
+		n.global_position = p
+	else:
+		n.position = p
 
 
 func _ready() -> void:
 	top_level = true
 	if target != null:
-		global_position = target.global_position + Vector3.UP * Config.CAMERA_TARGET_HEIGHT
+		_set_pos(self, _get_pos(target) + Vector3.UP * Config.CAMERA_TARGET_HEIGHT)
 		if target is CollisionObject3D:
 			_arm.add_excluded_object((target as CollisionObject3D).get_rid())
 	_apply()
+
+
+func exclude_collision_rid(rid: RID) -> void:
+	if _arm != null and rid.is_valid():
+		_arm.add_excluded_object(rid)
 
 
 func get_camera() -> Camera3D:
@@ -36,16 +55,41 @@ func get_camera() -> Camera3D:
 func snap_to_target() -> void:
 	_touches.clear()
 	if target != null:
-		global_position = target.global_position + Vector3.UP * Config.CAMERA_TARGET_HEIGHT
+		if bool(target.get("riding_bus")):
+			_set_pos(self, target.get("bus_camera_focus"))
+		else:
+			_set_pos(self, _get_pos(target) + Vector3.UP * Config.CAMERA_TARGET_HEIGHT)
 	_apply()
 
 
 func _process(delta: float) -> void:
 	if target == null:
 		return
-	var goal: Vector3 = target.global_position + Vector3.UP * Config.CAMERA_TARGET_HEIGHT
+	var riding: bool = bool(target.get("riding_bus"))
+	if riding:
+		var bus_yaw: float = float(target.get("bus_camera_yaw"))
+		if not _was_riding_bus:
+			_was_riding_bus = true
+			_ride_yaw_offset = deg_to_rad(-16.0)
+			yaw = wrapf(bus_yaw + PI + _ride_yaw_offset, -PI, PI)
+			pitch = clampf(pitch, deg_to_rad(-34.0), deg_to_rad(-22.0))
+		elif _touches.is_empty():
+			yaw = lerp_angle(yaw, bus_yaw + PI + _ride_yaw_offset, minf(1.0, delta * 5.5))
+		# Otobüs 14.2 m/s hızla giderken lerp gecikmesi kamerayı tavanın içine sokup titretir;
+		# otobüs üstü odak noktasına 1:1 kilitlenerek sıfır kayma sağlanır.
+		_set_pos(self, target.get("bus_camera_focus"))
+		_apply()
+		return
+
+	if _was_riding_bus:
+		_was_riding_bus = false
+		_ride_yaw_offset = 0.0
+		snap_to_target()
+		return
+
+	var goal: Vector3 = _get_pos(target) + Vector3.UP * Config.CAMERA_TARGET_HEIGHT
 	var t: float = 1.0 - exp(-Config.CAMERA_FOLLOW_SHARPNESS * delta)
-	global_position = global_position.lerp(goal, t)
+	_set_pos(self, _get_pos(self).lerp(goal, t))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -82,6 +126,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func rotate_by(relative: Vector2) -> void:
 	yaw -= relative.x * Config.CAMERA_ROTATE_SENSITIVITY
 	pitch = clamp_pitch(pitch - relative.y * Config.CAMERA_ROTATE_SENSITIVITY)
+	if target != null and bool(target.get("riding_bus")):
+		_ride_yaw_offset = wrapf(yaw - (float(target.get("bus_camera_yaw")) + PI), -PI, PI)
 	_apply()
 
 
@@ -89,7 +135,8 @@ func _apply() -> void:
 	rotation = Vector3(0.0, yaw, 0.0)
 	if _arm != null:
 		_arm.rotation = Vector3(pitch, 0.0, 0.0)
-		_arm.spring_length = distance
+		var riding: bool = target != null and bool(target.get("riding_bus"))
+		_arm.spring_length = maxf(distance, BUS_MIN_CAMERA_DISTANCE) if riding else distance
 
 
 func _other_touch(index: int) -> Vector2:
