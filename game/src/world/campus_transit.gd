@@ -14,7 +14,12 @@ const TRANSIT_JSON_PATH: String = "res://data/transit_routes.json"
 
 const CRUISE_SPEED_MPS: float = 12.4
 const STOP_DWELL_SEC: float = 6.0
-const INITIAL_A_GATE_DWELL_SEC: float = 14.0
+## A Kapısı (hat başı) bekleme süresi: yeni gelen oyuncu Ring'i kaçırmasın.
+const A_GATE_DWELL_SEC: float = 20.0
+## Sefer tarifesi örnekleme adımı (sn).
+const TIMETABLE_DT: float = 0.1
+## Durak yakınında "sıradaki otobüs" süresi gösterme yarıçapı (m).
+const STOP_ETA_RADIUS_M: float = 22.0
 const BOARD_RADIUS_M: float = 15.5
 const STOP_APPROACH_SLOW_M: float = 18.0
 
@@ -28,6 +33,18 @@ var loop_length: float = 0.0
 
 ## Otobüs durumları: [{"id","label","is_41at","node":Node3D,"s":float,"dwell":float,"last_stop_idx":int,"pos":Vector2,"yaw":float}]
 var _buses: Array[Dictionary] = []
+
+## Ortak sefer tarifesi: otobüs konumu = f(ortak saat). Tüm istemcilerde otobüsler aynı yerde olur; aynı Ring'e
+## binen oyuncular birbirini otobüsün içinde görür (eskiden her cihaz kendi otobüslerini ayrı yürütüyordu).
+## Testler gerçek saat yerine _process(delta) toplamını kullanır.
+@export var use_wall_clock: bool = true
+var _sim_time: float = 0.0
+var _period: float = 0.0
+var _tt_s: PackedFloat32Array = PackedFloat32Array()
+var _tt_dwell: PackedFloat32Array = PackedFloat32Array()
+var _tt_stop: PackedInt32Array = PackedInt32Array()
+## Tarife içinde her durağa varış anı (sn).
+var _stop_arrival_t: PackedFloat32Array = PackedFloat32Array()
 
 var riding_bus_idx: int = -1
 var target_stop_idx: int = -1
@@ -84,6 +101,7 @@ func build() -> void:
 	if waypoints.size() < 3 or stops.is_empty():
 		return
 	_build_stop_shelters()
+	_build_timetable()
 	_spawn_fleet()
 	_build_transit_hud()
 	_update_buses_transforms(0.0)
@@ -217,10 +235,11 @@ func _spawn_fleet() -> void:
 	var bus_41at_mesh: ArrayMesh = _create_41at_iett_mesh()
 
 	var fleet_specs: Array[Dictionary] = [
-		{"id": "ring_1", "label": "Mavi YTÜ Ring #1", "is_41at": false, "s": float(stops[0]["s"]), "dwell": INITIAL_A_GATE_DWELL_SEC, "stop": 0},
-		{"id": "iett_41at", "label": "İETT 41AT (Ayazağa - Davutpaşa Y.T.Ü.)", "is_41at": true, "s": fposmod(float(stops[0]["s"]) - 42.0, loop_length), "dwell": 0.0, "stop": -1},
-		{"id": "ring_2", "label": "Mavi YTÜ Ring #2", "is_41at": false, "s": fposmod(loop_length * 0.35, loop_length), "dwell": 0.0, "stop": -1},
-		{"id": "ring_3", "label": "Mavi YTÜ Ring #3", "is_41at": false, "s": fposmod(loop_length * 0.70, loop_length), "dwell": 0.0, "stop": -1},
+		# phase: tarife periyodunun kesri (otobüsler hat boyunca eşit aralıklı)
+		{"id": "ring_1", "label": "Mavi YTÜ Ring #1", "is_41at": false, "phase": 0.0},
+		{"id": "iett_41at", "label": "İETT 41AT (Ayazağa - Davutpaşa Y.T.Ü.)", "is_41at": true, "phase": 0.5},
+		{"id": "ring_2", "label": "Mavi YTÜ Ring #2", "is_41at": false, "phase": 0.25},
+		{"id": "ring_3", "label": "Mavi YTÜ Ring #3", "is_41at": false, "phase": 0.75},
 	]
 
 	for spec: Dictionary in fleet_specs:
@@ -243,9 +262,10 @@ func _spawn_fleet() -> void:
 			"label": str(spec["label"]),
 			"is_41at": is_41at,
 			"node": bus_root,
-			"s": float(spec["s"]),
-			"dwell": float(spec["dwell"]),
-			"last_stop_idx": int(spec["stop"]),
+			"phase": float(spec["phase"]),
+			"s": 0.0,
+			"dwell": 0.0,
+			"last_stop_idx": -1,
 			"pos": Vector2.ZERO,
 			"yaw": 0.0,
 		})
@@ -693,38 +713,89 @@ func _process(delta: float) -> void:
 	_update_player_riding_and_hud()
 
 
+## Tek otobüsün bir tam turunu (A Kapısı'nda bekleyişten tekrar A Kapısı'na varışa kadar) sabit adımla benzetip
+## tarife çıkarır: yavaşlama + durak beklemeleri dahil. Aynı veri + aynı kural = her cihazda aynı tarife.
+func _build_timetable() -> void:
+	_tt_s = PackedFloat32Array()
+	_tt_dwell = PackedFloat32Array()
+	_tt_stop = PackedInt32Array()
+	_stop_arrival_t = PackedFloat32Array()
+	_stop_arrival_t.resize(stops.size())
+	_stop_arrival_t.fill(-1.0)
+	var cur_s: float = float(stops[0]["s"])
+	var dwell: float = A_GATE_DWELL_SEC
+	var last_stop: int = 0
+	_stop_arrival_t[0] = 0.0
+	var max_steps: int = int((loop_length / 3.0 + float(stops.size()) * (STOP_DWELL_SEC + 10.0) + A_GATE_DWELL_SEC) / TIMETABLE_DT)
+	for step: int in max_steps:
+		_tt_s.append(cur_s)
+		_tt_dwell.append(dwell)
+		_tt_stop.append(last_stop)
+		if dwell > 0.0:
+			dwell = maxf(0.0, dwell - TIMETABLE_DT)
+			continue
+		var nstop_i: int = _next_stop_index_from_s(cur_s)
+		var dist_to_stop: float = _forward_dist_on_loop(cur_s, float(stops[nstop_i]["s"]))
+		var speed: float = CRUISE_SPEED_MPS
+		if dist_to_stop < STOP_APPROACH_SLOW_M and last_stop != nstop_i:
+			speed = lerpf(3.2, CRUISE_SPEED_MPS, clampf(dist_to_stop / STOP_APPROACH_SLOW_M, 0.0, 1.0))
+		var step_m: float = speed * TIMETABLE_DT
+		if dist_to_stop <= maxf(step_m + 0.35, 0.8) and last_stop != nstop_i:
+			if nstop_i == 0:
+				break  # tur tamam: periyot = buraya kadarki süre
+			cur_s = float(stops[nstop_i]["s"])
+			dwell = STOP_DWELL_SEC
+			last_stop = nstop_i
+			_stop_arrival_t[nstop_i] = float(step + 1) * TIMETABLE_DT
+		else:
+			cur_s = fposmod(cur_s + step_m, loop_length)
+			if dist_to_stop > 24.0 and last_stop == nstop_i:
+				last_stop = -1
+	_period = float(_tt_s.size()) * TIMETABLE_DT
+
+
+## Tarifede t anındaki (0 ≤ t < periyot) konum/bekleme.
+func _sample_timetable(t: float) -> Dictionary:
+	var n: int = _tt_s.size()
+	var f: float = t / TIMETABLE_DT
+	var i: int = clampi(int(f), 0, n - 1)
+	var j: int = (i + 1) % n
+	var frac: float = clampf(f - float(i), 0.0, 1.0)
+	var s_val: float = fposmod(_tt_s[i] + _forward_dist_on_loop(_tt_s[i], _tt_s[j]) * frac, loop_length)
+	return {"s": s_val, "dwell": _tt_dwell[i], "stop": _tt_stop[i]}
+
+
+func _bus_time(b: Dictionary) -> float:
+	return fposmod(_sim_time + float(b["phase"]) * _period, _period)
+
+
 func _update_buses_transforms(delta: float) -> void:
+	if _period <= 0.0:
+		return
+	if use_wall_clock:
+		_sim_time = Time.get_unix_time_from_system()
+	else:
+		_sim_time += delta
 	for bi: int in _buses.size():
 		var b: Dictionary = _buses[bi]
-		var dwell: float = float(b["dwell"])
-		var cur_s: float = float(b["s"])
-		if dwell > 0.0:
-			dwell = maxf(0.0, dwell - delta)
-			b["dwell"] = dwell
-		else:
-			# Sıradaki durağa yaklaşırken yumuşak yavaşlama ve durakta bekleme
-			var nstop_i: int = _next_stop_index_from_s(cur_s)
-			var dist_to_stop: float = _forward_dist_on_loop(cur_s, float(stops[nstop_i]["s"]))
-			var speed: float = CRUISE_SPEED_MPS
-			if dist_to_stop < STOP_APPROACH_SLOW_M and int(b["last_stop_idx"]) != nstop_i:
-				speed = lerpf(3.2, CRUISE_SPEED_MPS, clampf(dist_to_stop / STOP_APPROACH_SLOW_M, 0.0, 1.0))
-			var step_m: float = speed * delta
-			if step_m > 0.0 and dist_to_stop <= maxf(step_m + 0.35, 0.8) and int(b["last_stop_idx"]) != nstop_i:
-				cur_s = float(stops[nstop_i]["s"])
-				b["dwell"] = STOP_DWELL_SEC
-				b["last_stop_idx"] = nstop_i
-				# Oyuncu bu otobüsteyse ve bu durağı seçtiyse otomatik indir!
-				if riding_bus_idx == bi and target_stop_idx == nstop_i:
-					b["s"] = cur_s
-					_apply_bus_3d_pose(b)
-					alight_bus(nstop_i)
-					continue
-			else:
-				cur_s = fposmod(cur_s + step_m, loop_length)
-				if dist_to_stop > 24.0 and int(b["last_stop_idx"]) == nstop_i:
-					b["last_stop_idx"] = -1
-			b["s"] = cur_s
+		var smp: Dictionary = _sample_timetable(_bus_time(b))
+		b["s"] = float(smp["s"])
+		b["dwell"] = float(smp["dwell"])
+		b["last_stop_idx"] = int(smp["stop"])
 		_apply_bus_3d_pose(b)
+		# Oyuncu bu otobüsteyse ve seçtiği durakta bekliyorsa otomatik indir.
+		if riding_bus_idx == bi and target_stop_idx >= 0 and float(b["dwell"]) > 0.0 and int(b["last_stop_idx"]) == target_stop_idx:
+			alight_bus(target_stop_idx)
+
+
+## Durağa sıradaki otobüsün varmasına kalan süre (sn); tarife yoksa -1.
+func seconds_until_next_bus(stop_idx: int) -> float:
+	if _period <= 0.0 or stop_idx < 0 or stop_idx >= _stop_arrival_t.size() or _stop_arrival_t[stop_idx] < 0.0:
+		return -1.0
+	var best: float = INF
+	for b: Dictionary in _buses:
+		best = minf(best, fposmod(_stop_arrival_t[stop_idx] - _bus_time(b), _period))
+	return best
 
 
 func _apply_bus_3d_pose(b: Dictionary) -> void:
@@ -854,10 +925,6 @@ func board_bus(bus_idx: int) -> bool:
 	else:
 		set_target_stop_index(-1)
 
-	# Bekleyen başlangıç otobüsüyse kapıları kapatıp kalkışa hazırla (2.5 sn içinde yumuşak kalkış)
-	if float(_buses[bus_idx]["dwell"]) > 2.5:
-		_buses[bus_idx]["dwell"] = 2.2
-
 	if _board_btn != null:
 		_board_btn.visible = false
 	if _ride_panel != null:
@@ -949,9 +1016,22 @@ func _update_player_riding_and_hud() -> void:
 		if near_bi >= 0:
 			var nb: Dictionary = _buses[near_bi]
 			_board_btn.visible = true
+			_board_btn.disabled = false
 			_board_btn.text = "🚌 Efsane 41AT'ye Bin" if bool(nb["is_41at"]) else "🚌 Mavi Ring'e Bin (Ücretsiz)"
 		else:
-			_board_btn.visible = false
+			# Durakta bekliyorsa sıradaki otobüsün kaç saniye sonra geleceğini göster.
+			var p3: Vector3 = _get_node_pos(player)
+			var p_xz: Vector2 = Vector2(p3.x, p3.z)
+			var si: int = _nearest_stop_index_xz(p_xz)
+			var eta: float = -1.0
+			if si >= 0 and si < stops.size() and p_xz.distance_to(stops[si]["shelter_pos"] as Vector2) <= STOP_ETA_RADIUS_M:
+				eta = seconds_until_next_bus(si)
+			if eta >= 0.0:
+				_board_btn.visible = true
+				_board_btn.disabled = true
+				_board_btn.text = "🚏 Sıradaki otobüs ~%d sn" % ceili(eta)
+			else:
+				_board_btn.visible = false
 
 
 # ==============================================================================

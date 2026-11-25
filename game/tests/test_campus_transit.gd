@@ -38,6 +38,7 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 	player.position = Vector3(764.89, 0.5, 566.52)
 
 	var transit: Node3D = CampusTransit.new()
+	transit.set("use_wall_clock", false)  # t=0: Ring #1 A Kapısı'nda bekliyor
 	transit.set("player", player)
 	(Engine.get_main_loop() as SceneTree).root.add_child(transit)
 	transit.call("build")
@@ -72,7 +73,7 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 	# İneceği durağı 2. durak (İlhan Varank Kütüphanesi, index=1) seç ve otobüsü ilerlet -> durakta otomatik inmeli!
 	transit.call("_finish_onboarding")
 	transit.call("set_target_stop_index", 1)
-	for _step: int in 260:
+	for _step: int in 600:
 		transit.call("_process", 0.25)
 		if int(transit.get("riding_bus_idx")) == -1:
 			break
@@ -92,3 +93,33 @@ func test_ring_41at_fleet_boarding_onboarding_and_auto_alight() -> String:
 	if not alighted_ok or dist_to_stop1 > 12.0:
 		return "Seçilen durakta otomatik iniş gerçekleşmedi (alighted=%s, dist=%.1f)" % [alighted_ok, dist_to_stop1]
 	return ""
+
+
+func test_bus_timetable_is_shared_and_periodic() -> String:
+	# Aynı saatte iki ayrı istemci (iki CampusTransit) otobüsleri aynı yerde görmeli.
+	var a: Node3D = CampusTransit.new()
+	var b: Node3D = CampusTransit.new()
+	for t: Node3D in [a, b]:
+		t.set("use_wall_clock", false)
+		(Engine.get_main_loop() as SceneTree).root.add_child(t)
+		t.call("build")
+	var period: float = float(a.get("_period"))
+	var err: String = ""
+	if period < 120.0:
+		err = "tarife periyodu çok kısa: %.1f" % period
+	if err.is_empty():
+		a.call("_process", 137.3)
+		b.call("_process", 137.3 + period)  # bir tur sonrası = aynı konum
+		var ba: Array = a.call("get_live_buses")
+		var bb: Array = b.call("get_live_buses")
+		for i: int in ba.size():
+			if (ba[i]["pos"] as Vector2).distance_to(bb[i]["pos"] as Vector2) > 0.5:
+				err = "otobüs %d iki istemcide farklı yerde: %s / %s" % [i, ba[i]["pos"], bb[i]["pos"]]
+				break
+	if err.is_empty():
+		var eta: float = float(a.call("seconds_until_next_bus", 0))
+		if eta < 0.0 or eta > period:
+			err = "A Kapısı için sıradaki otobüs süresi geçersiz: %.1f" % eta
+	a.free()
+	b.free()
+	return err
